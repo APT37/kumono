@@ -1,0 +1,7 @@
+# ignore cargo build artifacts
+target/
+
+# ignore makepkg build artifacts
+src/
+pkg/
+*.pkg.tar.zst

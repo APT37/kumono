@@ -1,0 +1,28 @@
+when:
+  - event: push
+    branch: master
+
+steps:
+  - name: install-toolchain
+    image: fish
+    commands:
+      - rustup toolchain install stable --profile minimal
+
+  - name: build
+    image: fish
+    environment:
+      CARGO_INCREMENTAL: false
+    commands:
+      - cargo build --release
+
+  - name: PKGBUILD
+    image: fish
+    environment:
+      ARCH_REPO_DIR:
+        from_secret: arch_repo_dir
+      ARCH_REPO_NAME:
+        from_secret: arch_repo_name
+    commands:
+      - makepkg --nodeps
+      - mv (makepkg --packagelist) $ARCH_REPO_DIR
+      - for pkg in (makepkg --packagelist); repo-add $ARCH_REPO_DIR/$ARCH_REPO_NAME.db.tar.zst $ARCH_REPO_DIR/(string split -r -m 1 '/' $pkg | tail -1); end

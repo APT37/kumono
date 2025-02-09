@@ -1,0 +1,50 @@
+[package]
+name = "coomer_rip"
+version = "0.1.0"
+edition = "2021"
+description = "Helper tool for ripping media from coomer.su creator posts"
+readme = "README.md"
+license = "MIT"
+keywords = ["coomer"]
+
+[profile.dev]
+opt-level = 0
+debug = true
+strip = false
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+[profile.release]
+opt-level = 3
+debug = false
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+lto = "fat"
+panic = 'unwind'
+incremental = true
+codegen-units = 16
+rpath = false
+
+[[bin]]
+name = "coomer-rip"
+path = "coomer_rip.rs"
+
+[dependencies]
+anyhow = "1.0.*"
+futures = "0.3.*"
+futures-util = "0.3.*"
+lazy_static = "1.5.*"
+reqwest = { version = "0.12.*", default-features = false, features = [
+    "http2",
+    "json",
+    "rustls-tls",
+    "stream",
+] }
+serde = { version = "1.0.*", features = ["derive"] }
+tokio = { version = "1.43.*", features = ["full"] }
