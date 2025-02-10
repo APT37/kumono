@@ -10,35 +10,44 @@ lazy_static::lazy_static! {
     static ref CLIENT: Client = Client::new();
 }
 
-fn get_args() -> (String, String) {
-    let mut args = env::args();
+struct Target {
+    creator: String,
+    url: String,
+}
 
-    args.next();
+impl Target {
+    fn from_args() -> Self {
+        let args: Vec<_> = env::args().filter(|arg| !arg.is_empty()).collect();
 
-    if args.len() != 2 {
-        eprintln!("Usage: coomer-rip <service> <creator>\nSevices: [\"FanBox\", \"Fansly\", \"OnlyFans\"]");
-        process::exit(1);
+        if args.len() != 3 {
+            eprintln!("Usage: coomer-rip <service> <creator>");
+            eprintln!();
+            eprintln!("Services: onlyfans, fansly, fanbox, patreon, ...");
+            eprintln!();
+            eprintln!("Example: coomer-rip onlyfans belledelphine");
+            process::exit(1);
+        }
+
+        Self {
+            creator: args[2].clone(),
+            url: format!("https://coomer.su/api/v1/{}/user/{}", args[1], args[2]),
+        }
     }
-
-    (
-        args.next().unwrap().to_lowercase(),
-        args.next().unwrap().to_lowercase(),
-    )
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let (service, creator) = get_args();
+    let target = Target::from_args();
 
-    fs::create_dir_all(&creator).await?;
+    fs::create_dir_all(&target.creator).await?;
 
     let mut failed = 0;
 
-    for post in get_posts(&service, &creator).await? {
+    for post in get_posts(&target).await? {
         let mut tasks = vec![];
 
         for file in post.files() {
-            let creator = creator.clone();
+            let creator = target.creator.clone();
 
             tasks.push(task::spawn(async move {
                 if let Err(err) = file.download(creator).await {
@@ -61,16 +70,14 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn get_posts(service: &str, creator: &str) -> Result<Vec<Post>> {
+async fn get_posts(target: &Target) -> Result<Vec<Post>> {
     let mut all_posts = vec![];
 
     let mut offset = 0;
 
     loop {
         let mut posts: Vec<Post> = CLIENT
-            .get(format!(
-                "https://coomer.su/api/v1/{service}/user/{creator}?o={offset}"
-            ))
+            .get(format!("{}?o={offset}", target.url))
             .send()
             .await?
             .json()
@@ -92,7 +99,7 @@ async fn get_posts(service: &str, creator: &str) -> Result<Vec<Post>> {
 struct Post {
     // id: String,        // "1000537173"
     // user: String,      // "paigetheuwulord"
-    // service: Service,  // "onlyfans"
+    // service: String,  // "onlyfans"
     // title: String,     // "What an ass"
     // content: String,   // "What an ass"
     // shared_file: bool, // false
@@ -104,14 +111,6 @@ struct Post {
     // poll: ???, // null
     // captions: ???, // null
     // tags: ???, // null
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum Service {
-    FanBox, // no creators of this type
-    Fansly, // API doesn't return anything for this type
-    OnlyFans,
 }
 
 impl Post {

@@ -1,11 +1,11 @@
 [package]
 name = "coomer_rip"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Helper tool for ripping media from coomer.su creator posts"
 readme = "README.md"
 license = "MIT"
-keywords = ["coomer"]
+keywords = ["coomer", "rip"]
 
 [profile.dev]
 opt-level = 0
