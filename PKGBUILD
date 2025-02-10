@@ -1,5 +1,5 @@
 pkgname=coomer-rip
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc="Helper tool for ripping media from coomer.su creator posts"
 arch=('x86_64')
