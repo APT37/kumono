@@ -9,7 +9,7 @@ lazy_static! {
 }
 
 const DEFAULT_CONCURRENCY: usize = 32;
-const MAX_CONCURRENCY: usize = 64;
+const MAX_CONCURRENCY: usize = 256;
 
 const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 1000;
 const DEFAULT_TIMEOUT_MS: u64 = 5000;
