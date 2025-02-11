@@ -9,6 +9,7 @@ lazy_static! {
 }
 
 const DEFAULT_CONCURRENCY: usize = 32;
+const MAX_CONCURRENCY: usize = 64;
 
 const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 1000;
 const DEFAULT_TIMEOUT_MS: u64 = 5000;
@@ -49,7 +50,9 @@ impl Config {
     }
 
     pub fn concurrency(&self) -> usize {
-        self.concurrency.unwrap_or(DEFAULT_CONCURRENCY)
+        self.concurrency
+            .unwrap_or(DEFAULT_CONCURRENCY)
+            .clamp(1, MAX_CONCURRENCY)
     }
 
     pub fn connect_timeout(&self) -> Duration {
@@ -84,7 +87,7 @@ impl fmt::Display for Config {
 
         write!(
             f,
-            "Concurrent Tasks: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Timeout: {}",
+            "Concurrent Downloads: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Timeout: {}",
             self.concurrency(),
             pd(&self.api_delay()),
             pd(&self.api_backoff()),
