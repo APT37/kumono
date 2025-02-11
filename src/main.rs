@@ -11,7 +11,6 @@ mod profile;
 mod stats;
 mod usage;
 
-
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::init();
