@@ -1,11 +1,15 @@
+use anyhow::Result;
 use lazy_static::lazy_static;
-use log::error;
+use log::{error, info};
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{env, fmt, fs, process, time::Duration};
+use std::{env, fmt, fs, path::PathBuf, process, time::Duration};
 
 lazy_static! {
-    pub static ref CONFIG: Config = Config::parse();
+    pub static ref CONFIG: Config = Config::parse().unwrap_or_else(|err| {
+        error!("{err}");
+        process::exit(1);
+    });
 }
 
 const DEFAULT_CONCURRENCY: usize = 32;
@@ -17,7 +21,7 @@ const DEFAULT_TIMEOUT_MS: u64 = 5000;
 const DEFAULT_API_DELAY_MS: u64 = 100;
 const DEFAULT_API_BACKOFF: u64 = 45;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct Config {
     concurrency: Option<usize>,
 
@@ -31,22 +35,22 @@ pub struct Config {
 }
 
 impl Config {
-    fn parse() -> Self {
-        let home = env::var("HOME").unwrap_or_else(|err| {
-            error!("{err}");
-            process::exit(1);
-        });
+    fn parse() -> Result<Self> {
+        let home = env::var("HOME")?;
 
-        toml::from_str::<Config>(
-            &fs::read_to_string(format!("{home}/.config/coomer-rip.toml")).unwrap_or_else(|err| {
-                error!("{err}");
-                process::exit(1);
-            }),
-        )
-        .unwrap_or_else(|err| {
-            error!("{err}");
-            process::exit(1);
-        })
+        let path = PathBuf::from_iter([&home, ".config", "coomer-rip.toml"]);
+
+        let config = if path.try_exists()? {
+            info!("found configuration file {}", path.to_string_lossy());
+
+            let file = fs::read_to_string(path)?;
+
+            toml::from_str::<Config>(&file)?
+        } else {
+            Config::default()
+        };
+
+        Ok(config)
     }
 
     pub fn concurrency(&self) -> usize {

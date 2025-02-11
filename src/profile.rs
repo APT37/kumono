@@ -26,8 +26,13 @@ impl Profile {
         };
 
         profile.init_posts().await?;
-
         profile.init_files();
+
+        info!(
+            "found {} posts, containing {} files",
+            profile.posts.len().to_formatted_string(&Locale::de),
+            profile.files.len().to_formatted_string(&Locale::de),
+        );
 
         Ok(profile)
     }
@@ -79,11 +84,6 @@ impl Profile {
             offset += 50;
         }
 
-        info!(
-            "found {} posts",
-            self.posts.len().to_formatted_string(&Locale::de)
-        );
-
         Ok(())
     }
 
@@ -101,11 +101,6 @@ impl Profile {
 
         self.files.sort();
         self.files.dedup();
-
-        info!(
-            "downloading {} files",
-            self.files.len().to_formatted_string(&Locale::de)
-        );
     }
 }
 
