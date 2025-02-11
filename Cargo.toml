@@ -1,6 +1,6 @@
 [package]
 name = "coomer_rip"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "Helper tool for ripping media from coomer.su creator posts"
 readme = "README.md"
@@ -53,6 +53,7 @@ reqwest = { version = "0.12.*", default-features = false, features = [
 serde = { version = "1.0.*", features = ["derive"] }
 size = "0.5.*"
 tokio = { version = "1.43.*", features = ["full"] }
+toml = "0.8.*"
 
 [[bin]]
 name = "coomer-rip"

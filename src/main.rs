@@ -1,12 +1,14 @@
-use crate::{profile::Profile, stats::Stats};
+use crate::{config::CONFIG, profile::Profile, stats::Stats};
 use anyhow::Result;
 use futures::future::join_all;
 use log::error;
-use std::{env, process, sync::Arc};
+use log::info;
+use std::sync::Arc;
 use tokio::{fs, sync::Semaphore, task};
 
 mod client;
 mod config;
+mod input;
 mod profile;
 mod stats;
 mod usage;
@@ -15,12 +17,9 @@ mod usage;
 async fn main() -> Result<()> {
     env_logger::init();
 
-    let args: Vec<_> = env::args().filter(|arg| !arg.is_empty()).collect();
+    let args = input::args();
 
-    if args.len() != 3 {
-        usage::usage();
-        process::exit(1);
-    }
+    info!("{}", *CONFIG);
 
     let profile = Profile::new(&args[1], &args[2]).await?;
 
@@ -28,7 +27,7 @@ async fn main() -> Result<()> {
 
     let mut tasks = vec![];
 
-    let sem = Arc::new(Semaphore::new(config::CONCURRENCY));
+    let sem = Arc::new(Semaphore::new(CONFIG.concurrency()));
 
     for file in profile.files {
         let permit = sem.clone().acquire_owned().await;

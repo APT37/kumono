@@ -1,4 +1,4 @@
-use crate::{client::CLIENT, config};
+use crate::{client::CLIENT, config::CONFIG};
 use anyhow::Result;
 use futures_util::StreamExt;
 use log::{debug, error, info, warn};
@@ -48,7 +48,7 @@ impl Profile {
             let url = self.api_url_with_offset(offset);
 
             loop {
-                sleep(config::API_DELAY).await;
+                sleep(CONFIG.api_delay()).await;
 
                 let response = CLIENT.get(&url).send().await?;
 
@@ -56,15 +56,13 @@ impl Profile {
 
                 if status == StatusCode::OK {
                     posts = response.json().await?;
-
                     break;
                 } else if status == StatusCode::TOO_MANY_REQUESTS {
                     warn!(
                         "hit rate-limiting at offset {offset}, sleeping for {}",
-                        pretty_duration::pretty_duration(&config::API_BACKOFF, None)
+                        pretty_duration::pretty_duration(&CONFIG.api_backoff(), None)
                     );
-
-                    sleep(config::API_BACKOFF).await;
+                    sleep(CONFIG.api_backoff()).await;
                 } else {
                     error!("got unhandled status {status} when requesting {url}");
 

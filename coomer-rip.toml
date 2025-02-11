@@ -1,0 +1,9 @@
+# concurrency = 32
+
+# connect_timeout_ms = 1000
+# read_timeout_ms = 5000
+
+# api_delay_ms = 100
+# api_backoff_sec = 45
+
+# proxy = "10.64.0.1:1080"
