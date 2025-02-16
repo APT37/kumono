@@ -15,7 +15,7 @@ mod usage;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
+    colog::init();
 
     let args = input::args();
 

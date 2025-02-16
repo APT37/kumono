@@ -1,6 +1,6 @@
 [package]
 name = "coomer_rip"
-version = "0.4.4"
+version = "0.5.0"
 edition = "2021"
 description = "Helper tool for ripping media from coomer.su creator posts"
 
@@ -31,9 +31,7 @@ rpath = false
 [dependencies]
 anyhow = "1.0.*"
 # clap = { version = "4.5.*", features = ["derive"] }
-env_logger = { version = "0.11.*", default-features = false, features = [
-    "auto-color",
-] }
+colog = "1.3.*"
 futures = "0.3.*"
 futures-util = "0.3.*"
 log = "0.4.*"
