@@ -1,8 +1,7 @@
 use crate::{config::CONFIG, profile::Profile, stats::Stats};
 use anyhow::Result;
 use futures::future::join_all;
-use log::error;
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use tokio::{fs, sync::Semaphore, task};
 
