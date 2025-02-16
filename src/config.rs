@@ -1,16 +1,15 @@
 use anyhow::Result;
-use lazy_static::lazy_static;
 use log::{error, info};
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{env, fmt, fs, path::PathBuf, process, time::Duration};
+use std::{env, fmt, fs, path::PathBuf, process, sync::LazyLock, time::Duration};
 
-lazy_static! {
-    pub static ref CONFIG: Config = Config::parse().unwrap_or_else(|err| {
+pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
+    Config::parse().unwrap_or_else(|err| {
         error!("{err}");
         process::exit(1);
-    });
-}
+    })
+});
 
 const DEFAULT_CONCURRENCY: usize = 32;
 const MAX_CONCURRENCY: usize = 256;
@@ -41,7 +40,7 @@ impl Config {
         let path = PathBuf::from_iter([&home, ".config", "coomer-rip.toml"]);
 
         let config = if path.try_exists()? {
-            info!("found configuration file {}", path.to_string_lossy());
+            info!("using configuration file {}", path.to_string_lossy());
 
             let file = fs::read_to_string(path)?;
 

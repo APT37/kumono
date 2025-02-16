@@ -1,11 +1,8 @@
 [package]
 name = "coomer_rip"
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 description = "Helper tool for ripping media from coomer.su creator posts"
-readme = "README.md"
-license = "MIT"
-keywords = ["coomer", "rip"]
 
 [profile.dev]
 opt-level = 0
@@ -39,7 +36,6 @@ env_logger = { version = "0.11.*", default-features = false, features = [
 ] }
 futures = "0.3.*"
 futures-util = "0.3.*"
-lazy_static = "1.5.*"
 log = "0.4.*"
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
