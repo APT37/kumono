@@ -9,18 +9,18 @@ use size::Size;
 use std::{path::PathBuf, process};
 use tokio::{fs, io::AsyncWriteExt, time::sleep};
 
-pub struct Profile {
-    site: String,
-    creator: String,
+pub struct Profile<'a> {
+    site: &'a str,
+    creator: &'a str,
     pub posts: Vec<Post>,
     pub files: Vec<TargetFile>,
 }
 
-impl Profile {
-    pub async fn new(site: &str, creator: &str) -> Result<Self> {
+impl<'a> Profile<'a> {
+    pub async fn new(site: &'a str, creator: &'a str) -> Result<Self> {
         let mut profile = Self {
-            site: site.to_string(),
-            creator: creator.to_string(),
+            site,
+            creator,
             posts: vec![],
             files: vec![],
         };

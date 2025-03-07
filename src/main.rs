@@ -58,5 +58,7 @@ async fn main() -> Result<()> {
 
     stats.print();
 
+    let _ = fs::remove_dir(&args[2]).await;
+
     Ok(())
 }
