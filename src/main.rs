@@ -1,9 +1,9 @@
-use crate::{config::CONFIG, profile::Profile, stats::Stats};
+use crate::{ config::CONFIG, profile::Profile, stats::Stats };
 use anyhow::Result;
 use futures::future::join_all;
-use log::{error, info};
+use log::{ error, info };
 use std::sync::Arc;
-use tokio::{fs, sync::Semaphore, task};
+use tokio::{ fs, sync::Semaphore, task };
 
 mod client;
 mod config;
@@ -31,13 +31,15 @@ async fn main() -> Result<()> {
     for file in profile.files {
         let permit = sem.clone().acquire_owned().await;
 
-        tasks.push(task::spawn(async move {
-            // aww, the compiler thinks this is useless :)
-            #[allow(clippy::no_effect_underscore_binding)]
-            let _permit = permit;
+        tasks.push(
+            task::spawn(async move {
+                // aww, the compiler thinks this is useless :)
+                #[allow(clippy::no_effect_underscore_binding)]
+                let _permit = permit;
 
-            file.download().await
-        }));
+                file.download().await
+            })
+        );
     }
 
     let mut stats = Stats::new();

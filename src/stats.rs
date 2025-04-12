@@ -1,4 +1,4 @@
-use num_format::{Locale, ToFormattedString};
+use num_format::{ Locale, ToFormattedString };
 use size::Size;
 
 pub struct Stats {
@@ -44,7 +44,7 @@ impl Stats {
                 (self.success + self.failure).to_formatted_string(&Locale::de),
                 self.success.to_formatted_string(&Locale::de),
                 self.skipped.to_formatted_string(&Locale::de),
-                self.failure.to_formatted_string(&Locale::de),
+                self.failure.to_formatted_string(&Locale::de)
             );
         }
     }

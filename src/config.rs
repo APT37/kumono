@@ -1,8 +1,8 @@
 use anyhow::Result;
-use log::{error, info};
+use log::{ error, info };
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{env, fmt, fs, path::PathBuf, process, sync::LazyLock, time::Duration};
+use std::{ env, fmt, fs, path::PathBuf, process, sync::LazyLock, time::Duration };
 
 pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     Config::parse().unwrap_or_else(|err| {
@@ -53,16 +53,11 @@ impl Config {
     }
 
     pub fn concurrency(&self) -> usize {
-        self.concurrency
-            .unwrap_or(DEFAULT_CONCURRENCY)
-            .clamp(1, MAX_CONCURRENCY)
+        self.concurrency.unwrap_or(DEFAULT_CONCURRENCY).clamp(1, MAX_CONCURRENCY)
     }
 
     pub fn connect_timeout(&self) -> Duration {
-        Duration::from_millis(
-            self.connect_timeout_ms
-                .unwrap_or(DEFAULT_CONNECT_TIMEOUT_MS),
-        )
+        Duration::from_millis(self.connect_timeout_ms.unwrap_or(DEFAULT_CONNECT_TIMEOUT_MS))
     }
 
     pub fn read_timeout(&self) -> Duration {
@@ -96,7 +91,7 @@ impl fmt::Display for Config {
             pd(&self.api_backoff()),
             self.proxy.as_ref().unwrap_or(&"None".to_string()),
             pd(&self.connect_timeout()),
-            pd(&self.read_timeout()),
+            pd(&self.read_timeout())
         )
     }
 }

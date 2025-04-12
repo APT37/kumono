@@ -1,13 +1,13 @@
-use crate::{client::CLIENT, config::CONFIG};
+use crate::{ client::CLIENT, config::CONFIG };
 use anyhow::Result;
 use futures_util::StreamExt;
-use log::{debug, error, info, warn};
-use num_format::{Locale, ToFormattedString};
+use log::{ debug, error, info, warn };
+use num_format::{ Locale, ToFormattedString };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
-use std::{path::PathBuf, process};
-use tokio::{fs, io::AsyncWriteExt, time::sleep};
+use std::{ path::PathBuf, process };
+use tokio::{ fs, io::AsyncWriteExt, time::sleep };
 
 pub struct Profile<'a> {
     site: &'a str,
@@ -31,7 +31,7 @@ impl<'a> Profile<'a> {
         info!(
             "found {} posts, containing {} files",
             profile.posts.len().to_formatted_string(&Locale::de),
-            profile.files.len().to_formatted_string(&Locale::de),
+            profile.files.len().to_formatted_string(&Locale::de)
         );
 
         Ok(profile)
@@ -43,10 +43,7 @@ impl<'a> Profile<'a> {
         let mut offset = 0;
 
         loop {
-            debug!(
-                "fetching posts for {}/{} with offset {offset}",
-                self.site, self.creator
-            );
+            debug!("fetching posts for {}/{} with offset {offset}", self.site, self.creator);
 
             let mut posts: Vec<Post>;
 
@@ -88,10 +85,7 @@ impl<'a> Profile<'a> {
     }
 
     fn api_url_with_offset(&self, offset: u32) -> String {
-        format!(
-            "https://coomer.su/api/v1/{}/user/{}?o={offset}",
-            self.site, self.creator
-        )
+        format!("https://coomer.su/api/v1/{}/user/{}?o={offset}", self.site, self.creator)
     }
 
     fn init_files(&mut self) {
