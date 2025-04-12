@@ -2,18 +2,40 @@ when:
   - event: push
     branch: master
 
+skip_clone: true
+
 steps:
-  - name: install-toolchain
+  - name: clone
     image: fish
+    environment:
+      CARGO_TARGET_DIR:
+        from_secret: cargo_target_dir
+      REPOSITORY_DIR:
+        from_secret: repository_dir
     commands:
-      - rustup toolchain install stable --profile minimal
+      - mkdir -p $REPOSITORY_DIR/$CI_REPO_NAME && cd $REPOSITORY_DIR/$CI_REPO_NAME
+      - git clone $CI_REPO_CLONE_SSH_URL (pwd) || git pull --force
+      - ln -sf $CARGO_TARGET_DIR target
+      - rmdir $CI_WORKSPACE
+      - ln -sf $REPOSITORY_DIR/$CI_REPO_NAME $CI_WORKSPACE
+
+  - name: toolchain
+    image: fish
+    environment:
+      RUST_TOOLCHAIN_PATH:
+        from_secret: rust_toolchain_path
+    commands:
+      - rustup toolchain link woodpecker $RUST_TOOLCHAIN_PATH
+      - rustup default woodpecker
 
   - name: build
     image: fish
     environment:
-      CARGO_INCREMENTAL: false
+      CARGO_HOME:
+        from_secret: cargo_home
+      # CARGO_LOG: cargo::core::compiler::fingerprint=info
     commands:
-      - cargo build --release
+      - cargo build --release #--verbose
 
   - name: PKGBUILD
     image: fish
@@ -23,6 +45,10 @@ steps:
       ARCH_REPO_NAME:
         from_secret: arch_repo_name
     commands:
-      - makepkg --nodeps
-      - mv (makepkg --packagelist) $ARCH_REPO_DIR
-      - for pkg in (makepkg --packagelist); repo-add $ARCH_REPO_DIR/$ARCH_REPO_NAME.db.tar.zst $ARCH_REPO_DIR/(string split -r -m 1 '/' $pkg | tail -1); end
+      - set repo_pkgs (exa --oneline $ARCH_REPO_DIR)
+      - set make_pkgs (makepkg --packagelist)
+      - set build false
+      - for pkg in $make_pkgs; if not contains (string split -r -m 1 '/' $pkg | tail -1) $repo_pkgs; set build true; break; end; end
+      - if $build; makepkg --nodeps --force; end
+      - if $build; mv $make_pkgs $ARCH_REPO_DIR; end
+      - if $build; for pkg in $make_pkgs; repo-add $ARCH_REPO_DIR/$ARCH_REPO_NAME.db.tar.zst $ARCH_REPO_DIR/(string split -r -m 1 '/' $pkg | tail -1); end; end
