@@ -2,7 +2,7 @@
 name = "coomer_rip"
 version = "0.6.0"
 edition = "2021"
-description = "Helper tool for ripping media from coomer.su creator posts"
+description = "Media ripper for coomer.su and kemono.su"
 
 [profile.dev]
 opt-level = 0
