@@ -46,10 +46,7 @@ async fn main() -> Result<()> {
 
     for task in join_all(tasks).await {
         match task? {
-            Ok((true, size)) => {
-                stats.add_success();
-                stats.add_size(size);
-            }
+            Ok((true, size)) => stats.add_success(size),
             Ok((false, _)) => stats.add_skipped(),
             Err(err) => {
                 stats.add_failure();
