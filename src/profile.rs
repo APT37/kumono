@@ -1,8 +1,7 @@
-use crate::{ client::CLIENT, config::CONFIG };
+use crate::{ client::CLIENT, config::CONFIG, n_fmt };
 use anyhow::Result;
 use futures_util::StreamExt;
 use log::{ debug, error, info, warn };
-use num_format::{ Locale, ToFormattedString };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
@@ -10,16 +9,16 @@ use std::{ path::PathBuf, process };
 use tokio::{ fs, io::AsyncWriteExt, time::sleep };
 
 pub struct Profile<'a> {
-    site: &'a str,
+    service: &'a str,
     creator: &'a str,
     pub posts: Vec<Post>,
     pub files: Vec<TargetFile>,
 }
 
 impl<'a> Profile<'a> {
-    pub async fn new(site: &'a str, creator: &'a str) -> Result<Self> {
+    pub async fn new(service: &'a str, creator: &'a str) -> Result<Self> {
         let mut profile = Self {
-            site,
+            service,
             creator,
             posts: vec![],
             files: vec![],
@@ -30,20 +29,20 @@ impl<'a> Profile<'a> {
 
         info!(
             "found {} posts, containing {} files",
-            profile.posts.len().to_formatted_string(&Locale::de),
-            profile.files.len().to_formatted_string(&Locale::de)
+            n_fmt(profile.posts.len()),
+            n_fmt(profile.files.len())
         );
 
         Ok(profile)
     }
 
     pub async fn init_posts(&mut self) -> Result<()> {
-        info!("fetching posts for {}/{}", self.site, self.creator);
+        info!("fetching posts for {}/{}", self.service, self.creator);
 
         let mut offset = 0;
 
         loop {
-            debug!("fetching posts for {}/{} with offset {offset}", self.site, self.creator);
+            debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator);
 
             let mut posts: Vec<Post>;
 
@@ -67,7 +66,6 @@ impl<'a> Profile<'a> {
                     sleep(CONFIG.api_backoff()).await;
                 } else {
                     error!("got unhandled status {status} when requesting {url}");
-
                     process::exit(1);
                 }
             }
@@ -85,7 +83,7 @@ impl<'a> Profile<'a> {
     }
 
     fn api_url_with_offset(&self, offset: u32) -> String {
-        format!("https://coomer.su/api/v1/{}/user/{}?o={offset}", self.site, self.creator)
+        format!("https://coomer.su/api/v1/{}/user/{}?o={offset}", self.service, self.creator)
     }
 
     fn init_files(&mut self) {

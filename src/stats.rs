@@ -1,4 +1,5 @@
-use num_format::{ Locale, ToFormattedString };
+use crate::n_fmt;
+use log::info;
 use size::Size;
 
 pub struct Stats {
@@ -33,9 +34,7 @@ impl Stats {
 
     pub fn print(&self) {
         if self.success + self.skipped + self.failure > 0 {
-            let n_fmt = |n: usize| n.to_formatted_string(&Locale::de);
-
-            log::info!(
+            info!(
                 "downloaded approx. {} / total: {} / success: {} / skipped: {} / failure: {}",
                 Size::from_bytes(self.dl_size),
                 n_fmt(self.success + self.failure),

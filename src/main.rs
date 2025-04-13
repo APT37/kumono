@@ -2,6 +2,7 @@ use crate::{ config::CONFIG, profile::Profile, stats::Stats };
 use anyhow::Result;
 use futures::future::join_all;
 use log::{ error, info };
+use num_format::{ Locale, ToFormattedString };
 use std::sync::Arc;
 use tokio::{ fs, sync::Semaphore, task };
 
@@ -11,6 +12,10 @@ mod input;
 mod profile;
 mod stats;
 mod usage;
+
+fn n_fmt(n: usize) -> String {
+    n.to_formatted_string(&Locale::de)
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
