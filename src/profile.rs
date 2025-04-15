@@ -87,16 +87,17 @@ impl<'a> Profile<'a> {
     }
 
     fn init_files(&mut self) {
-        for post in &self.posts {
-            self.files.append(&mut post.files());
-        }
+        self.posts
+            .clone()
+            .into_iter()
+            .for_each(|post| self.files.append(&mut post.files()));
 
         self.files.sort();
         self.files.dedup();
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Post {
     // id: String,   // "1000537173"
     pub user: String, // "paigetheuwulord"
@@ -107,16 +108,12 @@ pub struct Post {
 }
 
 impl Post {
-    pub fn files(&self) -> Vec<TargetFile> {
-        let mut files = vec![];
+    pub fn files(mut self) -> Vec<TargetFile> {
+        let mut files = vec![self.file];
 
-        files.push(self.file.clone());
+        files.append(&mut self.attachments);
 
-        for file in &self.attachments {
-            files.push(file.clone());
-        }
-
-        let files: Vec<_> = files
+        files
             .into_iter()
             .filter_map(|f| {
                 if let (Some(name), Some(path)) = (f.name, f.path) {
@@ -125,9 +122,7 @@ impl Post {
                     None
                 }
             })
-            .collect();
-
-        files
+            .collect()
     }
 }
 
@@ -146,22 +141,22 @@ pub struct TargetFile {
 }
 
 impl TargetFile {
-    fn new(creator: &str, name: &str, path: &str) -> Self {
+    fn new(creator: &str, filename: &str, path: &str) -> Self {
         Self {
-            name: name.to_string(),
+            name: filename.to_string(),
 
             url: format!("https://coomer.su/data{path}"),
 
-            fs_path: PathBuf::from(format!("{creator}/{name}")),
-            fs_path_temp: PathBuf::from(format!("{creator}/{name}.temp")),
+            fs_path: PathBuf::from(format!("{creator}/{filename}")),
+            fs_path_temp: PathBuf::from(format!("{creator}/{filename}.temp")),
         }
     }
 
-    pub async fn download(&self) -> Result<(bool, Size)> {
+    pub async fn download(&self) -> Result<Option<Size>> {
         if fs::try_exists(&self.fs_path).await? {
             info!("skipping {}", self.name);
 
-            return Ok((false, Size::default()));
+            return Ok(None);
         }
 
         let size = self.size().await;
@@ -180,16 +175,16 @@ impl TargetFile {
 
         fs::rename(&self.fs_path_temp, &self.fs_path).await?;
 
-        Ok((true, size))
+        Ok(Some(size))
     }
 
     async fn size(&self) -> Size {
         if let Ok(res) = CLIENT.head(&self.url).send().await {
-            if res.status().is_success() {
+            if res.status().as_u16() == 200 {
                 return Size::from_bytes(res.content_length().unwrap_or_default());
             }
         }
 
-        Size::default()
+        Size::from_bytes(-1)
     }
 }

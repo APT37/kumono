@@ -15,7 +15,7 @@ const DEFAULT_CONCURRENCY: usize = 32;
 const MAX_CONCURRENCY: usize = 256;
 
 const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 1000;
-const DEFAULT_TIMEOUT_MS: u64 = 5000;
+const DEFAULT_OVERALL_TIMEOUT_MS: u64 = 5000;
 
 const DEFAULT_API_DELAY_MS: u64 = 100;
 const DEFAULT_API_BACKOFF: u64 = 45;
@@ -61,7 +61,7 @@ impl Config {
     }
 
     pub fn read_timeout(&self) -> Duration {
-        Duration::from_millis(self.read_timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS))
+        Duration::from_millis(self.read_timeout_ms.unwrap_or(DEFAULT_OVERALL_TIMEOUT_MS))
     }
 
     pub fn api_delay(&self) -> Duration {
@@ -73,7 +73,7 @@ impl Config {
     }
 
     pub fn proxy(&self) -> Option<String> {
-        self.proxy.clone().map(|p| format!("socks5://{p}"))
+        self.proxy.clone().map(|proxy| format!("socks5://{proxy}"))
     }
 }
 
@@ -85,11 +85,11 @@ impl fmt::Display for Config {
 
         write!(
             f,
-            "Concurrent Downloads: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Timeout: {}",
+            "Concurrent Downloads: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Overall Timeout: {}",
             self.concurrency(),
             pd(&self.api_delay()),
             pd(&self.api_backoff()),
-            self.proxy.as_ref().unwrap_or(&"None".to_string()),
+            self.proxy.as_ref().unwrap_or(&String::from("None")),
             pd(&self.connect_timeout()),
             pd(&self.read_timeout())
         )

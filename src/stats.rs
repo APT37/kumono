@@ -35,9 +35,9 @@ impl Stats {
     pub fn print(&self) {
         if self.success + self.skipped + self.failure > 0 {
             info!(
-                "downloaded approx. {} / total: {} / success: {} / skipped: {} / failure: {}",
+                "downloaded approx. {} for {} files / success: {} / skipped: {} / failure: {}",
                 Size::from_bytes(self.dl_size),
-                n_fmt(self.success + self.failure),
+                n_fmt(self.success + self.skipped + self.failure),
                 n_fmt(self.success),
                 n_fmt(self.skipped),
                 n_fmt(self.failure)
