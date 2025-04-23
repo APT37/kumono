@@ -185,6 +185,6 @@ impl TargetFile {
             }
         }
 
-        Size::from_bytes(-1)
+        Size::default()
     }
 }
