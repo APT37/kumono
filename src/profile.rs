@@ -201,7 +201,7 @@ impl TargetFile {
         if status.as_u16() != 200 {
             return Err(
                 anyhow!(
-                    "failed to determine remote size, received unexpected status code: {status}"
+                    "failed to determine remote size: received unexpected status code {status}"
                 )
             );
         }
