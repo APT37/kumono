@@ -1,12 +1,12 @@
 use crate::{ client::CLIENT, config::CONFIG, n_fmt };
-use anyhow::Result;
+use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use log::{ debug, error, info, warn };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
-use std::{ path::PathBuf, process };
-use tokio::{ fs, io::AsyncWriteExt, time::sleep };
+use std::{ io::SeekFrom, path::PathBuf, process };
+use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
 pub struct Profile<'a> {
     service: &'a str,
@@ -49,7 +49,7 @@ impl<'a> Profile<'a> {
             let url = self.api_url_with_offset(offset);
 
             loop {
-                sleep(CONFIG.api_delay()).await;
+                sleep(CONFIG.api_delay_ms).await;
 
                 let response = CLIENT.get(&url).send().await?;
 
@@ -61,9 +61,9 @@ impl<'a> Profile<'a> {
                 } else if status == StatusCode::TOO_MANY_REQUESTS {
                     warn!(
                         "hit rate-limiting at offset {offset}, sleeping for {}",
-                        pretty_duration::pretty_duration(&CONFIG.api_backoff(), None)
+                        pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
                     );
-                    sleep(CONFIG.api_backoff()).await;
+                    sleep(CONFIG.api_backoff).await;
                 } else {
                     error!("got unhandled status {status} when requesting {url}");
                     process::exit(1);
@@ -137,7 +137,6 @@ pub struct TargetFile {
     name: String,
     url: String, // "https://coomer.su/data/6e/6c/6e6cf84df44c1d091a2e36b6df77b098107c18831833de1e2e9c8207206f150b.jpg"
     fs_path: PathBuf,
-    fs_path_temp: PathBuf,
 }
 
 impl TargetFile {
@@ -147,44 +146,79 @@ impl TargetFile {
 
             url: format!("https://coomer.su/data{path}"),
 
-            fs_path: PathBuf::from(format!("{creator}/{filename}")),
-            fs_path_temp: PathBuf::from(format!("{creator}/{filename}.temp")),
+            fs_path: PathBuf::from_iter([creator, filename]),
         }
     }
 
-    pub async fn download(&self) -> Result<Option<Size>> {
-        if fs::try_exists(&self.fs_path).await? {
-            info!("skipping {}", self.name);
+    pub async fn download(&self) -> Result<Size> {
+        let s = |n| Size::from_bytes(n);
 
-            return Ok(None);
+        let mut file = File::options()
+            .append(true)
+            .create(true)
+            .truncate(false)
+            .open(&self.fs_path).await?;
+
+        let mut local = file.seek(SeekFrom::End(0)).await?;
+
+        let remote = self.remote_size().await?;
+
+        let left = remote - local;
+
+        if left == 0 {
+            info!("skipping {} ({})", self.name, s(remote));
+
+            return Ok(Size::from_bytes(-1));
         }
 
-        let size = self.size().await;
+        if left == remote {
+            info!("downloading {} ({})", self.name, s(remote));
+        } else {
+            info!("resuming {} ({}) [{} remaining]", self.name, s(remote), s(left));
+        }
 
-        info!("downloading {} ({size})", self.name);
+        loop {
+            self.download_range(&mut file, local, remote - 1).await?;
 
-        let mut stream = CLIENT.get(&self.url).send().await?.bytes_stream();
+            local = file.seek(SeekFrom::End(0)).await?;
 
-        let mut file = fs::File::create(&self.fs_path_temp).await?;
+            if local == remote {
+                file.flush().await?;
+
+                break;
+            }
+        }
+
+        // broken
+        Ok(Size::default())
+    }
+
+    async fn remote_size(&self) -> Result<u64> {
+        let res = CLIENT.head(&self.url).send().await?;
+
+        if res.status().as_u16() != 200 {
+            return Err(anyhow!("unexpected status code while determining remote size"));
+        }
+
+        match res.content_length() {
+            Some(length) => Ok(length),
+            None => Err(anyhow!("Content-Length header is not present")),
+        }
+    }
+
+    async fn download_range(&self, file: &mut File, start: u64, end: u64) -> Result<()> {
+        let mut stream = CLIENT.get(&self.url)
+            .header("Range", format!("bytes={start}-{end}"))
+
+            .send().await?
+            .bytes_stream();
 
         while let Some(Ok(bytes)) = stream.next().await {
             file.write_all(&bytes).await?;
         }
 
-        file.flush().await?;
+        // file.flush().await?;
 
-        fs::rename(&self.fs_path_temp, &self.fs_path).await?;
-
-        Ok(Some(size))
-    }
-
-    async fn size(&self) -> Size {
-        if let Ok(res) = CLIENT.head(&self.url).send().await {
-            if res.status().as_u16() == 200 {
-                return Size::from_bytes(res.content_length().unwrap_or_default());
-            }
-        }
-
-        Size::default()
+        Ok(())
     }
 }

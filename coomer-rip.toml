@@ -1,7 +1,7 @@
-# concurrency = 32
+# concurrency = 64
 
-# connect_timeout_ms = 1000
-# read_timeout_ms = 5000
+# connect_timeout = 1
+# read_timeout = 5
 
 # api_delay_ms = 100
 # api_backoff = 45

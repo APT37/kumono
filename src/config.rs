@@ -11,26 +11,42 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
     })
 });
 
-const DEFAULT_CONCURRENCY: usize = 32;
-const MAX_CONCURRENCY: usize = 256;
-
-const DEFAULT_CONNECT_TIMEOUT_MS: u64 = 1000;
-const DEFAULT_OVERALL_TIMEOUT_MS: u64 = 5000;
-
-const DEFAULT_API_DELAY_MS: u64 = 100;
-const DEFAULT_API_BACKOFF: u64 = 45;
-
 #[derive(Deserialize, Default)]
 pub struct Config {
-    concurrency: Option<usize>,
+    #[serde(default = "concurrency")]
+    pub concurrency: u8,
 
-    connect_timeout_ms: Option<u64>,
-    read_timeout_ms: Option<u64>,
+    #[serde(default = "connect_timeout")]
+    pub connect_timeout: Duration,
+    #[serde(default = "read_timeout")]
+    pub read_timeout: Duration,
 
-    api_delay_ms: Option<u64>,
-    api_backoff: Option<u64>,
+    #[serde(default = "api_delay_ms")]
+    pub api_delay_ms: Duration,
+    #[serde(default = "api_backoff")]
+    pub api_backoff: Duration,
 
-    proxy: Option<String>,
+    pub proxy: Option<String>,
+}
+
+fn concurrency() -> u8 {
+    64
+}
+
+fn connect_timeout() -> Duration {
+    Duration::from_secs(1)
+}
+
+fn read_timeout() -> Duration {
+    Duration::from_secs(5)
+}
+
+fn api_delay_ms() -> Duration {
+    Duration::from_millis(100)
+}
+
+fn api_backoff() -> Duration {
+    Duration::from_secs(45)
 }
 
 impl Config {
@@ -52,26 +68,6 @@ impl Config {
         Ok(config)
     }
 
-    pub fn concurrency(&self) -> usize {
-        self.concurrency.unwrap_or(DEFAULT_CONCURRENCY).clamp(1, MAX_CONCURRENCY)
-    }
-
-    pub fn connect_timeout(&self) -> Duration {
-        Duration::from_millis(self.connect_timeout_ms.unwrap_or(DEFAULT_CONNECT_TIMEOUT_MS))
-    }
-
-    pub fn read_timeout(&self) -> Duration {
-        Duration::from_millis(self.read_timeout_ms.unwrap_or(DEFAULT_OVERALL_TIMEOUT_MS))
-    }
-
-    pub fn api_delay(&self) -> Duration {
-        Duration::from_millis(self.api_delay_ms.unwrap_or(DEFAULT_API_DELAY_MS))
-    }
-
-    pub fn api_backoff(&self) -> Duration {
-        Duration::from_secs(self.api_backoff.unwrap_or(DEFAULT_API_BACKOFF))
-    }
-
     pub fn proxy(&self) -> Option<String> {
         self.proxy.clone().map(|proxy| format!("socks5://{proxy}"))
     }
@@ -86,12 +82,12 @@ impl fmt::Display for Config {
         write!(
             f,
             "Concurrent Downloads: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Overall Timeout: {}",
-            self.concurrency(),
-            pd(&self.api_delay()),
-            pd(&self.api_backoff()),
+            self.concurrency,
+            pd(&self.api_delay_ms),
+            pd(&self.api_backoff),
             self.proxy.as_ref().unwrap_or(&String::from("None")),
-            pd(&self.connect_timeout()),
-            pd(&self.read_timeout())
+            pd(&self.connect_timeout),
+            pd(&self.read_timeout)
         )
     }
 }

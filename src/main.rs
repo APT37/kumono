@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
 
     let mut tasks = vec![];
 
-    let sem = Arc::new(Semaphore::new(CONFIG.concurrency()));
+    let sem = Arc::new(Semaphore::new(CONFIG.concurrency.into()));
 
     for file in profile.files {
         let permit = sem.clone().acquire_owned().await;
@@ -51,8 +51,11 @@ async fn main() -> Result<()> {
 
     for task in join_all(tasks).await {
         match task? {
-            Ok(Some(size)) => stats.add_success(size),
-            Ok(None) => stats.add_skipped(),
+            Ok(size) => if size.bytes() >= 0 {
+                stats.add_success(size);
+            } else {
+                stats.add_skipped();
+            }
             Err(err) => {
                 stats.add_failure();
                 error!("{err}");
