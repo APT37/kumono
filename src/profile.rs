@@ -65,7 +65,7 @@ impl<'a> Profile<'a> {
                     );
                     sleep(CONFIG.api_backoff).await;
                 } else {
-                    error!("got unhandled status {status} when requesting {url}");
+                    error!("{url} returned unexpected status: {status}");
                     process::exit(1);
                 }
             }
@@ -196,20 +196,28 @@ impl TargetFile {
     async fn remote_size(&self) -> Result<u64> {
         let res = CLIENT.head(&self.url).send().await?;
 
-        if res.status().as_u16() != 200 {
-            return Err(anyhow!("unexpected status code while determining remote size"));
+        let status = res.status();
+
+        if status.as_u16() != 200 {
+            return Err(
+                anyhow!(
+                    "failed to determine remote size, received unexpected status code: {status}"
+                )
+            );
         }
 
         match res.content_length() {
             Some(length) => Ok(length),
-            None => Err(anyhow!("Content-Length header is not present")),
+            None =>
+                Err(
+                    anyhow!("failed to determine remote size: Content-Length header is not present")
+                ),
         }
     }
 
     async fn download_range(&self, file: &mut File, start: u64, end: u64) -> Result<()> {
         let mut stream = CLIENT.get(&self.url)
             .header("Range", format!("bytes={start}-{end}"))
-
             .send().await?
             .bytes_stream();
 
