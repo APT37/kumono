@@ -54,7 +54,11 @@ async fn main() -> Result<()> {
         match task? {
             Ok(dl_state) => stats.update(dl_state),
             Err(err) => {
-                error!("{err}");
+                error!("{err}{}", if let Some(s) = err.source() {
+                    format!("\n{s}")
+                } else {
+                    String::new()
+                });
                 stats.update(DownloadState::Fail(Size::default()));
             }
         }
