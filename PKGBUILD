@@ -1,5 +1,5 @@
 pkgname=coomer-rip
-pkgver=0.11.1
+pkgver=0.11.2
 pkgrel=1
 pkgdesc="Media ripper for coomer.su and kemono.su"
 arch=('x86_64')

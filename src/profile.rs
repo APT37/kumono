@@ -53,20 +53,22 @@ impl<'a> Profile<'a> {
 
                 let response = CLIENT.get(&url).send().await?;
 
-                let status = response.status();
-
-                if status == StatusCode::OK {
-                    posts = response.json().await?;
-                    break;
-                } else if status == StatusCode::TOO_MANY_REQUESTS {
-                    warn!(
-                        "hit rate-limiting at offset {offset}, sleeping for {}",
-                        pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
-                    );
-                    sleep(CONFIG.api_backoff).await;
-                } else {
-                    error!("{url} returned unexpected status: {status}");
-                    process::exit(1);
+                match response.status() {
+                    StatusCode::OK => {
+                        posts = response.json().await?;
+                        break;
+                    }
+                    StatusCode::TOO_MANY_REQUESTS => {
+                        warn!(
+                            "hit rate-limit at offset {offset}, sleeping for {}",
+                            pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
+                        );
+                        sleep(CONFIG.api_backoff).await;
+                    }
+                    status => {
+                        error!("{url} returned unexpected status: {status}");
+                        process::exit(1);
+                    }
                 }
             }
 
@@ -163,24 +165,30 @@ impl TargetFile {
 
         let mut local = initial_size;
 
-        let remote = self.remote_size().await?;
+        let remote = match self.remote_size().await {
+            Ok(size) => size,
+            Err(err) => {
+                error!("{err}");
+                return Ok(DownloadState::Fail(Size::default()));
+            }
+        };
+
+        let name_size = format!("{} ({})", self.name, s(remote));
 
         if local == remote {
-            debug!("skipping {} ({})", self.name, s(remote));
-
+            debug!("skipping {name_size}");
             return Ok(DownloadState::Skip);
         }
 
         if local == 0 {
-            info!("downloading {} ({})", self.name, s(remote));
+            info!("downloading {name_size}");
         } else {
-            info!("resuming {} ({}) [{} remaining]", self.name, s(remote), s(remote - local));
+            info!("resuming {name_size} [{} remaining]", s(remote - local));
         }
 
         loop {
             if let Err(err) = self.download_range(&mut file, local, remote - 1).await {
                 error!("{err}");
-
                 return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
             }
 
@@ -190,14 +198,12 @@ impl TargetFile {
                 }
                 Err(err) => {
                     error!("{err}");
-
                     return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
                 }
             }
 
             if local == remote {
                 file.flush().await?;
-
                 break;
             }
         }
@@ -206,22 +212,37 @@ impl TargetFile {
     }
 
     async fn remote_size(&self) -> Result<u64> {
-        let res = CLIENT.head(&self.url).send().await?;
+        loop {
+            let response = CLIENT.head(&self.url).send().await?;
 
-        let status = res.status();
-
-        if status != StatusCode::OK {
-            return Err(
-                anyhow!("failed to determine remote size: received unexpected status code {status}")
-            );
-        }
-
-        match res.content_length() {
-            Some(length) => Ok(length),
-            None =>
-                Err(
-                    anyhow!("failed to determine remote size: Content-Length header is not present")
-                ),
+            match response.status() {
+                StatusCode::OK => {
+                    return match response.content_length() {
+                        Some(length) => Ok(length),
+                        None =>
+                            Err(
+                                anyhow!(
+                                    "failed to determine remote size: Content-Length header is not present"
+                                )
+                            ),
+                    };
+                }
+                StatusCode::TOO_MANY_REQUESTS => {
+                    warn!(
+                        "hit rate-limit at {}, sleeping for {}",
+                        self.url,
+                        pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
+                    );
+                    sleep(CONFIG.api_backoff).await;
+                }
+                status => {
+                    error!(
+                        "failed to determine remote size: {} returned unexpected status: {status}",
+                        self.url
+                    );
+                    process::exit(1);
+                }
+            }
         }
     }
 
@@ -234,8 +255,6 @@ impl TargetFile {
         while let Some(Ok(bytes)) = stream.next().await {
             file.write_all(&bytes).await?;
         }
-
-        // file.flush().await?;
 
         Ok(())
     }
