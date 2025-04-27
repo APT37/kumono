@@ -166,7 +166,7 @@ impl TargetFile {
         let remote = self.remote_size().await?;
 
         if local == remote {
-            info!("skipping {} ({})", self.name, s(remote));
+            debug!("skipping {} ({})", self.name, s(remote));
 
             return Ok(DownloadState::Skip);
         }
