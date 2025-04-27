@@ -165,13 +165,7 @@ impl TargetFile {
 
         let mut local = initial_size;
 
-        let remote = match self.remote_size().await {
-            Ok(size) => size,
-            Err(err) => {
-                error!("{err}");
-                return Ok(DownloadState::Fail(Size::default()));
-            }
-        };
+        let remote = self.remote_size().await?;
 
         let name_size = format!("{} ({})", self.name, s(remote));
 

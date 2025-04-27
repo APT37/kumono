@@ -1,9 +1,10 @@
-use crate::{ config::CONFIG, profile::Profile, stats::Stats };
-use anyhow::{ anyhow, Result };
+use crate::{ config::CONFIG, profile::Profile, stats::{ DownloadState, Stats } };
+use anyhow::Result;
 use futures::future::join_all;
 use log::{ error, info };
 use num_format::{ Locale, ToFormattedString };
-use std::sync::Arc;
+use size::Size;
+use std::{ process, sync::Arc };
 use tokio::{ fs, sync::Semaphore, task };
 
 mod client;
@@ -52,7 +53,10 @@ async fn main() -> Result<()> {
     for task in join_all(tasks).await {
         match task? {
             Ok(dl_state) => stats.update(dl_state),
-            Err(err) => error!("{err}"),
+            Err(err) => {
+                error!("{err}");
+                stats.update(DownloadState::Fail(Size::default()));
+            }
         }
     }
 
@@ -60,9 +64,9 @@ async fn main() -> Result<()> {
 
     let _ = fs::remove_dir(&args[2]).await;
 
-    if stats.failure == 0 {
-        Ok(())
-    } else {
-        Err(anyhow!(""))
+    if stats.failure != 0 {
+        process::exit(1);
     }
+
+    Ok(())
 }
