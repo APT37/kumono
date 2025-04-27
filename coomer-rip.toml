@@ -6,4 +6,6 @@
 # api_delay_ms = 100
 # api_backoff = 45
 
+# download_backoff = 15
+
 # proxy = "10.64.0.1:1080"

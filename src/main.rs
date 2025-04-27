@@ -1,5 +1,5 @@
 use crate::{ config::CONFIG, profile::Profile, stats::Stats };
-use anyhow::Result;
+use anyhow::{ anyhow, Result };
 use futures::future::join_all;
 use log::{ error, info };
 use num_format::{ Locale, ToFormattedString };
@@ -60,5 +60,9 @@ async fn main() -> Result<()> {
 
     let _ = fs::remove_dir(&args[2]).await;
 
-    Ok(())
+    if stats.failure == 0 {
+        Ok(())
+    } else {
+        Err(anyhow!(""))
+    }
 }

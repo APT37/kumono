@@ -26,6 +26,9 @@ pub struct Config {
     #[serde(default = "api_backoff")]
     pub api_backoff: Duration,
 
+    #[serde(default = "download_backoff")]
+    pub download_backoff: Duration,
+
     pub proxy: Option<String>,
 }
 
@@ -47,6 +50,10 @@ fn api_delay_ms() -> Duration {
 
 fn api_backoff() -> Duration {
     Duration::from_secs(45)
+}
+
+fn download_backoff() -> Duration {
+    Duration::from_secs(15)
 }
 
 impl Config {
@@ -81,13 +88,14 @@ impl fmt::Display for Config {
 
         write!(
             f,
-            "Concurrent Downloads: {} / Delay: {} / Backoff: {} / Proxy: {} / Connect Timeout: {} / Overall Timeout: {}",
+            "Concurrent Downloads: {} / API Delay: {} / API Backoff: {} / Proxy: {} / Connect Timeout: {} / Overall Timeout: {} / Download Backoff: {}",
             self.concurrency,
             pd(&self.api_delay_ms),
             pd(&self.api_backoff),
             self.proxy.as_ref().unwrap_or(&String::from("None")),
             pd(&self.connect_timeout),
-            pd(&self.read_timeout)
+            pd(&self.read_timeout),
+            pd(&self.download_backoff)
         )
     }
 }

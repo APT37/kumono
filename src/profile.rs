@@ -189,7 +189,7 @@ impl TargetFile {
         loop {
             if let Err(err) = self.download_range(&mut file, local, remote - 1).await {
                 error!("{err}");
-                return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
+                return Ok(DownloadState::Fail(s(local - initial_size)));
             }
 
             match file.seek(SeekFrom::End(0)).await {
@@ -198,7 +198,7 @@ impl TargetFile {
                 }
                 Err(err) => {
                     error!("{err}");
-                    return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
+                    return Ok(DownloadState::Fail(s(local - initial_size)));
                 }
             }
 
@@ -231,9 +231,9 @@ impl TargetFile {
                     warn!(
                         "hit rate-limit at {}, sleeping for {}",
                         self.url,
-                        pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
+                        pretty_duration::pretty_duration(&CONFIG.download_backoff, None)
                     );
-                    sleep(CONFIG.api_backoff).await;
+                    sleep(CONFIG.download_backoff).await;
                 }
                 status => {
                     error!(

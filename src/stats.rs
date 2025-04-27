@@ -10,10 +10,10 @@ pub enum DownloadState {
 
 #[derive(Default)]
 pub struct Stats {
-    success: usize,
-    skipped: usize,
-    failure: usize,
-    dl_size: i64,
+    pub success: usize,
+    pub skipped: usize,
+    pub failure: usize,
+    pub dl_size: i64,
 }
 
 impl Stats {
