@@ -206,6 +206,8 @@ impl TargetFile {
     }
 
     async fn remote_size(&self) -> Result<u64> {
+        let mut first_error = true;
+
         loop {
             let response = CLIENT.head(&self.url).send().await?;
 
@@ -228,6 +230,23 @@ impl TargetFile {
                         pretty_duration::pretty_duration(&CONFIG.download_backoff, None)
                     );
                     sleep(CONFIG.download_backoff).await;
+                }
+                StatusCode::GATEWAY_TIMEOUT => {
+                    if first_error {
+                        first_error = false;
+                        warn!(
+                            "gateway timed out at {}, sleeping for {}",
+                            self.url,
+                            pretty_duration::pretty_duration(&CONFIG.download_backoff, None)
+                        );
+                        sleep(CONFIG.download_backoff).await;
+                    } else {
+                        error!(
+                            "failed to determine remote size: gateway timed out repeatedly ({})",
+                            self.url
+                        );
+                        process::exit(1);
+                    }
                 }
                 status => {
                     error!(
