@@ -163,18 +163,16 @@ impl TargetFile {
 
         let remote = self.remote_size().await?;
 
-        let left = remote - local;
-
-        if left == 0 {
+        if local == remote {
             info!("skipping {} ({})", self.name, s(remote));
 
             return Ok(Size::from_bytes(-1));
         }
 
-        if left == remote {
+        if local == 0 {
             info!("downloading {} ({})", self.name, s(remote));
         } else {
-            info!("resuming {} ({}) [{} remaining]", self.name, s(remote), s(left));
+            info!("resuming {} ({}) [{} remaining]", self.name, s(remote), s(remote - local));
         }
 
         loop {
@@ -198,11 +196,9 @@ impl TargetFile {
 
         let status = res.status();
 
-        if status.as_u16() != 200 {
+        if status != StatusCode::OK {
             return Err(
-                anyhow!(
-                    "failed to determine remote size: received unexpected status code {status}"
-                )
+                anyhow!("failed to determine remote size: received unexpected status code {status}")
             );
         }
 
