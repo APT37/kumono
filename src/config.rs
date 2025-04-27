@@ -88,7 +88,7 @@ impl fmt::Display for Config {
 
         write!(
             f,
-            "Concurrent Downloads: {} / API Delay: {} / API Backoff: {} / Proxy: {} / Connect Timeout: {} / Overall Timeout: {} / Download Backoff: {}",
+            "Concurrency: {} / API: (Delay: {} / Backoff: {}) / Proxy: {} / Timeouts: (Connect: {} / Overall: {}) / Download Backoff: {}",
             self.concurrency,
             pd(&self.api_delay_ms),
             pd(&self.api_backoff),
