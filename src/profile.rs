@@ -241,19 +241,21 @@ impl TargetFile {
                         );
                         sleep(CONFIG.download_backoff).await;
                     } else {
-                        error!(
-                            "failed to determine remote size: gateway timed out repeatedly ({})",
-                            self.url
+                        return Err(
+                            anyhow!(
+                                "failed to determine remote size: gateway timed out repeatedly ({})",
+                                self.url
+                            )
                         );
-                        process::exit(1);
                     }
                 }
                 status => {
-                    error!(
-                        "failed to determine remote size: {} returned unexpected status: {status}",
-                        self.url
+                    return Err(
+                        anyhow!(
+                            "failed to determine remote size: {} returned unexpected status: {status}",
+                            self.url
+                        )
                     );
-                    process::exit(1);
                 }
             }
         }
