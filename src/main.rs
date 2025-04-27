@@ -47,19 +47,12 @@ async fn main() -> Result<()> {
         );
     }
 
-    let mut stats = Stats::new();
+    let mut stats = Stats::default();
 
     for task in join_all(tasks).await {
         match task? {
-            Ok(size) => if size.bytes() >= 0 {
-                stats.add_success(size);
-            } else {
-                stats.add_skipped();
-            }
-            Err(err) => {
-                stats.add_failure();
-                error!("{err}");
-            }
+            Ok(dl_state) => stats.update(dl_state),
+            Err(err) => error!("{err}"),
         }
     }
 

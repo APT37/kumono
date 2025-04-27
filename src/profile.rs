@@ -1,4 +1,4 @@
-use crate::{ client::CLIENT, config::CONFIG, n_fmt };
+use crate::{ client::CLIENT, config::CONFIG, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use log::{ debug, error, info, warn };
@@ -150,7 +150,7 @@ impl TargetFile {
         }
     }
 
-    pub async fn download(&self) -> Result<Size> {
+    pub async fn download(&self) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
         let mut file = File::options()
@@ -159,14 +159,16 @@ impl TargetFile {
             .truncate(false)
             .open(&self.fs_path).await?;
 
-        let mut local = file.seek(SeekFrom::End(0)).await?;
+        let initial_size = file.seek(SeekFrom::End(0)).await?;
+
+        let mut local = initial_size;
 
         let remote = self.remote_size().await?;
 
         if local == remote {
             info!("skipping {} ({})", self.name, s(remote));
 
-            return Ok(Size::from_bytes(-1));
+            return Ok(DownloadState::Skip);
         }
 
         if local == 0 {
@@ -176,9 +178,22 @@ impl TargetFile {
         }
 
         loop {
-            self.download_range(&mut file, local, remote - 1).await?;
+            if let Err(err) = self.download_range(&mut file, local, remote - 1).await {
+                error!("{err}");
 
-            local = file.seek(SeekFrom::End(0)).await?;
+                return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
+            }
+
+            match file.seek(SeekFrom::End(0)).await {
+                Ok(pos) => {
+                    local = pos;
+                }
+                Err(err) => {
+                    error!("{err}");
+
+                    return Ok(DownloadState::Fail(Size::from_bytes(local - initial_size)));
+                }
+            }
 
             if local == remote {
                 file.flush().await?;
@@ -187,8 +202,7 @@ impl TargetFile {
             }
         }
 
-        // broken
-        Ok(Size::default())
+        Ok(DownloadState::Success(Size::from_bytes(local - initial_size)))
     }
 
     async fn remote_size(&self) -> Result<u64> {
