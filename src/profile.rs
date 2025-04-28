@@ -5,7 +5,7 @@ use log::{ debug, error, info, warn };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
-use std::{ io::SeekFrom, path::PathBuf, process };
+use std::{ io::SeekFrom, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
 pub struct Profile<'a> {
@@ -66,8 +66,7 @@ impl<'a> Profile<'a> {
                         sleep(CONFIG.api_backoff).await;
                     }
                     status => {
-                        error!("{url} returned unexpected status: {status}");
-                        process::exit(1);
+                        return Err(anyhow!("{url} returned unexpected status: {status}"));
                     }
                 }
             }
@@ -182,7 +181,11 @@ impl TargetFile {
 
         loop {
             if let Err(err) = self.download_range(&mut file, local, remote - 1).await {
-                error!("{err}");
+                error!("{err}{}", if let Some(s) = err.source() {
+                    format!("\n{s}")
+                } else {
+                    String::new()
+                });
                 return Ok(DownloadState::Fail(s(local - initial_size)));
             }
 
