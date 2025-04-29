@@ -1,16 +1,42 @@
-use crate::usage::usage;
-use std::{ env, process };
+use clap::{ arg, Parser, ValueEnum };
+use serde::Deserialize;
+use std::sync::LazyLock;
+use strum_macros::Display;
 
-pub fn args() -> Vec<String> {
-    let args: Vec<_> = env
-        ::args()
-        .filter(|arg| !arg.is_empty())
-        .collect();
+pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
-    if args.len() != 3 {
-        usage();
-        process::exit(1);
+#[derive(Deserialize, Parser)]
+pub struct Args {
+    #[arg(short, long)]
+    pub service: Service,
+
+    #[arg(short = 'i', long = "id")]
+    pub creator: String,
+}
+
+#[allow(non_camel_case_types)]
+#[derive(Deserialize, Display, Clone, Copy, ValueEnum)]
+pub enum Service {
+    boosty,
+    candfans,
+    discord,
+    dlsite,
+    fanBox,
+    fansly,
+    fantia,
+    gumroad,
+    onlyfans,
+    patreon,
+    subscribestar,
+}
+
+impl Service {
+    pub fn site(self) -> &'static str {
+        use Service::{ candfans, fansly, onlyfans };
+
+        match self {
+            candfans | fansly | onlyfans => "coomer",
+            _ => "kemono",
+        }
     }
-
-    args
 }

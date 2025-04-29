@@ -1,7 +1,8 @@
-use crate::{ client::CLIENT, config::CONFIG, n_fmt, stats::DownloadState };
+use crate::{ client::CLIENT, config::CONFIG, input::Service, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use log::{ debug, error, info, warn };
+use pretty_duration::pretty_duration;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
@@ -9,17 +10,17 @@ use std::{ io::SeekFrom, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
 pub struct Profile<'a> {
-    service: &'a str,
-    creator: &'a str,
-    pub posts: Vec<Post>,
-    pub files: Vec<TargetFile>,
+    service: Service,
+    creator_id: &'a str,
+    posts: Vec<Post>,
+    pub files: Vec<PostFile>,
 }
 
 impl<'a> Profile<'a> {
-    pub async fn new(service: &'a str, creator: &'a str) -> Result<Self> {
+    pub async fn new(service: Service, creator_id: &'a str) -> Result<Self> {
         let mut profile = Self {
             service,
-            creator,
+            creator_id,
             posts: vec![],
             files: vec![],
         };
@@ -36,13 +37,13 @@ impl<'a> Profile<'a> {
         Ok(profile)
     }
 
-    pub async fn init_posts(&mut self) -> Result<()> {
-        info!("fetching posts for {}/{}", self.service, self.creator);
+    async fn init_posts(&mut self) -> Result<()> {
+        info!("fetching posts for {}/{}", self.service, self.creator_id);
 
         let mut offset = 0;
 
         loop {
-            debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator);
+            debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator_id);
 
             let mut posts: Vec<Post>;
 
@@ -84,7 +85,12 @@ impl<'a> Profile<'a> {
     }
 
     fn api_url_with_offset(&self, offset: u32) -> String {
-        format!("https://coomer.su/api/v1/{}/user/{}?o={offset}", self.service, self.creator)
+        format!(
+            "https://{}.su/api/v1/{}/user/{}?o={offset}",
+            self.service.site(),
+            self.service,
+            self.creator_id
+        )
     }
 
     fn init_files(&mut self) {
@@ -99,74 +105,75 @@ impl<'a> Profile<'a> {
 }
 
 #[derive(Deserialize, Clone)]
-pub struct Post {
+struct Post {
     // id: String,   // "1000537173"
-    pub user: String, // "paigetheuwulord"
-    // service: String,  // "onlyfans"
+    // this is the creator_id
+    // user: String, // "paigetheuwulord"
+    // service: Service, // "onlyfans"
     // title: String,     // "What an ass"
     file: PostFile,
     attachments: Vec<PostFile>,
 }
 
 impl Post {
-    pub fn files(mut self) -> Vec<TargetFile> {
+    fn files(mut self) -> Vec<PostFile> {
         let mut files = vec![self.file];
-
         files.append(&mut self.attachments);
-
+        files.retain(|pf| pf.path.is_some());
         files
-            .into_iter()
-            .filter_map(|f| {
-                if let (Some(name), Some(path)) = (f.name, f.path) {
-                    Some(TargetFile::new(&self.user, &name, &path))
-                } else {
-                    None
-                }
-            })
-            .collect()
     }
 }
 
-#[derive(Deserialize, Clone)]
-struct PostFile {
-    name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",
+#[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PostFile {
+    // original file name
+    // name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",
+
+    // remote file path, name is the file's sha256 hash
     path: Option<String>, // "/6e/6c/6e6cf84df44c1d091a2e36b6df77b098107c18831833de1e2e9c8207206f150b.jpg"
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TargetFile {
-    name: String,
-    url: String, // "https://coomer.su/data/6e/6c/6e6cf84df44c1d091a2e36b6df77b098107c18831833de1e2e9c8207206f150b.jpg"
-    fs_path: PathBuf,
-}
-
-impl TargetFile {
-    fn new(creator: &str, filename: &str, path: &str) -> Self {
-        Self {
-            name: filename.to_string(),
-
-            url: format!("https://coomer.su/data{path}"),
-
-            fs_path: PathBuf::from_iter([creator, filename]),
-        }
+impl PostFile {
+    fn to_url(&self, service: Service) -> String {
+        format!("https://{}.su/data{}", service.site(), self.path.as_ref().unwrap())
     }
 
-    pub async fn download(&self) -> Result<DownloadState> {
+    fn to_pathbuf(&self, creator_id: &str) -> PathBuf {
+        PathBuf::from_iter([
+            creator_id,
+            self.path
+                .as_ref()
+                .unwrap()
+                .split('/')
+                .next_back()
+                .expect("get local name from split remote path"),
+        ])
+    }
+
+    pub async fn download(&self, service: Service, creator_id: &str) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
         let mut file = File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.fs_path).await?;
+            .open(&self.to_pathbuf(creator_id)).await?;
 
         let initial_size = file.seek(SeekFrom::End(0)).await?;
 
         let mut local = initial_size;
 
-        let remote = self.remote_size().await?;
+        let remote = self.remote_size(service).await?;
 
-        let name_size = format!("{} ({})", self.name, s(remote));
+        let name_size = format!(
+            "{} ({})",
+            self
+                .to_pathbuf(creator_id)
+                .file_name()
+                .expect("get local file name from pathbuf")
+                .to_string_lossy(),
+            s(remote)
+        );
 
         if local == remote {
             debug!("skipping {name_size}");
@@ -180,7 +187,7 @@ impl TargetFile {
         }
 
         loop {
-            if let Err(err) = self.download_range(&mut file, local, remote - 1).await {
+            if let Err(err) = self.download_range(&mut file, service, local, remote - 1).await {
                 error!("{err}{}", if let Some(s) = err.source() {
                     format!("\n{s}")
                 } else {
@@ -208,64 +215,73 @@ impl TargetFile {
         Ok(DownloadState::Success(Size::from_bytes(local - initial_size)))
     }
 
-    async fn remote_size(&self) -> Result<u64> {
+    async fn warn_and_sleep(&self, status: StatusCode) {
+        warn!(
+            "[{status}] ({}) sleeping for {}",
+            self.path.as_ref().unwrap(),
+            pretty_duration(&CONFIG.download_backoff, None)
+        );
+
+        sleep(CONFIG.download_backoff).await;
+    }
+
+    async fn remote_size(&self, service: Service) -> Result<u64> {
+        fn size_error(url: &str, status: StatusCode, message: &str) -> Result<u64> {
+            Err(anyhow!("[{status}] ({url}) failed to determine remote size: {message}"))
+        }
+
         let mut first_error = true;
 
         loop {
-            let response = CLIENT.head(&self.url).send().await?;
+            let response = CLIENT.head(self.to_url(service)).send().await?;
 
-            match response.status() {
+            let status = response.status();
+
+            match status {
                 StatusCode::OK => {
                     return match response.content_length() {
                         Some(length) => Ok(length),
-                        None =>
-                            Err(
-                                anyhow!(
-                                    "failed to determine remote size: Content-Length header is not present"
-                                )
-                            ),
+                        None => {
+                            return size_error(
+                                self.path.as_ref().unwrap(),
+                                status,
+                                "Content-Length header is not present"
+                            );
+                        }
                     };
                 }
-                StatusCode::TOO_MANY_REQUESTS => {
-                    warn!(
-                        "hit rate-limit at {}, sleeping for {}",
-                        self.url,
-                        pretty_duration::pretty_duration(&CONFIG.download_backoff, None)
-                    );
-                    sleep(CONFIG.download_backoff).await;
-                }
-                StatusCode::GATEWAY_TIMEOUT => {
+                StatusCode::TOO_MANY_REQUESTS => self.warn_and_sleep(status).await,
+                StatusCode::INTERNAL_SERVER_ERROR | StatusCode::GATEWAY_TIMEOUT => {
                     if first_error {
                         first_error = false;
-                        warn!(
-                            "gateway timed out at {}, sleeping for {}",
-                            self.url,
-                            pretty_duration::pretty_duration(&CONFIG.download_backoff, None)
-                        );
-                        sleep(CONFIG.download_backoff).await;
+                        self.warn_and_sleep(status).await;
                     } else {
-                        return Err(
-                            anyhow!(
-                                "failed to determine remote size: gateway timed out repeatedly ({})",
-                                self.url
-                            )
-                        );
+                        size_error(
+                            self.path.as_ref().unwrap(),
+                            status,
+                            "server returned errors repeatedly"
+                        )?;
                     }
                 }
-                status => {
-                    return Err(
-                        anyhow!(
-                            "failed to determine remote size: {} returned unexpected status: {status}",
-                            self.url
-                        )
+                _ => {
+                    return size_error(
+                        self.path.as_ref().unwrap(),
+                        status,
+                        "received unexpected status code"
                     );
                 }
             }
         }
     }
 
-    async fn download_range(&self, file: &mut File, start: u64, end: u64) -> Result<()> {
-        let mut stream = CLIENT.get(&self.url)
+    async fn download_range(
+        &self,
+        file: &mut File,
+        service: Service,
+        start: u64,
+        end: u64
+    ) -> Result<()> {
+        let mut stream = CLIENT.get(self.to_url(service))
             .header("Range", format!("bytes={start}-{end}"))
             .send().await?
             .bytes_stream();

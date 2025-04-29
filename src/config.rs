@@ -12,7 +12,7 @@ pub static CONFIG: LazyLock<Config> = LazyLock::new(|| {
 });
 
 #[derive(Deserialize, Default)]
-pub struct Config {
+pub struct Config {    
     #[serde(default = "concurrency")]
     pub concurrency: u8,
 

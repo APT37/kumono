@@ -1,4 +1,4 @@
-use crate::{ config::CONFIG, profile::Profile, stats::{ DownloadState, Stats } };
+use crate::{ config::CONFIG, input::ARGS, profile::Profile, stats::{ DownloadState, Stats } };
 use anyhow::Result;
 use futures::future::join_all;
 use log::{ error, info };
@@ -12,7 +12,6 @@ mod config;
 mod input;
 mod profile;
 mod stats;
-mod usage;
 
 fn n_fmt(n: usize) -> String {
     n.to_formatted_string(&Locale::de)
@@ -22,13 +21,15 @@ fn n_fmt(n: usize) -> String {
 async fn main() -> Result<()> {
     colog::init();
 
-    let args = input::args();
-
     info!("{}", *CONFIG);
 
-    let profile = Profile::new(&args[1], &args[2]).await?;
+    let profile = Profile::new(ARGS.service, &ARGS.creator).await?;
 
-    fs::create_dir_all(&args[2]).await?;
+    if profile.files.is_empty() {
+        return Ok(());
+    }
+
+    fs::create_dir_all(&ARGS.creator).await?;
 
     let mut tasks = vec![];
 
@@ -43,7 +44,7 @@ async fn main() -> Result<()> {
                 #[allow(clippy::no_effect_underscore_binding)]
                 let _permit = permit;
 
-                file.download().await
+                file.download(ARGS.service, &ARGS.creator).await
             })
         );
     }
@@ -66,7 +67,7 @@ async fn main() -> Result<()> {
 
     stats.print();
 
-    let _ = fs::remove_dir(&args[2]).await;
+    let _ = fs::remove_dir(&ARGS.creator).await;
 
     if stats.failure != 0 {
         process::exit(1);
