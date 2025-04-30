@@ -5,6 +5,7 @@ use log::{ debug, error, info, warn };
 use pretty_duration::pretty_duration;
 use reqwest::StatusCode;
 use serde::Deserialize;
+use sha256::async_digest::try_async_digest;
 use size::Size;
 use std::{ io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
@@ -183,7 +184,7 @@ impl PostFile {
         let name_and_size = format!("{name} ({})", s(remote));
 
         if local == remote {
-            return if name[..64] == sha256::try_digest(&self.to_pathbuf(service, creator_id))? {
+            return if name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await? {
                 debug!("skipping {name_and_size}");
                 Ok(DownloadState::Skip)
             } else {
