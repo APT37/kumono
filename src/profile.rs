@@ -217,12 +217,11 @@ impl PostFile {
             }
 
             if local == remote {
-                file.flush().await?;
                 break;
             }
         }
 
-        let downloaded = Size::from_bytes(local - initial_size);
+        let downloaded = s(local - initial_size);
 
         Ok(
             if name[..64] == sha256::try_digest(&self.to_pathbuf(service, creator_id))? {
@@ -309,6 +308,8 @@ impl PostFile {
         while let Some(Ok(bytes)) = stream.next().await {
             file.write_all(&bytes).await?;
         }
+
+        file.flush().await?;
 
         Ok(())
     }
