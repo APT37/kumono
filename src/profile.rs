@@ -6,7 +6,7 @@ use pretty_duration::pretty_duration;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
-use std::{ io::SeekFrom, path::PathBuf };
+use std::{ io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
 pub struct Profile<'a> {
@@ -150,14 +150,26 @@ impl PostFile {
         ])
     }
 
-    pub async fn download(&self, service: Service, creator_id: &str) -> Result<DownloadState> {
-        let s = |n| Size::from_bytes(n);
+    fn to_name(&self, creator_id: &str) -> String {
+        self.to_pathbuf(creator_id)
+            .file_name()
+            .expect("get local file name from pathbuf")
+            .to_string_lossy()
+            .to_string()
+    }
 
-        let mut file = File::options()
+    async fn open(&self, creator_id: &str) -> Result<File, io::Error> {
+        File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_pathbuf(creator_id)).await?;
+            .open(&self.to_pathbuf(creator_id)).await
+    }
+
+    pub async fn download(&self, service: Service, creator_id: &str) -> Result<DownloadState> {
+        let s = |n| Size::from_bytes(n);
+
+        let mut file = self.open(creator_id).await?;
 
         let initial_size = file.seek(SeekFrom::End(0)).await?;
 
@@ -165,25 +177,21 @@ impl PostFile {
 
         let remote = self.remote_size(service).await?;
 
-        let name_size = format!(
-            "{} ({})",
-            self
-                .to_pathbuf(creator_id)
-                .file_name()
-                .expect("get local file name from pathbuf")
-                .to_string_lossy(),
-            s(remote)
-        );
+        let name = self.to_name(creator_id);
+
+        let name_and_size = format!("{name} ({})", s(remote));
 
         if local == remote {
-            debug!("skipping {name_size}");
-            return Ok(DownloadState::Skip);
-        }
-
-        if local == 0 {
-            info!("downloading {name_size}");
+            return if name[..64] == sha256::try_digest(&self.to_pathbuf(creator_id))? {
+                debug!("skipping {name_and_size}");
+                Ok(DownloadState::Skip)
+            } else {
+                Err(anyhow!("hash mismatch: {name}"))
+            };
+        } else if local == 0 {
+            info!("downloading {name_and_size}");
         } else {
-            info!("resuming {name_size} [{} remaining]", s(remote - local));
+            info!("resuming {name_and_size} [{} remaining]", s(remote - local));
         }
 
         loop {
@@ -193,7 +201,7 @@ impl PostFile {
                 } else {
                     String::new()
                 });
-                return Ok(DownloadState::Fail(s(local - initial_size)));
+                return Ok(DownloadState::Failure(s(local - initial_size)));
             }
 
             match file.seek(SeekFrom::End(0)).await {
@@ -202,7 +210,7 @@ impl PostFile {
                 }
                 Err(err) => {
                     error!("{err}");
-                    return Ok(DownloadState::Fail(s(local - initial_size)));
+                    return Ok(DownloadState::Failure(s(local - initial_size)));
                 }
             }
 
@@ -212,7 +220,17 @@ impl PostFile {
             }
         }
 
-        Ok(DownloadState::Success(Size::from_bytes(local - initial_size)))
+        let downloaded = Size::from_bytes(local - initial_size);
+
+        Ok(
+            if name[..64] == sha256::try_digest(&self.to_pathbuf(creator_id))? {
+                debug!("skipping {name_and_size}");
+                DownloadState::Success(downloaded)
+            } else {
+                error!("hash mismatch: {name}");
+                DownloadState::Failure(downloaded)
+            }
+        )
     }
 
     async fn warn_and_sleep(&self, status: StatusCode) {

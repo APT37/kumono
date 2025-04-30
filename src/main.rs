@@ -60,7 +60,7 @@ async fn main() -> Result<()> {
                 } else {
                     String::new()
                 });
-                stats.update(DownloadState::Fail(Size::default()));
+                stats.update(DownloadState::Failure(Size::default()));
             }
         }
     }

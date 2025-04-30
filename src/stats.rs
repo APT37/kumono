@@ -3,7 +3,7 @@ use log::info;
 use size::Size;
 
 pub enum DownloadState {
-    Fail(Size),
+    Failure(Size),
     Skip,
     Success(Size),
 }
@@ -20,7 +20,7 @@ impl Stats {
     #[allow(clippy::needless_pass_by_value)]
     pub fn update(&mut self, state: DownloadState) {
         match state {
-            DownloadState::Fail(size) => self.add_failure(size),
+            DownloadState::Failure(size) => self.add_failure(size),
             DownloadState::Skip => self.add_skipped(),
             DownloadState::Success(size) => self.add_success(size),
         }

@@ -1,6 +1,6 @@
 [package]
 name = "coomer_rip"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 
@@ -45,6 +45,7 @@ reqwest = { version = "0.12.*", default-features = false, features = [
     "stream",
 ] }
 serde = { version = "1.0.*", features = ["derive"] }
+sha256 = "1.6.*"
 size = "0.5.*"
 strum_macros = "0.27.*"
 tokio = { version = "1.44.*", features = ["full"] }
