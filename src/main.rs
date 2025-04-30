@@ -1,4 +1,4 @@
-use crate::{ config::CONFIG, input::ARGS, profile::Profile, stats::{ DownloadState, Stats } };
+use crate::{ cli::ARGS, profile::Profile, stats::{ DownloadState, Stats } };
 use anyhow::Result;
 use futures::future::join_all;
 use log::{ error, info };
@@ -8,8 +8,7 @@ use std::{ path::PathBuf, process, sync::Arc };
 use tokio::{ fs, sync::Semaphore, task };
 
 mod client;
-mod config;
-mod input;
+mod cli;
 mod profile;
 mod stats;
 
@@ -21,7 +20,7 @@ fn n_fmt(n: usize) -> String {
 async fn main() -> Result<()> {
     colog::init();
 
-    info!("{}", *CONFIG);
+    info!("{}", *ARGS);
 
     let profile = Profile::new(ARGS.service, &ARGS.creator).await?;
 
@@ -35,7 +34,7 @@ async fn main() -> Result<()> {
 
     let mut tasks = vec![];
 
-    let sem = Arc::new(Semaphore::new(CONFIG.concurrency.into()));
+    let sem = Arc::new(Semaphore::new(ARGS.threads.into()));
 
     for file in profile.files {
         let permit = sem.clone().acquire_owned().await;

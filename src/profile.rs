@@ -1,4 +1,4 @@
-use crate::{ client::CLIENT, config::CONFIG, input::Service, n_fmt, stats::DownloadState };
+use crate::{ cli::{ ARGS, Service }, client::CLIENT, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use log::{ debug, error, info, warn };
@@ -8,7 +8,9 @@ use serde::Deserialize;
 use sha256::async_digest::try_async_digest;
 use size::Size;
 use std::{ io::{ self, SeekFrom }, path::PathBuf };
-use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
+use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
+
+const API_DELAY: Duration = Duration::from_millis(100);
 
 pub struct Profile<'a> {
     service: Service,
@@ -51,7 +53,7 @@ impl<'a> Profile<'a> {
             let url = self.api_url_with_offset(offset);
 
             loop {
-                sleep(CONFIG.api_delay_ms).await;
+                sleep(API_DELAY).await;
 
                 let response = CLIENT.get(&url).send().await?;
 
@@ -63,9 +65,9 @@ impl<'a> Profile<'a> {
                     StatusCode::TOO_MANY_REQUESTS => {
                         warn!(
                             "hit rate-limit at offset {offset}, sleeping for {}",
-                            pretty_duration::pretty_duration(&CONFIG.api_backoff, None)
+                            pretty_duration::pretty_duration(&ARGS.api_backoff, None)
                         );
-                        sleep(CONFIG.api_backoff).await;
+                        sleep(ARGS.api_backoff).await;
                     }
                     status => {
                         return Err(anyhow!("{url} returned unexpected status: {status}"));
@@ -264,10 +266,10 @@ impl PostFile {
         warn!(
             "[{status}] ({}) sleeping for {}",
             self.path.as_ref().unwrap(),
-            pretty_duration(&CONFIG.download_backoff, None)
+            pretty_duration(&ARGS.download_backoff, None)
         );
 
-        sleep(CONFIG.download_backoff).await;
+        sleep(ARGS.download_backoff).await;
     }
 
     async fn remote_size(&self, service: Service) -> Result<u64> {
