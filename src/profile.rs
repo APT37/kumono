@@ -234,6 +234,32 @@ impl PostFile {
         )
     }
 
+    async fn download_range(
+        &self,
+        file: &mut File,
+        service: Service,
+        start: u64,
+        end: u64
+    ) -> Result<()> {
+        let url = self.to_url(service);
+
+        let response = CLIENT.get(&url)
+            .header("Range", format!("bytes={start}-{end}"))
+            .send().await?;
+
+        if response.status() == StatusCode::PARTIAL_CONTENT {
+            let mut stream = response.bytes_stream();
+
+            while let Some(Ok(bytes)) = stream.next().await {
+                file.write_all(&bytes).await?;
+            }
+
+            file.flush().await?;
+        }
+
+        Ok(())
+    }
+
     async fn warn_and_sleep(&self, status: StatusCode) {
         warn!(
             "[{status}] ({}) sleeping for {}",
@@ -291,26 +317,5 @@ impl PostFile {
                 }
             }
         }
-    }
-
-    async fn download_range(
-        &self,
-        file: &mut File,
-        service: Service,
-        start: u64,
-        end: u64
-    ) -> Result<()> {
-        let mut stream = CLIENT.get(self.to_url(service))
-            .header("Range", format!("bytes={start}-{end}"))
-            .send().await?
-            .bytes_stream();
-
-        while let Some(Ok(bytes)) = stream.next().await {
-            file.write_all(&bytes).await?;
-        }
-
-        file.flush().await?;
-
-        Ok(())
     }
 }

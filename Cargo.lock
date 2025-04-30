@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "coomer_rip"
-version = "0.15.3"
+version = "0.15.4"
 dependencies = [
  "anyhow",
  "clap",
