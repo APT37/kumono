@@ -187,7 +187,7 @@ impl PostFile {
                 debug!("skipping {name_and_size}");
                 Ok(DownloadState::Skip)
             } else {
-                Err(anyhow!("hash mismatch: {name}"))
+                Err(anyhow!("hash mismatch: {name} (before)"))
             };
         } else if local == 0 {
             info!("downloading {name_and_size}");
@@ -228,7 +228,7 @@ impl PostFile {
                 debug!("skipping {name_and_size}");
                 DownloadState::Success(downloaded)
             } else {
-                error!("hash mismatch: {name}");
+                error!("hash mismatch: {name} (after)");
                 DownloadState::Failure(downloaded)
             }
         )
