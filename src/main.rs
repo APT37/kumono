@@ -4,7 +4,7 @@ use futures::future::join_all;
 use log::{ error, info };
 use num_format::{ Locale, ToFormattedString };
 use size::Size;
-use std::{ process, sync::Arc };
+use std::{ path::PathBuf, process, sync::Arc };
 use tokio::{ fs, sync::Semaphore, task };
 
 mod client;
@@ -29,7 +29,9 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    fs::create_dir_all(&ARGS.creator).await?;
+    let path = PathBuf::from_iter([&ARGS.service.to_string(), &ARGS.creator]);
+
+    fs::create_dir_all(&path).await?;
 
     let mut tasks = vec![];
 
@@ -67,7 +69,7 @@ async fn main() -> Result<()> {
 
     stats.print();
 
-    let _ = fs::remove_dir(&ARGS.creator).await;
+    let _ = fs::remove_dir(&path).await;
 
     if stats.failure != 0 {
         process::exit(1);
