@@ -295,8 +295,12 @@ impl PostFile {
                         }
                     };
                 }
+
                 StatusCode::TOO_MANY_REQUESTS => self.warn_and_sleep(status).await,
-                StatusCode::INTERNAL_SERVER_ERROR | StatusCode::GATEWAY_TIMEOUT => {
+
+                | StatusCode::INTERNAL_SERVER_ERROR
+                | StatusCode::GATEWAY_TIMEOUT
+                | StatusCode::BAD_GATEWAY => {
                     if first_error {
                         first_error = false;
                         self.warn_and_sleep(status).await;
@@ -308,6 +312,7 @@ impl PostFile {
                         )?;
                     }
                 }
+
                 _ => {
                     return size_error(
                         self.path.as_ref().unwrap(),
