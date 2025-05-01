@@ -17,6 +17,9 @@ pub struct Args {
     #[arg(short, long)]
     proxy: Option<String>,
 
+    #[arg(long)]
+    pub skip_hash_verification: bool,
+
     #[arg(default_value_t = 64)]
     pub threads: u8,
 

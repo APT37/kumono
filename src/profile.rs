@@ -186,7 +186,10 @@ impl PostFile {
         let name_and_size = format!("{name} ({})", s(remote));
 
         if local == remote {
-            return if name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await? {
+            return if
+                ARGS.skip_hash_verification ||
+                name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
+            {
                 debug!("skipping {name_and_size}");
                 Ok(DownloadState::Skip)
             } else {
