@@ -72,7 +72,7 @@ pub enum Service {
     candfans,
     discord,
     dlsite,
-    fanBox,
+    fanbox,
     fansly,
     fantia,
     gumroad,
