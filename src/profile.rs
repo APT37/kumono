@@ -187,7 +187,7 @@ impl PostFile {
 
         if local == remote {
             return if
-                ARGS.skip_hash_verification ||
+                ARGS.skip_initial_hash_verification ||
                 name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
             {
                 debug!("skipping {name_and_size}");
