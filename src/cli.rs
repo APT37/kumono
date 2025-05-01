@@ -51,7 +51,7 @@ impl fmt::Display for Args {
 
         write!(
             f,
-            "threads: {} / API Backoff: {} / Proxy: {} / Timeouts: (Connect: {} / Overall: {}) / Download Backoff: {}",
+            "Threads: {} / API Backoff: {} / Proxy: {} / Timeouts: (Connect: {} / Overall: {}) / Download Backoff: {}",
             self.threads,
             pd(&self.api_backoff),
             self.proxy.as_ref().unwrap_or(&String::from("None")),
