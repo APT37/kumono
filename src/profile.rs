@@ -245,21 +245,38 @@ impl PostFile {
     ) -> Result<()> {
         let url = self.to_url(service);
 
-        let response = CLIENT.get(&url)
-            .header("Range", format!("bytes={start}-{end}"))
-            .send().await?;
+        let mut first_error = true;
 
-        if response.status() == StatusCode::PARTIAL_CONTENT {
-            let mut stream = response.bytes_stream();
+        loop {
+            let response = CLIENT.get(&url)
+                .header("Range", format!("bytes={start}-{end}"))
+                .send().await?;
 
-            while let Some(Ok(bytes)) = stream.next().await {
-                file.write_all(&bytes).await?;
+            match response.status() {
+                StatusCode::PARTIAL_CONTENT => {
+                    let mut stream = response.bytes_stream();
+
+                    while let Some(Ok(bytes)) = stream.next().await {
+                        file.write_all(&bytes).await?;
+                    }
+
+                    file.flush().await?;
+
+                    break Ok(());
+                }
+                status => {
+                    if !first_error {
+                        break Err(
+                            anyhow!(
+                                "[{status}] ({url}) failed to download range: server returned unexpected status codes repeatedly"
+                            )
+                        );
+                    }
+
+                    first_error = false;
+                }
             }
-
-            file.flush().await?;
         }
-
-        Ok(())
     }
 
     async fn warn_and_sleep(&self, status: StatusCode) {
