@@ -255,7 +255,9 @@ impl PostFile {
                 .header("Range", format!("bytes={start}-{end}"))
                 .send().await?;
 
-            match response.status() {
+            let status = response.status();
+
+            match status {
                 StatusCode::PARTIAL_CONTENT => {
                     let mut stream = response.bytes_stream();
 
@@ -267,7 +269,8 @@ impl PostFile {
 
                     break Ok(());
                 }
-                status => {
+                StatusCode::TOO_MANY_REQUESTS => self.warn_and_sleep(status).await,
+                _ => {
                     if !first_error {
                         break Err(
                             anyhow!(
