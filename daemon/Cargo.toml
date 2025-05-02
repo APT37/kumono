@@ -3,27 +3,18 @@ name = "daemon"
 version = "0.1.0"
 edition.workspace = true
 description.workspace = true
-# readme.workspace = true
 
-# [dependencies]
-# anyhow = "1.0.*"
-# axum = "0.8.*"
-# axum-macros = "0.5.*"
-# const_format = "0.2.*"
-# env_logger = { version = "0.11.*", default-features = false, features = [
-#     "auto-color",
-#     "humantime",
-# ] }
-# log = "0.4.*"
-# mvs_lib = { path = "../mvs_lib" }
-# reqwest = { version = "0.12.*", default-features = false, features = [
-#     "blocking",
-#     "http2",
-#     "json",
-#     "rustls-tls",
-# ] }
-# serde = { version = "1.0.*", features = ["derive"] }
-# tokio = { version = "1.44.*", default-features = false, features = [
-#     "macros",
-#     "rt-multi-thread",
-# ] }
+[dependencies]
+axum = "0.8.*"
+axum-macros = "0.5.*"
+clap.workspace = true
+const_format = "0.2.*"
+env_logger = { version = "0.11.*", default-features = false, features = [
+    "auto-color",
+    "humantime",
+] }
+kumono = { path = "../kumono" }
+log = "0.4.*"
+reqwest.workspace = true
+serde.workspace = true
+tokio.workspace = true

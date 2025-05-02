@@ -1,26 +1,21 @@
 [package]
 name = "cli"
-version = "0.20.3"
+version = "0.20.4"
 edition.workspace = true
 description.workspace = true
 
 [dependencies]
-anyhow = "1.0.*"
-clap = { version = "4.5.*", features = ["derive"] }
-futures = "0.3.*"
-futures-util = "0.3.*"
+anyhow.workspace = true
+clap.workspace = true
+futures.workspace = true
+futures-util.workspace = true
 indicatif = "0.17.*"
+kumono = { path = "../kumono" }
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
-reqwest = { version = "0.12.*", default-features = false, features = [
-    "http2",
-    "json",
-    "rustls-tls",
-    "socks",
-    "stream",
-] }
-serde = { version = "1.0.*", features = ["derive"] }
-sha256 = "1.6.*"
-size = "0.5.*"
+reqwest.workspace = true
+serde.workspace = true
+sha256.workspace = true
+size.workspace = true
 strum_macros = "0.27.*"
-tokio = { version = "1.44.*", features = ["full"] }
+tokio.workspace = true

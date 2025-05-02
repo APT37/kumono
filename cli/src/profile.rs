@@ -1,4 +1,5 @@
-use crate::{ cli::{ ARGS, Service }, client::CLIENT, n_fmt, stats::DownloadState };
+use kumono::Service;
+use crate::{ cli::ARGS, client::CLIENT, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use reqwest::StatusCode;

@@ -1,8 +1,8 @@
-use clap::{ arg, Parser, ValueEnum };
+use kumono::Service;
+use clap::{ arg, Parser };
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
 use std::{ fmt, num, sync::LazyLock, time::Duration };
-use strum_macros::Display;
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -62,32 +62,5 @@ impl fmt::Display for Args {
             pd(&self.read_timeout),
             pd(&self.download_backoff)
         )
-    }
-}
-
-#[allow(non_camel_case_types)]
-#[derive(Deserialize, Display, Clone, Copy, ValueEnum)]
-pub enum Service {
-    boosty,
-    candfans,
-    discord,
-    dlsite,
-    fanbox,
-    fansly,
-    fantia,
-    gumroad,
-    onlyfans,
-    patreon,
-    subscribestar,
-}
-
-impl Service {
-    pub fn site(self) -> &'static str {
-        use Service::{ candfans, fansly, onlyfans };
-
-        match self {
-            candfans | fansly | onlyfans => "coomer",
-            _ => "kemono",
-        }
     }
 }
