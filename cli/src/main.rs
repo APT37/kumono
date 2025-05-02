@@ -71,11 +71,8 @@ async fn main() -> Result<()> {
                     }
                     Err(error) => {
                         let prefix = format!(
-                            "{error}{}\n",
-                            error.source().map_or_else(
-                                || String::new(),
-                                |s| format!("\n{s}")
-                            )
+                            "{error}{}",
+                            error.source().map_or_else(String::new, |s| format!("\n{s}"))
                         );
 
                         tx.send(Message::Download(name, Some(prefix))).await.expect(
@@ -139,10 +136,10 @@ fn progress_bar(mut rx: mpsc::Receiver<Message>, length: u64) -> Result<()> {
                 bar.set_message(file_name);
 
                 if let Some(pre) = prefix {
-                    bar.set_prefix(pre);
+                    bar.set_prefix(format!("{pre}\n"));
                 }
             }
-            Message::Stats(stats) => bar.finish_with_message(stats.to_string()),
+            Message::Stats(stats) => bar.finish_with_message(format!("\n{stats}")),
         }
     }
 

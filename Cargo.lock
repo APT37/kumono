@@ -212,6 +212,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
+name = "cli"
+version = "0.20.2"
+dependencies = [
+ "anyhow",
+ "clap",
+ "futures",
+ "futures-util",
+ "indicatif",
+ "num-format",
+ "pretty-duration",
+ "reqwest",
+ "serde",
+ "sha256",
+ "size",
+ "strum_macros",
+ "tokio",
+]
+
+[[package]]
 name = "colorchoice"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -228,25 +247,6 @@ dependencies = [
  "once_cell",
  "unicode-width",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "coomer_rip"
-version = "0.20.1"
-dependencies = [
- "anyhow",
- "clap",
- "futures",
- "futures-util",
- "indicatif",
- "num-format",
- "pretty-duration",
- "reqwest",
- "serde",
- "sha256",
- "size",
- "strum_macros",
- "tokio",
 ]
 
 [[package]]
@@ -267,6 +267,10 @@ dependencies = [
  "generic-array",
  "typenum",
 ]
+
+[[package]]
+name = "daemon"
+version = "0.1.0"
 
 [[package]]
 name = "digest"
@@ -778,6 +782,10 @@ dependencies = [
  "once_cell",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "lib"
+version = "0.1.0"
 
 [[package]]
 name = "libc"
