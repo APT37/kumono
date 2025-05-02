@@ -139,7 +139,7 @@ fn progress_bar(mut rx: mpsc::Receiver<Message>, length: u64) -> Result<()> {
                     bar.set_prefix(format!("{pre}\n"));
                 }
             }
-            Message::Stats(stats) => bar.finish_with_message(format!("\n{stats}")),
+            Message::Stats(stats) => bar.finish_with_message(stats.to_string()),
         }
     }
 

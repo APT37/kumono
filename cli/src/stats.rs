@@ -45,7 +45,7 @@ impl fmt::Display for Stats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", if self.success + self.skipped + self.failure > 0 {
             format!(
-                "downloaded approx. {} for {} files / success: {} / skipped: {} / failure: {}",
+                "\ndownloaded approx. {} for {} files / success: {} / skipped: {} / failure: {}",
                 Size::from_bytes(self.dl_size),
                 n_fmt(self.success + self.skipped + self.failure),
                 n_fmt(self.success),
