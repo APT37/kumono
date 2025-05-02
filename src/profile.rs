@@ -1,8 +1,7 @@
 use crate::{ cli::{ ARGS, Service }, client::CLIENT, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
-use log::{ debug, error, info, warn };
-use pretty_duration::pretty_duration;
+use log::{ debug, error, info };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use sha256::async_digest::try_async_digest;
@@ -46,7 +45,7 @@ impl<'a> Profile<'a> {
         let mut offset = 0;
 
         loop {
-            debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator_id);
+            // debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator_id);
 
             let mut posts: Vec<Post>;
 
@@ -63,10 +62,10 @@ impl<'a> Profile<'a> {
                         break;
                     }
                     StatusCode::TOO_MANY_REQUESTS => {
-                        warn!(
-                            "hit rate-limit at offset {offset}, sleeping for {}",
-                            pretty_duration::pretty_duration(&ARGS.api_backoff, None)
-                        );
+                        // warn!(
+                        //     "hit rate-limit at offset {offset}, sleeping for {}",
+                        //     pretty_duration::pretty_duration(&ARGS.api_backoff, None)
+                        // );
                         sleep(ARGS.api_backoff).await;
                     }
                     status => {
@@ -154,7 +153,7 @@ impl PostFile {
         ])
     }
 
-    fn to_name(&self, service: Service, creator_id: &str) -> String {
+    pub fn to_name(&self, service: Service, creator_id: &str) -> String {
         self.to_pathbuf(service, creator_id)
             .file_name()
             .expect("get local file name from pathbuf")
@@ -190,15 +189,15 @@ impl PostFile {
                 ARGS.skip_initial_hash_verification ||
                 name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
             {
-                debug!("skipping {name_and_size}");
+                // debug!("skipping {name_and_size}");
                 Ok(DownloadState::Skip)
             } else {
                 Err(anyhow!("hash mismatch: {name} (before)"))
             };
-        } else if local == 0 {
-            info!("downloading {name_and_size}");
-        } else {
-            info!("resuming {name_and_size} [{} remaining]", s(remote - local));
+            // } else if local == 0 {
+            // debug!("downloading {name_and_size}");
+            // } else {
+            // debug!("resuming {name_and_size} [{} remaining]", s(remote - local));
         }
 
         loop {
@@ -208,7 +207,7 @@ impl PostFile {
                 } else {
                     String::new()
                 });
-                return Ok(DownloadState::Failure(s(local - initial_size)));
+                return Ok(DownloadState::Failure(s(local - initial_size), None));
             }
 
             match file.seek(SeekFrom::End(0)).await {
@@ -216,8 +215,9 @@ impl PostFile {
                     local = pos;
                 }
                 Err(err) => {
-                    error!("{err}");
-                    return Ok(DownloadState::Failure(s(local - initial_size)));
+                    return Ok(
+                        DownloadState::Failure(s(local - initial_size), Some(err.to_string()))
+                    );
                 }
             }
 
@@ -234,7 +234,7 @@ impl PostFile {
                 DownloadState::Success(downloaded)
             } else {
                 error!("hash mismatch: {name} (after)");
-                DownloadState::Failure(downloaded)
+                DownloadState::Failure(downloaded, None)
             }
         )
     }
@@ -269,7 +269,7 @@ impl PostFile {
 
                     break Ok(());
                 }
-                StatusCode::TOO_MANY_REQUESTS => self.warn_and_sleep(status).await,
+                StatusCode::TOO_MANY_REQUESTS => sleep(ARGS.download_backoff).await,
                 _ => {
                     if !first_error {
                         break Err(
@@ -283,16 +283,6 @@ impl PostFile {
                 }
             }
         }
-    }
-
-    async fn warn_and_sleep(&self, status: StatusCode) {
-        warn!(
-            "[{status}] ({}) sleeping for {}",
-            self.path.as_ref().unwrap(),
-            pretty_duration(&ARGS.download_backoff, None)
-        );
-
-        sleep(ARGS.download_backoff).await;
     }
 
     async fn remote_size(&self, service: Service) -> Result<u64> {
@@ -321,14 +311,14 @@ impl PostFile {
                     };
                 }
 
-                StatusCode::TOO_MANY_REQUESTS => self.warn_and_sleep(status).await,
+                StatusCode::TOO_MANY_REQUESTS => sleep(ARGS.download_backoff).await,
 
                 | StatusCode::INTERNAL_SERVER_ERROR
                 | StatusCode::GATEWAY_TIMEOUT
                 | StatusCode::BAD_GATEWAY => {
                     if first_error {
                         first_error = false;
-                        self.warn_and_sleep(status).await;
+                        sleep(ARGS.download_backoff).await;
                     } else {
                         size_error(
                             self.path.as_ref().unwrap(),

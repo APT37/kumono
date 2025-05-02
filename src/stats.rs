@@ -1,14 +1,14 @@
 use crate::n_fmt;
-use log::info;
 use size::Size;
+use std::fmt;
 
 pub enum DownloadState {
-    Failure(Size),
+    Failure(Size, Option<String>),
     Skip,
     Success(Size),
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct Stats {
     pub success: usize,
     pub skipped: usize,
@@ -20,7 +20,7 @@ impl Stats {
     #[allow(clippy::needless_pass_by_value)]
     pub fn update(&mut self, state: DownloadState) {
         match state {
-            DownloadState::Failure(size) => self.add_failure(size),
+            DownloadState::Failure(size, _) => self.add_failure(size),
             DownloadState::Skip => self.add_skipped(),
             DownloadState::Success(size) => self.add_success(size),
         }
@@ -39,17 +39,21 @@ impl Stats {
         self.success += 1;
         self.dl_size += size.bytes();
     }
+}
 
-    pub fn print(&self) {
-        if self.success + self.skipped + self.failure > 0 {
-            info!(
-                "downloaded approx. {} for {} files / success: {} / skipped: {} / failure: {}",
+impl fmt::Display for Stats {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", if self.success + self.skipped + self.failure > 0 {
+            format!(
+                "\ndownloaded approx. {} for {} files / success: {} / skipped: {} / failure: {}",
                 Size::from_bytes(self.dl_size),
                 n_fmt(self.success + self.skipped + self.failure),
                 n_fmt(self.success),
                 n_fmt(self.skipped),
                 n_fmt(self.failure)
-            );
-        }
+            )
+        } else {
+            String::new()
+        })
     }
 }
