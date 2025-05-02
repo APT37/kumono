@@ -1,19 +1,19 @@
 pkgbase=kumono
-pkgname=('cli')
-# pkgname=('cli' 'daemon')
+pkgname=('kumono-cli')
+# pkgname=('kumono-cli' 'kumono-daemon')
 pkgver=0.1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Media ripper for coomer.su and kemono.su"
 arch=('x86_64')
 url="https://git.nospy.in/Rust/$pkgbase"
 
-package_cli() {
-  install -Dm755 "$startdir/target/release/$pkgname" "$pkgdir/usr/bin/$pkgbase-$pkgname"
+package_kumono-cli() {
+  install -Dm755 "$startdir/target/release/cli" "$pkgdir/usr/bin/$pkgname"
 }
 
-# package_daemon() {
-  # backup=("etc/init.d/$pkgbase-$pkgname")
+# package_kumono-daemon() {
+  # backup=("etc/init.d/$pkgname")
 
-  # install -Dm755 "$startdir/target/release/$pkgname" "$pkgdir/usr/bin/$pkgbase-$pkgname"
-  # install -Dm755 "$startdir/$pkgname/$pkgname.rc" "$pkgdir/etc/init.d/$pkgbase-$pkgname"
+  # install -Dm755 "$startdir/target/release/daemon" "$pkgdir/usr/bin/$pkgname"
+  # install -Dm755 "$startdir/daemon/$pkgname.rc" "$pkgdir/etc/init.d/$pkgname"
 # }
