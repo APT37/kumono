@@ -2,7 +2,6 @@ use crate::{ cli::ARGS, profile::Profile, stats::{ DownloadState, Stats } };
 use anyhow::Result;
 use futures::future::join_all;
 use indicatif::{ ProgressBar, ProgressStyle };
-use log::info;
 use num_format::{ Locale, ToFormattedString };
 use size::Size;
 use std::{ path::PathBuf, process, sync::Arc, thread };
@@ -24,9 +23,7 @@ fn n_fmt(n: usize) -> String {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    colog::init();
-
-    info!("{}", *ARGS);
+    eprintln!("{}", *ARGS);
 
     let profile = Profile::new(ARGS.service, &ARGS.creator).await?;
 

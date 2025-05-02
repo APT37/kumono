@@ -1,7 +1,6 @@
 use crate::{ cli::{ ARGS, Service }, client::CLIENT, n_fmt, stats::DownloadState };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
-use log::{ debug, error, info };
 use reqwest::StatusCode;
 use serde::Deserialize;
 use sha256::async_digest::try_async_digest;
@@ -30,7 +29,7 @@ impl<'a> Profile<'a> {
         profile.init_posts().await?;
         profile.init_files();
 
-        info!(
+        eprintln!(
             "found {} posts, containing {} files",
             n_fmt(profile.posts.len()),
             n_fmt(profile.files.len())
@@ -40,7 +39,7 @@ impl<'a> Profile<'a> {
     }
 
     async fn init_posts(&mut self) -> Result<()> {
-        info!("fetching posts for {}/{}", self.service, self.creator_id);
+        eprintln!("fetching posts for {}/{}", self.service, self.creator_id);
 
         let mut offset = 0;
 
@@ -182,7 +181,7 @@ impl PostFile {
 
         let name = self.to_name(service, creator_id);
 
-        let name_and_size = format!("{name} ({})", s(remote));
+        // let name_and_size = format!("{name} ({})", s(remote));
 
         if local == remote {
             return if
@@ -202,12 +201,12 @@ impl PostFile {
 
         loop {
             if let Err(err) = self.download_range(&mut file, service, local, remote - 1).await {
-                error!("{err}{}", if let Some(s) = err.source() {
+                let error = format!("{err}{}", if let Some(s) = err.source() {
                     format!("\n{s}")
                 } else {
                     String::new()
                 });
-                return Ok(DownloadState::Failure(s(local - initial_size), None));
+                return Ok(DownloadState::Failure(s(local - initial_size), Some(error)));
             }
 
             match file.seek(SeekFrom::End(0)).await {
@@ -230,11 +229,10 @@ impl PostFile {
 
         Ok(
             if name[..64] == sha256::try_digest(&self.to_pathbuf(service, creator_id))? {
-                debug!("skipping {name_and_size}");
+                // debug!("skipping {name_and_size}");
                 DownloadState::Success(downloaded)
             } else {
-                error!("hash mismatch: {name} (after)");
-                DownloadState::Failure(downloaded, None)
+                DownloadState::Failure(downloaded, Some(format!("hash mismatch: {name} (after)")))
             }
         )
     }
