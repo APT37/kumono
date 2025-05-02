@@ -4,7 +4,7 @@ use futures::future::join_all;
 use indicatif::{ ProgressBar, ProgressStyle };
 use num_format::{ Locale, ToFormattedString };
 use size::Size;
-use std::{ path::PathBuf, process, sync::Arc, thread };
+use std::{ path::PathBuf, process, sync::Arc, thread, time::Duration };
 use tokio::{ fs, sync::{ mpsc, Semaphore }, task };
 
 mod client;
@@ -70,11 +70,13 @@ async fn main() -> Result<()> {
                         Ok(dl_state)
                     }
                     Err(error) => {
-                        let prefix = format!("{error}{}\n", if let Some(s) = error.source() {
-                            format!("\n{s}")
-                        } else {
-                            String::new()
-                        });
+                        let prefix = format!(
+                            "{error}{}\n",
+                            error.source().map_or_else(
+                                || String::new(),
+                                |s| format!("\n{s}")
+                            )
+                        );
 
                         tx.send(Message::Download(name, Some(prefix))).await.expect(
                             "send name to progress bar"
@@ -121,6 +123,8 @@ async fn main() -> Result<()> {
 fn progress_bar(mut rx: mpsc::Receiver<Message>, length: u64) -> Result<()> {
     let bar = ProgressBar::new(length);
 
+    bar.enable_steady_tick(Duration::from_millis(200));
+
     bar.set_style(
         ProgressStyle::with_template(
             "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}"
@@ -138,11 +142,9 @@ fn progress_bar(mut rx: mpsc::Receiver<Message>, length: u64) -> Result<()> {
                     bar.set_prefix(pre);
                 }
             }
-            Message::Stats(stats) => bar.set_message(stats.to_string()),
+            Message::Stats(stats) => bar.finish_with_message(stats.to_string()),
         }
     }
-
-    bar.finish();
 
     Ok(())
 }
