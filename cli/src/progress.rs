@@ -6,7 +6,7 @@ use std::{ fmt, process, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
 pub fn n_fmt(n: usize) -> String {
-    n.to_formatted_string(&Locale::de)
+    n.to_formatted_string(&Locale::en)
 }
 
 pub enum DownloadState {
@@ -65,7 +65,7 @@ pub fn bar(mut rx: Receiver<DownloadState>, length: u64) -> Result<()> {
 
     bar.set_style(
         ProgressStyle::with_template(
-            "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}"
+            "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {human_pos:>7}/{human_len:7} ({percent}%) {msg}"
         )?.progress_chars("##-")
     );
 
