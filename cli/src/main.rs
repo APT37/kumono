@@ -1,25 +1,14 @@
-use crate::{ cli::ARGS, profile::Profile, stats::{ DownloadState, Stats } };
+use crate::{ cli::ARGS, profile::Profile, progress::DownloadState };
 use anyhow::Result;
 use futures::future::join_all;
-use indicatif::{ ProgressBar, ProgressStyle };
-use num_format::{ Locale, ToFormattedString };
 use size::Size;
-use std::{ path::PathBuf, process, sync::Arc, thread, time::Duration };
+use std::{ path::PathBuf, sync::Arc, thread };
 use tokio::{ fs, sync::{ mpsc, Semaphore }, task };
 
-mod client;
 mod cli;
+mod http;
 mod profile;
-mod stats;
-
-enum Message {
-    Download(String, Option<String>),
-    Stats(Stats),
-}
-
-fn n_fmt(n: usize) -> String {
-    n.to_formatted_string(&Locale::de)
-}
+mod progress;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,115 +22,55 @@ async fn main() -> Result<()> {
 
     let path = PathBuf::from_iter([&ARGS.service.to_string(), &ARGS.creator]);
 
-    fs::create_dir_all(&path).await?;
-
     let len = profile.files.len();
 
-    let (tx, rx) = mpsc::channel::<Message>(len);
+    if len > 0 {
+        fs::create_dir_all(&path).await?;
 
-    thread::spawn(move || progress_bar(rx, len as u64));
+        let (tx, rx) = mpsc::channel::<DownloadState>(len);
 
-    let tx = Arc::new(tx);
+        thread::spawn(move || progress::bar(rx, len as u64));
 
-    let mut tasks = vec![];
+        let mut tasks = vec![];
 
-    let sem = Arc::new(Semaphore::new(ARGS.threads.into()));
+        let sem = Arc::new(Semaphore::new(ARGS.threads.into()));
 
-    for file in profile.files {
-        let permit = sem.clone().acquire_owned().await;
+        for file in profile.files {
+            let permit = sem.clone().acquire_owned().await;
 
-        let tx = tx.clone();
+            let tx = tx.clone();
 
-        tasks.push(
-            task::spawn(async move {
-                // aww, the compiler thinks this is useless :)
-                #[allow(clippy::no_effect_underscore_binding)]
-                let _permit = permit;
+            tasks.push(
+                task::spawn(async move {
+                    // aww, the compiler thinks this is useless :)
+                    #[allow(clippy::no_effect_underscore_binding)]
+                    let _permit = permit;
 
-                let result = file.download(ARGS.service, &ARGS.creator).await;
+                    let result = file.download(ARGS.service, &ARGS.creator).await;
 
-                let name = file.to_name(ARGS.service, &ARGS.creator);
-
-                match result {
-                    Ok(dl_state) => {
-                        tx.send(Message::Download(name, None)).await.expect(
-                            "send name to progress bar"
-                        );
-                        Ok(dl_state)
-                    }
-                    Err(error) => {
-                        let prefix = format!(
-                            "{error}{}",
-                            error.source().map_or_else(String::new, |s| format!("\n{s}"))
-                        );
-
-                        tx.send(Message::Download(name, Some(prefix))).await.expect(
-                            "send name to progress bar"
-                        );
-                        Err(error)
-                    }
-                }
-            })
-        );
-    }
-
-    let mut stats = Stats::default();
-
-    for task in join_all(tasks).await {
-        match task? {
-            Ok(dl_state) =>
-                match dl_state {
-                    DownloadState::Failure(size, err) => {
-                        if let Some(error) = err {
-                            tx.send(Message::Download(String::new(), Some(error))).await?;
+                    match result {
+                        Ok(dl_state) => {
+                            tx.send(dl_state).await.expect("send state to progress bar");
                         }
-
-                        stats.update(DownloadState::Failure(size, None));
+                        Err(error) => {
+                            let prefix = format!(
+                                "{error}{}\n",
+                                error.source().map_or_else(String::new, |s| format!("\n{s}"))
+                            );
+                            tx.send(DownloadState::Failure(Size::default(), prefix)).await.expect(
+                                "send state to progress bar"
+                            );
+                        }
                     }
-
-                    dl_state => stats.update(dl_state),
-                }
-
-            Err(_) => stats.update(DownloadState::Failure(Size::default(), None)),
+                })
+            );
         }
+
+        join_all(tasks).await;
     }
 
-    tx.send(Message::Stats(stats)).await?;
-
-    let _ = fs::remove_dir(&path).await;
-
-    if stats.failure != 0 {
-        process::exit(1);
-    }
-
-    Ok(())
-}
-
-fn progress_bar(mut rx: mpsc::Receiver<Message>, length: u64) -> Result<()> {
-    let bar = ProgressBar::new(length);
-
-    bar.enable_steady_tick(Duration::from_millis(200));
-
-    bar.set_style(
-        ProgressStyle::with_template(
-            "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}"
-        )?.progress_chars("##-")
-    );
-
-    while let Some(message) = rx.blocking_recv() {
-        match message {
-            Message::Download(file_name, prefix) => {
-                bar.inc(1);
-
-                bar.set_message(file_name);
-
-                if let Some(pre) = prefix {
-                    bar.set_prefix(format!("{pre}\n"));
-                }
-            }
-            Message::Stats(stats) => bar.finish_with_message(stats.to_string()),
-        }
-    }
+    #[allow(unused_must_use)]
+    fs::remove_dir(&path).await;
 
     Ok(())
 }

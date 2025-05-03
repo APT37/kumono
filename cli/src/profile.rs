@@ -1,5 +1,5 @@
 use kumono::Service;
-use crate::{ cli::ARGS, client::CLIENT, n_fmt, stats::DownloadState };
+use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt } };
 use anyhow::{ Result, anyhow };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
@@ -30,18 +30,24 @@ impl<'a> Profile<'a> {
         profile.init_posts().await?;
         profile.init_files();
 
-        eprintln!(
-            "found {} posts, containing {} files",
-            n_fmt(profile.posts.len()),
-            n_fmt(profile.files.len())
-        );
+        let prefix = format!("{service} creator '{creator_id}' has");
+
+        if profile.posts.is_empty() {
+            eprintln!("{prefix} no posts");
+        } else if profile.files.is_empty() {
+            eprintln!("{prefix} {} posts, but no files", n_fmt(profile.posts.len()));
+        } else {
+            eprintln!(
+                "{prefix} {} posts with {} files",
+                n_fmt(profile.posts.len()),
+                n_fmt(profile.files.len())
+            );
+        }
 
         Ok(profile)
     }
 
     async fn init_posts(&mut self) -> Result<()> {
-        eprintln!("fetching posts for {}/{}", self.service, self.creator_id);
-
         let mut offset = 0;
 
         loop {
@@ -182,22 +188,20 @@ impl PostFile {
 
         let name = self.to_name(service, creator_id);
 
-        // let name_and_size = format!("{name} ({})", s(remote));
-
         if local == remote {
-            return if
-                ARGS.skip_initial_hash_verification ||
-                name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
-            {
-                // debug!("skipping {name_and_size}");
-                Ok(DownloadState::Skip)
-            } else {
-                Err(anyhow!("hash mismatch: {name} (before)"))
-            };
-            // } else if local == 0 {
-            // debug!("downloading {name_and_size}");
-            // } else {
-            // debug!("resuming {name_and_size} [{} remaining]", s(remote - local));
+            return Ok(
+                if
+                    ARGS.skip_initial_hash_verification ||
+                    name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
+                {
+                    DownloadState::Skip
+                } else {
+                    DownloadState::Failure(
+                        Size::default(),
+                        format!("hash mismatch: {name} (before)")
+                    )
+                }
+            );
         }
 
         loop {
@@ -207,7 +211,7 @@ impl PostFile {
                 } else {
                     String::new()
                 });
-                return Ok(DownloadState::Failure(s(local - initial_size), Some(error)));
+                return Ok(DownloadState::Failure(s(local - initial_size), error));
             }
 
             match file.seek(SeekFrom::End(0)).await {
@@ -215,9 +219,7 @@ impl PostFile {
                     local = pos;
                 }
                 Err(err) => {
-                    return Ok(
-                        DownloadState::Failure(s(local - initial_size), Some(err.to_string()))
-                    );
+                    return Ok(DownloadState::Failure(s(local - initial_size), err.to_string()));
                 }
             }
 
@@ -230,10 +232,9 @@ impl PostFile {
 
         Ok(
             if name[..64] == sha256::try_digest(&self.to_pathbuf(service, creator_id))? {
-                // debug!("skipping {name_and_size}");
                 DownloadState::Success(downloaded)
             } else {
-                DownloadState::Failure(downloaded, Some(format!("hash mismatch: {name} (after)")))
+                DownloadState::Failure(downloaded, format!("hash mismatch: {name} (after)"))
             }
         )
     }
@@ -273,7 +274,7 @@ impl PostFile {
                     if !first_error {
                         break Err(
                             anyhow!(
-                                "[{status}] ({url}) failed to download range: server returned unexpected status codes repeatedly"
+                                "[{status}] failed to download range: server returned unexpected status codes repeatedly"
                             )
                         );
                     }
@@ -285,8 +286,8 @@ impl PostFile {
     }
 
     async fn remote_size(&self, service: Service) -> Result<u64> {
-        fn size_error(url: &str, status: StatusCode, message: &str) -> Result<u64> {
-            Err(anyhow!("[{status}] ({url}) failed to determine remote size: {message}"))
+        fn size_error(status: StatusCode, message: &str) -> Result<u64> {
+            Err(anyhow!("[{status}] failed to determine remote size: {message}"))
         }
 
         let mut first_error = true;
@@ -301,11 +302,7 @@ impl PostFile {
                     return match response.content_length() {
                         Some(length) => Ok(length),
                         None => {
-                            return size_error(
-                                self.path.as_ref().unwrap(),
-                                status,
-                                "Content-Length header is not present"
-                            );
+                            return size_error(status, "Content-Length header is not present");
                         }
                     };
                 }
@@ -319,20 +316,12 @@ impl PostFile {
                         first_error = false;
                         sleep(ARGS.download_backoff).await;
                     } else {
-                        size_error(
-                            self.path.as_ref().unwrap(),
-                            status,
-                            "server returned errors repeatedly"
-                        )?;
+                        size_error(status, "server returned errors repeatedly")?;
                     }
                 }
 
                 _ => {
-                    return size_error(
-                        self.path.as_ref().unwrap(),
-                        status,
-                        "received unexpected status code"
-                    );
+                    return size_error(status, "received unexpected status code");
                 }
             }
         }
