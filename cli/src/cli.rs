@@ -7,6 +7,7 @@ use std::{ fmt, num, sync::LazyLock, time::Duration };
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
+#[clap(about)]
 pub struct Args {
     pub service: Service,
 
@@ -14,9 +15,9 @@ pub struct Args {
     pub creator: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
-    proxy: Option<String>,
+    pub proxy: Option<String>,
 
-    #[arg(short, long, default_value_t = 64)]
+    #[arg(short, long, default_value_t = 64, help = "Simultaneous downloads (1-255)")]
     pub threads: u8,
 
     #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
@@ -31,18 +32,19 @@ pub struct Args {
     #[arg(short, long, value_parser = duration_from_secs, default_value = "15")]
     pub download_backoff: Duration,
 
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = 3, help = "Simultaneously shown errors (1-10)")]
+    pub max_errors: u8,
+
+    #[arg(
+        short,
+        long,
+        help = "Skip hash check for existing files if their size matches the remote"
+    )]
     pub skip_initial_hash_verification: bool,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
     Ok(Duration::from_secs(arg.parse()?))
-}
-
-impl Args {
-    pub fn proxy(&self) -> Option<String> {
-        self.proxy.clone().map(|proxy| format!("socks5://{proxy}"))
-    }
 }
 
 impl fmt::Display for Args {

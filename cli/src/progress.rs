@@ -5,6 +5,8 @@ use size::Size;
 use std::{ fmt, process, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
+use crate::cli::ARGS;
+
 pub fn n_fmt(n: usize) -> String {
     n.to_formatted_string(&Locale::en)
 }
@@ -22,26 +24,27 @@ struct Stats {
     skipped: usize,
     failure: usize,
     dl_size: i64,
-    // errors: [String; 3],
+    errors: Vec<String>,
 }
 
 impl Stats {
     #[allow(clippy::needless_pass_by_value)]
-    fn update(&mut self, download_state: DownloadState) -> Option<String> {
+    fn update(&mut self, download_state: DownloadState) {
         match download_state {
             DownloadState::Failure(size, err) => {
                 self.dl_size += size.bytes();
                 self.failure += 1;
-                Some(err)
+                if self.errors.len() == ARGS.max_errors.clamp(1, 10) as usize {
+                    self.errors.remove(0);
+                }
+                self.errors.push(err);
             }
             DownloadState::Skip => {
                 self.skipped += 1;
-                None
             }
             DownloadState::Success(size) => {
                 self.dl_size += size.bytes();
                 self.success += 1;
-                None
             }
         }
     }
@@ -74,8 +77,10 @@ pub fn bar(mut rx: Receiver<DownloadState>, length: u64) -> Result<()> {
     let mut stats = Stats::default();
 
     while let Some(dl_state) = rx.blocking_recv() {
-        if let Some(err) = stats.update(dl_state) {
-            bar.set_message(format!("\n{err}"));
+        stats.update(dl_state);
+
+        if !stats.errors.is_empty() {
+            bar.set_message(format!("\n{}", stats.errors.join("\n")));
         }
 
         bar.inc(1);
