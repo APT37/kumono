@@ -9,6 +9,7 @@ pub fn n_fmt(n: usize) -> String {
     n.to_formatted_string(&Locale::en)
 }
 
+#[derive(Clone)]
 pub enum DownloadState {
     Failure(Size, String),
     Skip,
