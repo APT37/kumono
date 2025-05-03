@@ -52,12 +52,13 @@ async fn main() -> Result<()> {
                         Ok(dl_state) => {
                             tx.send(dl_state).await.expect("send state to progress bar");
                         }
-                        Err(error) => {
-                            let prefix = format!(
-                                "{error}{}\n",
-                                error.source().map_or_else(String::new, |s| format!("\n{s}"))
-                            );
-                            tx.send(DownloadState::Failure(Size::default(), prefix)).await.expect(
+                        Err(err) => {
+                            let mut error = err.to_string();
+                            if let Some(source) = err.source() {
+                                error.push('\n');
+                                error.push_str(&source.to_string());
+                            }
+                            tx.send(DownloadState::Failure(Size::default(), error)).await.expect(
                                 "send state to progress bar"
                             );
                         }

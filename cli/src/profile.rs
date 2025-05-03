@@ -206,11 +206,11 @@ impl PostFile {
 
         loop {
             if let Err(err) = self.download_range(&mut file, service, local, remote - 1).await {
-                let error = format!("{err}{}", if let Some(s) = err.source() {
-                    format!("\n{s}")
-                } else {
-                    String::new()
-                });
+                let mut error = err.to_string();
+                if let Some(source) = err.source() {
+                    error.push('\n');
+                    error.push_str(&source.to_string());
+                }
                 return Ok(DownloadState::Failure(s(local - initial_size), error));
             }
 

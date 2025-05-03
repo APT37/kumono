@@ -34,7 +34,9 @@ impl Stats {
             DownloadState::Failure(size, err) => {
                 self.dl_size += size.bytes();
                 self.failure += 1;
-                if self.errors.len() == ARGS.max_errors.clamp(1, 10) as usize {
+
+                self.errors.dedup();
+                if self.errors.len() == (ARGS.max_errors.clamp(1, 10) as usize) {
                     self.errors.remove(0);
                 }
                 self.errors.push(err);
