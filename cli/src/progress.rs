@@ -40,6 +40,7 @@ impl Stats {
                     self.errors.remove(0);
                 }
                 self.errors.push(err);
+                self.errors.dedup();
             }
             DownloadState::Skip => {
                 self.skipped += 1;
