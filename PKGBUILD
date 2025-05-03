@@ -1,8 +1,8 @@
 pkgbase=kumono
 pkgname=('kumono-cli')
 # pkgname=('kumono-cli' 'kumono-daemon')
-pkgver=0.3.0
-pkgrel=2
+pkgver=0.4.0
+pkgrel=1
 pkgdesc="Media ripper for coomer.su and kemono.su"
 arch=('x86_64')
 url="https://git.nospy.in/Rust/$pkgbase"

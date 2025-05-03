@@ -16,17 +16,18 @@ pub enum DownloadState {
     Success(Size),
 }
 
-#[derive(Default, Clone, Copy)]
-pub struct Stats {
-    pub success: usize,
-    pub skipped: usize,
-    pub failure: usize,
-    pub dl_size: i64,
+#[derive(Default, Clone)]
+struct Stats {
+    success: usize,
+    skipped: usize,
+    failure: usize,
+    dl_size: i64,
+    // errors: [String; 3],
 }
 
 impl Stats {
     #[allow(clippy::needless_pass_by_value)]
-    pub fn update(&mut self, download_state: DownloadState) -> Option<String> {
+    fn update(&mut self, download_state: DownloadState) -> Option<String> {
         match download_state {
             DownloadState::Failure(size, err) => {
                 self.dl_size += size.bytes();

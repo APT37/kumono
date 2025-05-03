@@ -8,32 +8,31 @@ pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
 pub struct Args {
-    #[arg(short, long)]
     pub service: Service,
 
-    #[arg(short, long)]
+    #[arg(help = "Creator ID")]
     pub creator: String,
 
-    #[arg(short, long)]
+    #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
     proxy: Option<String>,
 
-    #[arg(long)]
-    pub skip_initial_hash_verification: bool,
-
-    #[arg(default_value_t = 64)]
+    #[arg(short, long, default_value_t = 64)]
     pub threads: u8,
 
-    #[arg(value_parser = duration_from_secs, default_value = "1")]
+    #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
-    #[arg(value_parser = duration_from_secs, default_value = "5")]
+    #[arg(short, long, value_parser = duration_from_secs, default_value = "5")]
     pub read_timeout: Duration,
 
-    #[arg(value_parser = duration_from_secs, default_value = "45")]
+    #[arg(short, long, value_parser = duration_from_secs, default_value = "45")]
     pub api_backoff: Duration,
 
-    #[arg(value_parser = duration_from_secs, default_value = "15")]
+    #[arg(short, long, value_parser = duration_from_secs, default_value = "15")]
     pub download_backoff: Duration,
+
+    #[arg(short, long)]
+    pub skip_initial_hash_verification: bool,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
