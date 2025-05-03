@@ -11,7 +11,7 @@ futures.workspace = true
 futures-util.workspace = true
 indicatif = "0.17.*"
 kumono = { path = "../kumono" }
-num-format = "0.4.*"
+num-format.workspace = true
 pretty-duration = "0.1.*"
 reqwest.workspace = true
 serde.workspace = true
