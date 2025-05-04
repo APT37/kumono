@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use sha256::async_digest::try_async_digest;
 use size::Size;
-use std::{ io::{ self, SeekFrom }, path::PathBuf };
+use std::{ error::Error, io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
@@ -219,7 +219,12 @@ impl PostFile {
                     local = pos;
                 }
                 Err(err) => {
-                    return Ok(DownloadState::Failure(s(local - initial_size), err.to_string()));
+                    let mut error = err.to_string();
+                    if let Some(source) = err.source() {
+                        error.push('\n');
+                        error.push_str(&source.to_string());
+                    }
+                    return Ok(DownloadState::Failure(s(local - initial_size), error));
                 }
             }
 
