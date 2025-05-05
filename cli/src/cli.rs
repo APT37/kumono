@@ -32,8 +32,8 @@ pub struct Args {
     #[arg(short, long, value_parser = duration_from_secs, default_value = "15")]
     pub download_backoff: Duration,
 
-    #[arg(short, long, default_value_t = 3, help = "Simultaneously shown errors (1-10)")]
-    pub max_errors: u8,
+    // #[arg(short, long, default_value_t = 3, help = "Simultaneously shown errors (1-10)")]
+    // pub max_errors: u8,
 
     #[arg(
         short,

@@ -1,11 +1,10 @@
+// use crate::cli::ARGS;
 use anyhow::Result;
 use indicatif::{ ProgressBar, ProgressStyle };
 use num_format::{ Locale, ToFormattedString };
 use size::Size;
 use std::{ fmt, process, time::Duration };
 use tokio::sync::mpsc::Receiver;
-
-use crate::cli::ARGS;
 
 pub fn n_fmt(n: usize) -> String {
     n.to_formatted_string(&Locale::en)
@@ -36,9 +35,11 @@ impl Stats {
                 self.failure += 1;
 
                 self.errors.dedup();
-                if self.errors.len() == (ARGS.max_errors.clamp(1, 10) as usize) {
+
+                if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
+
                 self.errors.push(err);
                 self.errors.dedup();
             }
