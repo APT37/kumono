@@ -9,13 +9,13 @@ anyhow.workspace = true
 clap.workspace = true
 futures.workspace = true
 futures-util.workspace = true
-indicatif = "0.17.*"
+indicatif.workspace = true
 kumono = { path = "../kumono" }
 num-format.workspace = true
-pretty-duration = "0.1.*"
+pretty-duration.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 sha256.workspace = true
 size.workspace = true
-strum_macros = "0.27.*"
+strum_macros.workspace = true
 tokio.workspace = true

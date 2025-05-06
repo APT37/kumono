@@ -5,16 +5,13 @@ edition.workspace = true
 description.workspace = true
 
 [dependencies]
-axum = "0.8.*"
-axum-macros = "0.5.*"
+axum.workspace = true
+axum-macros.workspace = true
 clap.workspace = true
-const_format = "0.2.*"
-env_logger = { version = "0.11.*", default-features = false, features = [
-    "auto-color",
-    "humantime",
-] }
+const_format.workspace = true
+env_logger.workspace = true
 kumono = { path = "../kumono" }
-log = "0.4.*"
+log.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 tokio.workspace = true
