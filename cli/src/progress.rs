@@ -70,13 +70,13 @@ impl fmt::Display for Stats {
 pub fn bar(mut rx: Receiver<DownloadState>, length: u64) -> Result<()> {
     let bar = ProgressBar::new(length);
 
-    bar.enable_steady_tick(Duration::from_millis(200));
-
     bar.set_style(
         ProgressStyle::with_template(
             "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {human_pos:>7}/{human_len:7} ({percent}%) {msg}"
         )?.progress_chars("##-")
     );
+
+    bar.enable_steady_tick(Duration::from_millis(200));
 
     let mut stats = Stats::default();
 
