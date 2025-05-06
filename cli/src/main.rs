@@ -14,13 +14,13 @@ mod progress;
 async fn main() -> Result<()> {
     eprintln!("{}", *ARGS);
 
-    let profile = Profile::new(ARGS.service, &ARGS.creator).await?;
+    let profile = Profile::new(ARGS.service, &ARGS.user_id).await?;
 
     if profile.files.is_empty() {
         return Ok(());
     }
 
-    let path = PathBuf::from_iter([&ARGS.service.to_string(), &ARGS.creator]);
+    let path = PathBuf::from_iter([&ARGS.service.to_string(), &ARGS.user_id]);
 
     let len = profile.files.len();
 
@@ -42,11 +42,10 @@ async fn main() -> Result<()> {
 
             tasks.push(
                 task::spawn(async move {
-                    // aww, the compiler thinks this is useless :)
                     #[allow(clippy::no_effect_underscore_binding)]
                     let _permit = permit;
 
-                    let result = file.download(ARGS.service, &ARGS.creator).await;
+                    let result = file.download(ARGS.service, &ARGS.user_id).await;
 
                     match result {
                         Ok(dl_state) => {

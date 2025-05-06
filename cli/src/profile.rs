@@ -13,16 +13,16 @@ const API_DELAY: Duration = Duration::from_millis(100);
 
 pub struct Profile<'a> {
     service: Service,
-    creator_id: &'a str,
+    user_id: &'a str,
     posts: Vec<Post>,
     pub files: Vec<PostFile>,
 }
 
 impl<'a> Profile<'a> {
-    pub async fn new(service: Service, creator_id: &'a str) -> Result<Self> {
+    pub async fn new(service: Service, user_id: &'a str) -> Result<Self> {
         let mut profile = Self {
             service,
-            creator_id,
+            user_id,
             posts: vec![],
             files: vec![],
         };
@@ -30,19 +30,19 @@ impl<'a> Profile<'a> {
         profile.init_posts().await?;
         profile.init_files();
 
-        let prefix = format!("{service} creator '{creator_id}' has");
-
-        if profile.posts.is_empty() {
-            eprintln!("{prefix} no posts");
-        } else if profile.files.is_empty() {
-            eprintln!("{prefix} {} posts, but no files", n_fmt(profile.posts.len()));
-        } else {
-            eprintln!(
-                "{prefix} {} posts with {} files",
-                n_fmt(profile.posts.len()),
-                n_fmt(profile.files.len())
-            );
-        }
+        eprintln!("{service} user '{user_id}' has {}", {
+            if profile.posts.is_empty() {
+                "no posts".to_string()
+            } else if profile.files.is_empty() {
+                format!("{} posts, but no files", n_fmt(profile.posts.len()))
+            } else {
+                format!(
+                    "{} posts with {} files",
+                    n_fmt(profile.posts.len()),
+                    n_fmt(profile.files.len())
+                )
+            }
+        });
 
         Ok(profile)
     }
@@ -51,7 +51,7 @@ impl<'a> Profile<'a> {
         let mut offset = 0;
 
         loop {
-            // debug!("fetching posts for {}/{} with offset {offset}", self.service, self.creator_id);
+            // debug!("fetching posts for {}/{} with offset {offset}", self.service, self.user_id);
 
             let mut posts: Vec<Post>;
 
@@ -97,7 +97,7 @@ impl<'a> Profile<'a> {
             "https://{}.su/api/v1/{}/user/{}?o={offset}",
             self.service.site(),
             self.service,
-            self.creator_id
+            self.user_id
         )
     }
 
@@ -115,7 +115,7 @@ impl<'a> Profile<'a> {
 #[derive(Deserialize, Clone)]
 struct Post {
     // id: String,   // "1000537173"
-    // this is the creator_id
+    // this is the user_id, not the 'nice' user name
     // user: String, // "paigetheuwulord"
     // service: Service, // "onlyfans"
     // title: String,     // "What an ass"
@@ -146,10 +146,10 @@ impl PostFile {
         format!("https://{}.su/data{}", service.site(), self.path.as_ref().unwrap())
     }
 
-    fn to_pathbuf(&self, service: Service, creator_id: &str) -> PathBuf {
+    fn to_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
         PathBuf::from_iter([
             &service.to_string(),
-            creator_id,
+            user_id,
             self.path
                 .as_ref()
                 .unwrap()
@@ -159,26 +159,26 @@ impl PostFile {
         ])
     }
 
-    pub fn to_name(&self, service: Service, creator_id: &str) -> String {
-        self.to_pathbuf(service, creator_id)
+    pub fn to_name(&self, service: Service, user_id: &str) -> String {
+        self.to_pathbuf(service, user_id)
             .file_name()
             .expect("get local file name from pathbuf")
             .to_string_lossy()
             .to_string()
     }
 
-    async fn open(&self, service: Service, creator_id: &str) -> Result<File, io::Error> {
+    async fn open(&self, service: Service, user_id: &str) -> Result<File, io::Error> {
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_pathbuf(service, creator_id)).await
+            .open(&self.to_pathbuf(service, user_id)).await
     }
 
-    pub async fn download(&self, service: Service, creator_id: &str) -> Result<DownloadState> {
+    pub async fn download(&self, service: Service, user_id: &str) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
-        let mut file = self.open(service, creator_id).await?;
+        let mut file = self.open(service, user_id).await?;
 
         let initial_size = file.seek(SeekFrom::End(0)).await?;
 
@@ -186,14 +186,14 @@ impl PostFile {
 
         let remote = self.remote_size(service).await?;
 
-        let name = self.to_name(service, creator_id);
+        let name = self.to_name(service, user_id);
 
         if local == remote {
             return Ok({
                 let hash = if ARGS.skip_initial_hash_verification {
                     String::new()
                 } else {
-                    try_async_digest(&self.to_pathbuf(service, creator_id)).await?
+                    try_async_digest(&self.to_pathbuf(service, user_id)).await?
                 };
 
                 if ARGS.skip_initial_hash_verification || name[..64] == hash {
@@ -239,7 +239,7 @@ impl PostFile {
         let downloaded = s(local - initial_size);
 
         Ok({
-            let hash = sha256::try_digest(&self.to_pathbuf(service, creator_id))?;
+            let hash = sha256::try_digest(&self.to_pathbuf(service, user_id))?;
 
             if name[..64] == hash {
                 DownloadState::Success(downloaded)

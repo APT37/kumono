@@ -7,12 +7,11 @@ use std::{ fmt, num, sync::LazyLock, time::Duration };
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
-#[clap(about)]
+#[clap(about, version)]
 pub struct Args {
     pub service: Service,
 
-    #[arg(help = "Creator ID")]
-    pub creator: String,
+    pub user_id: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
     pub proxy: Option<String>,
