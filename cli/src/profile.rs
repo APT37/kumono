@@ -189,19 +189,22 @@ impl PostFile {
         let name = self.to_name(service, creator_id);
 
         if local == remote {
-            return Ok(
-                if
-                    ARGS.skip_initial_hash_verification ||
-                    name[..64] == try_async_digest(&self.to_pathbuf(service, creator_id)).await?
-                {
+            return Ok({
+                let hash = if ARGS.skip_initial_hash_verification {
+                    String::new()
+                } else {
+                    try_async_digest(&self.to_pathbuf(service, creator_id)).await?
+                };
+
+                if ARGS.skip_initial_hash_verification || name[..64] == hash {
                     DownloadState::Skip
                 } else {
                     DownloadState::Failure(
                         Size::default(),
-                        format!("hash mismatch: {name} (before)")
+                        format!("hash mismatch (before): {name} {hash}")
                     )
                 }
-            );
+            });
         }
 
         loop {
@@ -235,13 +238,15 @@ impl PostFile {
 
         let downloaded = s(local - initial_size);
 
-        Ok(
-            if name[..64] == sha256::try_digest(&self.to_pathbuf(service, creator_id))? {
+        Ok({
+            let hash = sha256::try_digest(&self.to_pathbuf(service, creator_id))?;
+
+            if name[..64] == hash {
                 DownloadState::Success(downloaded)
             } else {
-                DownloadState::Failure(downloaded, format!("hash mismatch: {name} (after)"))
+                DownloadState::Failure(downloaded, format!("hash mismatch (after): {name} {hash}"))
             }
-        )
+        })
     }
 
     async fn download_range(
