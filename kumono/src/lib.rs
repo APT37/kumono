@@ -7,7 +7,7 @@ use strum_macros::Display;
 pub enum Service {
     boosty,
     candfans,
-    discord,
+    // discord,
     dlsite,
     fanbox,
     fansly,
