@@ -191,10 +191,10 @@ impl PostFile {
         let s = |n| Size::from_bytes(n);
 
         if fs::try_exists(self.to_pathbuf(service, user_id)).await? {
-            if fs::try_exists(self.to_temp_pathbuf(service, user_id)).await? {
-                fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
-            }
-            
+            // if fs::try_exists(self.to_temp_pathbuf(service, user_id)).await? {
+            //     fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
+            // }
+
             return Ok(DownloadState::Skip);
         }
 
