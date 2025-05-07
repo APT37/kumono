@@ -34,14 +34,11 @@ impl Stats {
                 self.dl_size += size.bytes();
                 self.failure += 1;
 
-                self.errors.dedup();
-
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
 
                 self.errors.push(err);
-                self.errors.dedup();
             }
             DownloadState::Skip => {
                 self.skipped += 1;
