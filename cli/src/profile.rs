@@ -4,10 +4,9 @@ use anyhow::{ bail, Result };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use sha256::async_digest::try_async_digest;
 use size::Size;
 use std::{ error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
-use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
+use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ sleep, Duration } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
 
@@ -142,7 +141,7 @@ impl Post {
 
 #[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PostFile {
-    // original file name
+    // original source file name
     // name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",
 
     // remote file path, name is the file's sha256 hash
@@ -154,25 +153,30 @@ impl PostFile {
         format!("https://{}.su/data{}", service.site(), self.path.as_ref().unwrap())
     }
 
-    fn to_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
-        PathBuf::from_iter([
-            &service.to_string(),
-            user_id,
-            self.path
-                .as_ref()
-                .unwrap()
-                .split('/')
-                .next_back()
-                .expect("get local name from split remote path"),
-        ])
+    fn to_name(&self) -> String {
+        self.path
+            .as_ref()
+            .unwrap()
+            .split('/')
+            .next_back()
+            .expect("get local name from split remote path")
+            .to_string()
     }
 
-    pub fn to_name(&self, service: Service, user_id: &str) -> String {
-        self.to_pathbuf(service, user_id)
-            .file_name()
-            .expect("get local file name from pathbuf")
-            .to_string_lossy()
-            .to_string()
+    fn to_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
+        PathBuf::from_iter([&service.to_string(), user_id, &self.to_name()])
+    }
+
+    fn to_temp_name(&self) -> String {
+        self.to_name() + ".temp"
+    }
+
+    fn to_temp_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
+        PathBuf::from_iter([&service.to_string(), user_id, &self.to_temp_name()])
+    }
+
+    fn to_hash(&self) -> String {
+        self.to_name()[..64].to_string()
     }
 
     async fn open(&self, service: Service, user_id: &str) -> Result<File, io::Error> {
@@ -180,43 +184,34 @@ impl PostFile {
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_pathbuf(service, user_id)).await
+            .open(&self.to_temp_pathbuf(service, user_id)).await
     }
 
     pub async fn download(&self, service: Service, user_id: &str) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
-        let mut file = self.open(service, user_id).await?;
+        if fs::try_exists(self.to_pathbuf(service, user_id)).await? {
+            if fs::try_exists(self.to_temp_pathbuf(service, user_id)).await? {
+                fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
+            }
+            
+            return Ok(DownloadState::Skip);
+        }
 
-        let initial_size = file.seek(SeekFrom::End(0)).await?;
+        let mut temp_file = self.open(service, user_id).await?;
+
+        let initial_size = temp_file.seek(SeekFrom::End(0)).await?;
 
         let mut local = initial_size;
 
         let remote = self.remote_size(service).await?;
 
-        let name = self.to_name(service, user_id);
-
-        if local == remote {
-            return Ok({
-                let hash = if ARGS.skip_initial_hash_verification {
-                    String::new()
-                } else {
-                    try_async_digest(&self.to_pathbuf(service, user_id)).await?
-                };
-
-                if ARGS.skip_initial_hash_verification || name[..64] == hash {
-                    DownloadState::Skip
-                } else {
-                    DownloadState::Failure(
-                        Size::default(),
-                        format!("hash mismatch (before): {name} {hash}")
-                    )
-                }
-            });
-        }
-
         loop {
-            if let Err(err) = self.download_range(&mut file, service, local, remote - 1).await {
+            if local == remote {
+                break;
+            }
+
+            if let Err(err) = self.download_range(&mut temp_file, service, local, remote - 1).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
@@ -225,7 +220,7 @@ impl PostFile {
                 return Ok(DownloadState::Failure(s(local - initial_size), error));
             }
 
-            match file.seek(SeekFrom::End(0)).await {
+            match temp_file.seek(SeekFrom::End(0)).await {
                 Ok(pos) => {
                     local = pos;
                 }
@@ -238,21 +233,26 @@ impl PostFile {
                     return Ok(DownloadState::Failure(s(local - initial_size), error));
                 }
             }
-
-            if local == remote {
-                break;
-            }
         }
 
-        let downloaded = s(local - initial_size);
-
         Ok({
-            let hash = sha256::try_digest(&self.to_pathbuf(service, user_id))?;
+            let downloaded = s(local - initial_size);
 
-            if name[..64] == hash {
+            if
+                self.to_hash() ==
+                sha256::try_async_digest(&self.to_temp_pathbuf(service, user_id)).await?
+            {
+                fs::rename(
+                    self.to_temp_pathbuf(service, user_id),
+                    self.to_pathbuf(service, user_id)
+                ).await?;
                 DownloadState::Success(downloaded)
             } else {
-                DownloadState::Failure(downloaded, format!("hash mismatch (after): {name} {hash}"))
+                fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
+                DownloadState::Failure(
+                    downloaded,
+                    format!("hash mismatch (deleted): {}", self.to_name())
+                )
             }
         })
     }

@@ -33,13 +33,6 @@ pub struct Args {
 
     // #[arg(short, long, default_value_t = 3, help = "Simultaneously shown errors (1-10)")]
     // pub max_errors: u8,
-
-    #[arg(
-        short,
-        long,
-        help = "Skip hash check for existing files if their size matches the remote"
-    )]
-    pub skip_initial_hash_verification: bool,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {

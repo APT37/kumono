@@ -3,7 +3,7 @@ use anyhow::Result;
 use futures::future::join_all;
 use size::Size;
 use std::{ path::PathBuf, sync::Arc, thread };
-use tokio::{ fs, sync::{ mpsc, Semaphore }, task };
+use tokio::{ fs, sync::{ mpsc, Semaphore }, task, time::{ Duration, sleep } };
 
 mod cli;
 mod http;
@@ -68,6 +68,9 @@ async fn main() -> Result<()> {
 
         join_all(tasks).await;
     }
+
+    // wait as bit so the bar can finish properly
+    sleep(Duration::from_millis(1)).await;
 
     #[allow(unused_must_use)]
     fs::remove_dir(&path).await;
