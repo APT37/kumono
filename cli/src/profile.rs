@@ -1,12 +1,12 @@
 use kumono::Service;
 use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt } };
-use anyhow::{ Result, anyhow };
+use anyhow::{ bail, Result };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use sha256::async_digest::try_async_digest;
 use size::Size;
-use std::{ error::Error, io::{ self, SeekFrom }, path::PathBuf };
+use std::{ error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::File, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
@@ -16,6 +16,28 @@ pub struct Profile<'a> {
     user_id: &'a str,
     posts: Vec<Post>,
     pub files: Vec<PostFile>,
+}
+
+impl fmt::Display for Profile<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let posts = match self.posts.len() {
+            0 => "no posts",
+            1 => "1 post",
+            _ => &(n_fmt(self.posts.len()) + " posts"),
+        };
+
+        let files = if self.posts.is_empty() {
+            ""
+        } else {
+            match self.files.len() {
+                0 => ", but no files",
+                1 => " with 1 file",
+                _ => &format!(" with {} files", n_fmt(self.files.len())),
+            }
+        };
+
+        write!(f, "{} user '{}' has {posts}{files}", self.service, self.user_id)
+    }
 }
 
 impl<'a> Profile<'a> {
@@ -30,19 +52,7 @@ impl<'a> Profile<'a> {
         profile.init_posts().await?;
         profile.init_files();
 
-        eprintln!("{service} user '{user_id}' has {}", {
-            if profile.posts.is_empty() {
-                "no posts".to_string()
-            } else if profile.files.is_empty() {
-                format!("{} posts, but no files", n_fmt(profile.posts.len()))
-            } else {
-                format!(
-                    "{} posts with {} files",
-                    n_fmt(profile.posts.len()),
-                    n_fmt(profile.files.len())
-                )
-            }
-        });
+        eprintln!("{profile}");
 
         Ok(profile)
     }
@@ -74,9 +84,7 @@ impl<'a> Profile<'a> {
                         // );
                         sleep(ARGS.api_backoff).await;
                     }
-                    status => {
-                        return Err(anyhow!("{url} returned unexpected status: {status}"));
-                    }
+                    status => bail!("{url} returned unexpected status: {status}"),
                 }
             }
 
@@ -256,6 +264,10 @@ impl PostFile {
         start: u64,
         end: u64
     ) -> Result<()> {
+        fn range_error(status: StatusCode, message: &str) -> Result<u64> {
+            bail!("[{status}] failed to download range: {message}")
+        }
+
         let url = self.to_url(service);
 
         let mut first_error = true;
@@ -279,14 +291,23 @@ impl PostFile {
 
                     break Ok(());
                 }
+
                 StatusCode::TOO_MANY_REQUESTS => sleep(ARGS.download_backoff).await,
+
+                | StatusCode::INTERNAL_SERVER_ERROR
+                | StatusCode::GATEWAY_TIMEOUT
+                | StatusCode::BAD_GATEWAY => {
+                    if first_error {
+                        first_error = false;
+                        sleep(ARGS.download_backoff).await;
+                    } else {
+                        range_error(status, "server returned errors repeatedly")?;
+                    }
+                }
+
                 _ => {
                     if !first_error {
-                        break Err(
-                            anyhow!(
-                                "[{status}] failed to download range: server returned unexpected status codes repeatedly"
-                            )
-                        );
+                        range_error(status, "server returned unexpected status codes repeatedly")?;
                     }
 
                     first_error = false;
@@ -297,7 +318,7 @@ impl PostFile {
 
     async fn remote_size(&self, service: Service) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str) -> Result<u64> {
-            Err(anyhow!("[{status}] failed to determine remote size: {message}"))
+            bail!("[{status}] failed to determine remote size: {message}")
         }
 
         let mut first_error = true;
@@ -331,7 +352,7 @@ impl PostFile {
                 }
 
                 _ => {
-                    return size_error(status, "received unexpected status code");
+                    size_error(status, "received unexpected status code")?;
                 }
             }
         }

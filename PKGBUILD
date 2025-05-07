@@ -1,7 +1,7 @@
 pkgbase=kumono
 pkgname=('kumono-cli')
 # pkgname=('kumono-cli' 'kumono-daemon')
-pkgver=0.8.1
+pkgver=0.8.2
 pkgrel=1
 pkgdesc="Media ripper for coomer.su and kemono.su"
 arch=('x86_64')
