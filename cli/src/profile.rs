@@ -9,6 +9,7 @@ use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Du
 
 const API_DELAY: Duration = Duration::from_millis(100);
 
+#[derive(Default)]
 pub struct Profile {
     posts: Vec<Post>,
     pub files: Vec<PostFile>,
@@ -38,15 +39,15 @@ impl fmt::Display for Profile {
 
 impl Profile {
     pub async fn init() -> Result<Self> {
-        let mut profile = Self {
-            posts: vec![],
-            files: vec![],
-        };
+        let mut profile = Self::default();
 
         profile.init_posts().await?;
         profile.init_files();
 
         eprintln!("{profile}");
+
+        // discard posts after collecting files
+        profile.posts = vec![];
 
         Ok(profile)
     }
@@ -55,8 +56,6 @@ impl Profile {
         let mut offset = 0;
 
         loop {
-            // debug!("fetching posts for {}/{} with offset {offset}", self.service, self.user_id);
-
             let mut posts: Vec<Post>;
 
             let url = Self::api_url_with_offset(offset);
@@ -73,10 +72,6 @@ impl Profile {
                     }
 
                     StatusCode::TOO_MANY_REQUESTS => {
-                        // warn!(
-                        //     "hit rate-limit at offset {offset}, sleeping for {}",
-                        //     pretty_duration::pretty_duration(&ARGS.api_backoff, None)
-                        // );
                         sleep(ARGS.api_backoff).await;
                     }
 
@@ -193,6 +188,10 @@ impl PostFile {
         sha256::try_async_digest(&self.to_temp_pathbuf()).await
     }
 
+    async fn exists(&self) -> io::Result<bool> {
+        fs::try_exists(self.to_pathbuf()).await
+    }
+
     async fn r#move(&self) -> io::Result<()> {
         fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await
     }
@@ -204,7 +203,7 @@ impl PostFile {
     pub async fn download(&self) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
-        if fs::try_exists(self.to_pathbuf()).await? {
+        if self.exists().await? {
             return Ok(DownloadState::Skip);
         }
 
@@ -214,8 +213,10 @@ impl PostFile {
 
         let mut csize = isize;
 
+        let rsize = self.remote_size().await?;
+
         loop {
-            if csize == self.remote_size().await? {
+            if csize == rsize {
                 break;
             }
 
@@ -229,8 +230,8 @@ impl PostFile {
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
-                Ok(size) => {
-                    csize = size;
+                Ok(cursor) => {
+                    csize = cursor;
                 }
                 Err(err) => {
                     let mut error = err.to_string();
@@ -244,15 +245,15 @@ impl PostFile {
         }
 
         Ok({
-            let downloaded = s(csize - isize);
+            let dsize = s(csize - isize);
 
             if self.to_hash() == self.hash().await? {
                 self.r#move().await?;
-                DownloadState::Success(downloaded)
+                DownloadState::Success(dsize)
             } else {
                 self.delete().await?;
                 DownloadState::Failure(
-                    downloaded,
+                    dsize,
                     format!("hash mismatch (deleted): {}", self.to_name())
                 )
             }
