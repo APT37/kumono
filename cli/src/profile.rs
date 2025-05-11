@@ -1,23 +1,20 @@
-use kumono::Service;
 use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt } };
-use anyhow::{ bail, Result };
+use anyhow::{ Result, bail };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
 use std::{ error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
-use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ sleep, Duration } };
+use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
 
-pub struct Profile<'a> {
-    service: Service,
-    user_id: &'a str,
+pub struct Profile {
     posts: Vec<Post>,
     pub files: Vec<PostFile>,
 }
 
-impl fmt::Display for Profile<'_> {
+impl fmt::Display for Profile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let posts = match self.posts.len() {
             0 => "no posts",
@@ -35,15 +32,13 @@ impl fmt::Display for Profile<'_> {
             }
         };
 
-        write!(f, "{} user '{}' has {posts}{files}", self.service, self.user_id)
+        write!(f, "{} user '{}' has {posts}{files}", ARGS.service, ARGS.user_id)
     }
 }
 
-impl<'a> Profile<'a> {
-    pub async fn new(service: Service, user_id: &'a str) -> Result<Self> {
+impl Profile {
+    pub async fn init() -> Result<Self> {
         let mut profile = Self {
-            service,
-            user_id,
             posts: vec![],
             files: vec![],
         };
@@ -64,7 +59,7 @@ impl<'a> Profile<'a> {
 
             let mut posts: Vec<Post>;
 
-            let url = self.api_url_with_offset(offset);
+            let url = Self::api_url_with_offset(offset);
 
             loop {
                 sleep(API_DELAY).await;
@@ -76,6 +71,7 @@ impl<'a> Profile<'a> {
                         posts = response.json().await?;
                         break;
                     }
+
                     StatusCode::TOO_MANY_REQUESTS => {
                         // warn!(
                         //     "hit rate-limit at offset {offset}, sleeping for {}",
@@ -83,6 +79,7 @@ impl<'a> Profile<'a> {
                         // );
                         sleep(ARGS.api_backoff).await;
                     }
+
                     status => bail!("{url} returned unexpected status: {status}"),
                 }
             }
@@ -99,18 +96,18 @@ impl<'a> Profile<'a> {
         Ok(())
     }
 
-    fn api_url_with_offset(&self, offset: u32) -> String {
+    fn api_url_with_offset(offset: u32) -> String {
         format!(
             "https://{}.su/api/v1/{}/user/{}?o={offset}",
-            self.service.site(),
-            self.service,
-            self.user_id
+            ARGS.service.site(),
+            ARGS.service,
+            ARGS.user_id
         )
     }
 
     fn init_files(&mut self) {
         self.posts
-            .clone()
+            .clone() // TODO don't clone posts
             .into_iter()
             .for_each(|post| self.files.append(&mut post.files()));
 
@@ -121,11 +118,16 @@ impl<'a> Profile<'a> {
 
 #[derive(Deserialize, Clone)]
 struct Post {
-    // id: String,   // "1000537173"
-    // this is the user_id, not the 'nice' user name
+    // coomer/kemono database id
+    // id: String, // "1000537173"
+
+    // service user name/id
     // user: String, // "paigetheuwulord"
+
     // service: Service, // "onlyfans"
-    // title: String,     // "What an ass"
+
+    // post title
+    // title: String, // "What an ass"
     file: PostFile,
     attachments: Vec<PostFile>,
 }
@@ -149,8 +151,8 @@ pub struct PostFile {
 }
 
 impl PostFile {
-    fn to_url(&self, service: Service) -> String {
-        format!("https://{}.su/data{}", service.site(), self.path.as_ref().unwrap())
+    fn to_url(&self) -> String {
+        format!("https://{}.su/data{}", ARGS.service.site(), self.path.as_ref().unwrap())
     }
 
     fn to_name(&self) -> String {
@@ -163,66 +165,72 @@ impl PostFile {
             .to_string()
     }
 
-    fn to_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
-        PathBuf::from_iter([&service.to_string(), user_id, &self.to_name()])
-    }
-
     fn to_temp_name(&self) -> String {
         self.to_name() + ".temp"
     }
 
-    fn to_temp_pathbuf(&self, service: Service, user_id: &str) -> PathBuf {
-        PathBuf::from_iter([&service.to_string(), user_id, &self.to_temp_name()])
+    fn to_pathbuf(&self) -> PathBuf {
+        ARGS.to_pathbuf_with_file(self.to_name())
+    }
+
+    fn to_temp_pathbuf(&self) -> PathBuf {
+        ARGS.to_pathbuf_with_file(self.to_temp_name())
     }
 
     fn to_hash(&self) -> String {
         self.to_name()[..64].to_string()
     }
 
-    async fn open(&self, service: Service, user_id: &str) -> Result<File, io::Error> {
+    async fn open(&self) -> Result<File, io::Error> {
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_temp_pathbuf(service, user_id)).await
+            .open(&self.to_temp_pathbuf()).await
     }
 
-    pub async fn download(&self, service: Service, user_id: &str) -> Result<DownloadState> {
+    async fn hash(&self) -> io::Result<String> {
+        sha256::try_async_digest(&self.to_temp_pathbuf()).await
+    }
+
+    async fn r#move(&self) -> io::Result<()> {
+        fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await
+    }
+
+    async fn delete(&self) -> io::Result<()> {
+        fs::remove_file(self.to_temp_pathbuf()).await
+    }
+
+    pub async fn download(&self) -> Result<DownloadState> {
         let s = |n| Size::from_bytes(n);
 
-        if fs::try_exists(self.to_pathbuf(service, user_id)).await? {
-            // if fs::try_exists(self.to_temp_pathbuf(service, user_id)).await? {
-            //     fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
-            // }
-
+        if fs::try_exists(self.to_pathbuf()).await? {
             return Ok(DownloadState::Skip);
         }
 
-        let mut temp_file = self.open(service, user_id).await?;
+        let mut temp_file = self.open().await?;
 
-        let initial_size = temp_file.seek(SeekFrom::End(0)).await?;
+        let isize = temp_file.seek(SeekFrom::End(0)).await?;
 
-        let mut local = initial_size;
-
-        let remote = self.remote_size(service).await?;
+        let mut csize = isize;
 
         loop {
-            if local == remote {
+            if csize == self.remote_size().await? {
                 break;
             }
 
-            if let Err(err) = self.download_range(&mut temp_file, service, local, remote - 1).await {
+            if let Err(err) = self.download_range(&mut temp_file, csize).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
                     error.push_str(&source.to_string());
                 }
-                return Ok(DownloadState::Failure(s(local - initial_size), error));
+                return Ok(DownloadState::Failure(s(csize - isize), error));
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
-                Ok(pos) => {
-                    local = pos;
+                Ok(size) => {
+                    csize = size;
                 }
                 Err(err) => {
                     let mut error = err.to_string();
@@ -230,25 +238,19 @@ impl PostFile {
                         error.push('\n');
                         error.push_str(&source.to_string());
                     }
-                    return Ok(DownloadState::Failure(s(local - initial_size), error));
+                    return Ok(DownloadState::Failure(s(csize - isize), error));
                 }
             }
         }
 
         Ok({
-            let downloaded = s(local - initial_size);
+            let downloaded = s(csize - isize);
 
-            if
-                self.to_hash() ==
-                sha256::try_async_digest(&self.to_temp_pathbuf(service, user_id)).await?
-            {
-                fs::rename(
-                    self.to_temp_pathbuf(service, user_id),
-                    self.to_pathbuf(service, user_id)
-                ).await?;
+            if self.to_hash() == self.hash().await? {
+                self.r#move().await?;
                 DownloadState::Success(downloaded)
             } else {
-                fs::remove_file(self.to_temp_pathbuf(service, user_id)).await?;
+                self.delete().await?;
                 DownloadState::Failure(
                     downloaded,
                     format!("hash mismatch (deleted): {}", self.to_name())
@@ -257,24 +259,18 @@ impl PostFile {
         })
     }
 
-    async fn download_range(
-        &self,
-        file: &mut File,
-        service: Service,
-        start: u64,
-        end: u64
-    ) -> Result<()> {
+    async fn download_range(&self, file: &mut File, start: u64) -> Result<()> {
         fn range_error(status: StatusCode, message: &str) -> Result<u64> {
             bail!("[{status}] failed to download range: {message}")
         }
 
-        let url = self.to_url(service);
-
         let mut first_error = true;
+
+        let url = self.to_url();
 
         loop {
             let response = CLIENT.get(&url)
-                .header("Range", format!("bytes={start}-{end}"))
+                .header("Range", format!("bytes={start}-"))
                 .send().await?;
 
             let status = response.status();
@@ -316,7 +312,7 @@ impl PostFile {
         }
     }
 
-    async fn remote_size(&self, service: Service) -> Result<u64> {
+    async fn remote_size(&self) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str) -> Result<u64> {
             bail!("[{status}] failed to determine remote size: {message}")
         }
@@ -324,7 +320,7 @@ impl PostFile {
         let mut first_error = true;
 
         loop {
-            let response = CLIENT.head(self.to_url(service)).send().await?;
+            let response = CLIENT.head(self.to_url()).send().await?;
 
             let status = response.status();
 

@@ -2,8 +2,8 @@ use crate::{ cli::ARGS, profile::Profile, progress::DownloadState };
 use anyhow::Result;
 use futures::future::join_all;
 use size::Size;
-use std::{ path::PathBuf, sync::Arc, thread };
-use tokio::{ fs, sync::{ mpsc, Semaphore }, task, time::{ Duration, sleep } };
+use std::{ sync::Arc, thread };
+use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod cli;
 mod http;
@@ -14,18 +14,16 @@ mod progress;
 async fn main() -> Result<()> {
     eprintln!("{}", *ARGS);
 
-    let profile = Profile::new(ARGS.service, &ARGS.user_id).await?;
+    let profile = Profile::init().await?;
 
     if profile.files.is_empty() {
         return Ok(());
     }
 
-    let path = PathBuf::from_iter([&ARGS.service.to_string(), &ARGS.user_id]);
-
     let len = profile.files.len();
 
     if len > 0 {
-        fs::create_dir_all(&path).await?;
+        fs::create_dir_all(ARGS.to_pathbuf()).await?;
 
         let (tx, rx) = mpsc::channel::<DownloadState>(len);
 
@@ -45,7 +43,7 @@ async fn main() -> Result<()> {
                     #[allow(clippy::no_effect_underscore_binding)]
                     let _permit = permit;
 
-                    let result = file.download(ARGS.service, &ARGS.user_id).await;
+                    let result = file.download().await;
 
                     match result {
                         Ok(dl_state) => {
@@ -73,7 +71,7 @@ async fn main() -> Result<()> {
     sleep(Duration::from_millis(1)).await;
 
     #[allow(unused_must_use)]
-    fs::remove_dir(&path).await;
+    fs::remove_dir(ARGS.to_pathbuf()).await;
 
     Ok(())
 }

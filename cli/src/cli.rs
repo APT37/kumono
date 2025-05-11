@@ -2,7 +2,7 @@ use kumono::Service;
 use clap::{ arg, Parser };
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{ fmt, num, sync::LazyLock, time::Duration };
+use std::{ fmt, num, path::PathBuf, sync::LazyLock, time::Duration };
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -37,6 +37,16 @@ pub struct Args {
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
     Ok(Duration::from_secs(arg.parse()?))
+}
+
+impl Args {
+    pub fn to_pathbuf(&self) -> PathBuf {
+        PathBuf::from_iter([&self.service.to_string(), &self.user_id])
+    }
+
+    pub fn to_pathbuf_with_file(&self, file: impl AsRef<str>) -> PathBuf {
+        PathBuf::from_iter([&self.service.to_string(), &self.user_id, file.as_ref()])
+    }
 }
 
 impl fmt::Display for Args {
