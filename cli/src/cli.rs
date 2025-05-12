@@ -1,8 +1,8 @@
+use clap::{ Parser, arg };
 use kumono::Service;
-use clap::{ arg, Parser };
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{ fmt, num, path::PathBuf, sync::LazyLock, time::Duration };
+use std::{ fmt, net::SocketAddr, num, path::PathBuf, sync::LazyLock, time::Duration };
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -14,10 +14,10 @@ pub struct Args {
     pub user_id: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
-    pub proxy: Option<String>,
+    pub proxy: Option<SocketAddr>,
 
-    #[arg(short, long, default_value_t = 64, help = "Simultaneous downloads (1-255)")]
-    pub threads: u8,
+    #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
+    pub threads: u16,
 
     #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
@@ -30,9 +30,6 @@ pub struct Args {
 
     #[arg(short, long, value_parser = duration_from_secs, default_value = "15")]
     pub download_backoff: Duration,
-
-    // #[arg(short, long, default_value_t = 3, help = "Simultaneously shown errors (1-10)")]
-    // pub max_errors: u8,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
@@ -60,7 +57,7 @@ impl fmt::Display for Args {
             "Threads: {} / API Backoff: {} / Proxy: {} / Timeout: (Connect: {} / Read: {}) / Download Backoff: {}",
             self.threads,
             pd(&self.api_backoff),
-            self.proxy.as_ref().unwrap_or(&String::from("None")),
+            self.proxy.map_or(String::from("None"), |p| p.to_string()),
             pd(&self.connect_timeout),
             pd(&self.read_timeout),
             pd(&self.download_backoff)
