@@ -25,6 +25,12 @@ pretty-duration = "0.1.*"
 serde = { version = "1.0.*", features = ["derive"] }
 sha256 = "1.6.*"
 size = "0.5.*"
+sqlx = { version = "0.8.*", default-features = false, features = [
+    "macros",
+    "migrate",
+    "postgres",
+    "runtime-tokio",
+] }
 tokio = { version = "1.45.*", default-features = false, features = [
     "macros",
     "rt-multi-thread",

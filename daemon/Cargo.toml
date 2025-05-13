@@ -14,4 +14,6 @@ kumono = { path = "../kumono" }
 log.workspace = true
 reqwest.workspace = true
 serde.workspace = true
+sqlx.workspace = true
+sha256.workspace = true
 tokio.workspace = true
