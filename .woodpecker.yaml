@@ -13,11 +13,11 @@ steps:
       REPOSITORY_DIR:
         from_secret: repository_dir
     commands:
-      - mkdir -p $REPOSITORY_DIR/$CI_REPO_NAME && cd $REPOSITORY_DIR/$CI_REPO_NAME
-      - git clone $CI_REPO_CLONE_SSH_URL (pwd) || git pull --force
-      - ln -sf $CARGO_TARGET_DIR target
-      - rmdir $CI_WORKSPACE
-      - ln -sf $REPOSITORY_DIR/$CI_REPO_NAME $CI_WORKSPACE
+      - mkdir -vp $REPOSITORY_DIR/$CI_REPO_NAME && cd $REPOSITORY_DIR/$CI_REPO_NAME
+      - git clone -v $CI_REPO_CLONE_SSH_URL (pwd) || git pull -vf
+      - ln -vnsf $CARGO_TARGET_DIR target
+      - rmdir -v $CI_WORKSPACE
+      - ln -vsf $REPOSITORY_DIR/$CI_REPO_NAME $CI_WORKSPACE
 
   - name: toolchain
     image: fish
@@ -50,5 +50,5 @@ steps:
       - set build false
       - for pkg in $make_pkgs; if not contains (string split -r -m 1 '/' $pkg | tail -1) $repo_pkgs; set build true; break; end; end
       - if $build; makepkg --nodeps --force; end
-      - if $build; mv $make_pkgs $ARCH_REPO_DIR; end
+      - if $build; mv -v $make_pkgs $ARCH_REPO_DIR; end
       - if $build; for pkg in $make_pkgs; repo-add $ARCH_REPO_DIR/$ARCH_REPO_NAME.db.tar.zst $ARCH_REPO_DIR/(string split -r -m 1 '/' $pkg | tail -1); end; end
