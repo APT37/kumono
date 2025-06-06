@@ -261,12 +261,14 @@ impl PostFile {
     }
 
     async fn download_range(&self, file: &mut File, start: u64) -> Result<()> {
-        fn download_error(status: StatusCode, message: &str) -> Result<()> {
-            bail!("[{status}] failed to download file: {message}")
+        fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
+            bail!("[{status}] failed to download file: {message} ({url})")
         }
 
+        let url = self.to_url();
+
         loop {
-            let response = CLIENT.get(self.to_url())
+            let response = CLIENT.get(&url)
                 .header("Range", format!("bytes={start}-"))
                 .send().await?;
 
@@ -283,7 +285,7 @@ impl PostFile {
 
                 break Ok(());
             } else if status == StatusCode::NOT_FOUND {
-                download_error(status, "file not found")?;
+                download_error(status, "file not found", &url)?;
             } else if
                 status.is_server_error() ||
                 status == StatusCode::FORBIDDEN ||
@@ -291,18 +293,20 @@ impl PostFile {
             {
                 sleep(ARGS.download_backoff).await;
             } else {
-                download_error(status, "unexpected status code")?;
+                download_error(status, "unexpected status code", &url)?;
             }
         }
     }
 
     async fn remote_size(&self) -> Result<u64> {
-        fn size_error(status: StatusCode, message: &str) -> Result<u64> {
-            bail!("[{status}] failed to determine remote size: {message}")
+        fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
+            bail!("[{status}] failed to determine remote size: {message} ({url})")
         }
 
+        let url = self.to_url();
+
         loop {
-            let response = CLIENT.head(self.to_url()).send().await?;
+            let response = CLIENT.head(&url).send().await?;
 
             let status = response.status();
 
@@ -310,11 +314,11 @@ impl PostFile {
                 return match response.content_length() {
                     Some(length) => Ok(length),
                     None => {
-                        return size_error(status, "Content-Length header is not present");
+                        return size_error(status, "Content-Length header is not present", &url);
                     }
                 };
             } else if status == StatusCode::NOT_FOUND {
-                size_error(status, "file not found")?;
+                size_error(status, "file not found", &url)?;
             } else if
                 status.is_server_error() ||
                 status == StatusCode::FORBIDDEN ||
@@ -322,7 +326,7 @@ impl PostFile {
             {
                 sleep(ARGS.download_backoff).await;
             } else {
-                size_error(status, "unexpected status code")?;
+                size_error(status, "unexpected status code", &url)?;
             }
         }
     }
