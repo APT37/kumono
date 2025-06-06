@@ -261,54 +261,37 @@ impl PostFile {
     }
 
     async fn download_range(&self, file: &mut File, start: u64) -> Result<()> {
-        fn range_error(status: StatusCode, message: &str) -> Result<u64> {
-            bail!("[{status}] failed to download range: {message}")
+        fn download_error(status: StatusCode, message: &str) -> Result<()> {
+            bail!("[{status}] failed to download file: {message}")
         }
 
-        let mut first_error = true;
-
-        let url = self.to_url();
-
         loop {
-            let response = CLIENT.get(&url)
+            let response = CLIENT.get(self.to_url())
                 .header("Range", format!("bytes={start}-"))
                 .send().await?;
 
             let status = response.status();
 
-            match status {
-                StatusCode::PARTIAL_CONTENT => {
-                    let mut stream = response.bytes_stream();
+            if status == StatusCode::PARTIAL_CONTENT {
+                let mut stream = response.bytes_stream();
 
-                    while let Some(Ok(bytes)) = stream.next().await {
-                        file.write_all(&bytes).await?;
-                    }
-
-                    file.flush().await?;
-
-                    break Ok(());
+                while let Some(Ok(bytes)) = stream.next().await {
+                    file.write_all(&bytes).await?;
                 }
 
-                StatusCode::TOO_MANY_REQUESTS => sleep(ARGS.download_backoff).await,
+                file.flush().await?;
 
-                | StatusCode::INTERNAL_SERVER_ERROR
-                | StatusCode::GATEWAY_TIMEOUT
-                | StatusCode::BAD_GATEWAY => {
-                    if first_error {
-                        first_error = false;
-                        sleep(ARGS.download_backoff).await;
-                    } else {
-                        range_error(status, "server returned errors repeatedly")?;
-                    }
-                }
-
-                _ => {
-                    if !first_error {
-                        range_error(status, "server returned unexpected status codes repeatedly")?;
-                    }
-
-                    first_error = false;
-                }
+                break Ok(());
+            } else if status == StatusCode::NOT_FOUND {
+                download_error(status, "file not found")?;
+            } else if
+                status.is_server_error() ||
+                status == StatusCode::FORBIDDEN ||
+                status == StatusCode::TOO_MANY_REQUESTS
+            {
+                sleep(ARGS.download_backoff).await;
+            } else {
+                download_error(status, "unexpected status code")?;
             }
         }
     }
@@ -318,39 +301,28 @@ impl PostFile {
             bail!("[{status}] failed to determine remote size: {message}")
         }
 
-        let mut first_error = true;
-
         loop {
             let response = CLIENT.head(self.to_url()).send().await?;
 
             let status = response.status();
 
-            match status {
-                StatusCode::OK => {
-                    return match response.content_length() {
-                        Some(length) => Ok(length),
-                        None => {
-                            return size_error(status, "Content-Length header is not present");
-                        }
-                    };
-                }
-
-                StatusCode::TOO_MANY_REQUESTS => sleep(ARGS.download_backoff).await,
-
-                | StatusCode::INTERNAL_SERVER_ERROR
-                | StatusCode::GATEWAY_TIMEOUT
-                | StatusCode::BAD_GATEWAY => {
-                    if first_error {
-                        first_error = false;
-                        sleep(ARGS.download_backoff).await;
-                    } else {
-                        size_error(status, "server returned errors repeatedly")?;
+            if status == StatusCode::OK {
+                return match response.content_length() {
+                    Some(length) => Ok(length),
+                    None => {
+                        return size_error(status, "Content-Length header is not present");
                     }
-                }
-
-                _ => {
-                    size_error(status, "received unexpected status code")?;
-                }
+                };
+            } else if status == StatusCode::NOT_FOUND {
+                size_error(status, "file not found")?;
+            } else if
+                status.is_server_error() ||
+                status == StatusCode::FORBIDDEN ||
+                status == StatusCode::TOO_MANY_REQUESTS
+            {
+                sleep(ARGS.download_backoff).await;
+            } else {
+                size_error(status, "unexpected status code")?;
             }
         }
     }

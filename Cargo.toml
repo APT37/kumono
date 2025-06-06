@@ -1,23 +1,15 @@
 [package]
 name = "kumono"
-version = "0.30.0"
+version = "0.31.0"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 
 [dependencies]
-axum = "0.8.*"
-axum-macros = "0.5.*"
 anyhow = "1.0.*"
 clap = { version = "4.5.*", features = ["derive"] }
-const_format = "0.2.*"
-env_logger = { version = "0.11.*", default-features = false, features = [
-    "auto-color",
-    "humantime",
-] }
 futures = "0.3.*"
 futures-util = "0.3.*"
 indicatif = "0.17.*"
-log = "0.4.*"
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
 reqwest = { version = "0.12.*", default-features = false, features = [
@@ -30,12 +22,6 @@ reqwest = { version = "0.12.*", default-features = false, features = [
 serde = { version = "1.0.*", features = ["derive"] }
 sha256 = "1.6.*"
 size = "0.5.*"
-sqlx = { version = "0.8.*", default-features = false, features = [
-    "macros",
-    "migrate",
-    "postgres",
-    "runtime-tokio",
-] }
 tokio = { version = "1.45.*", default-features = false, features = [
     "macros",
     "rt-multi-thread",
