@@ -19,17 +19,17 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
     pub threads: u16,
 
-    #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
+    #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
-    #[arg(short, long, value_parser = duration_from_secs, default_value = "5")]
+    #[arg(long, value_parser = duration_from_secs, default_value = "5")]
     pub read_timeout: Duration,
 
-    #[arg(short, long, value_parser = duration_from_secs, default_value = "45")]
-    pub api_backoff: Duration,
+    #[arg(long, value_parser = duration_from_secs, default_value = "15")]
+    pub rate_limit_backoff: Duration,
 
-    #[arg(short, long, value_parser = duration_from_secs, default_value = "15")]
-    pub download_backoff: Duration,
+    #[arg(long, value_parser = duration_from_secs, default_value = "5")]
+    pub server_error_delay: Duration,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
@@ -54,13 +54,13 @@ impl fmt::Display for Args {
 
         write!(
             f,
-            "Threads: {} / API Backoff: {} / Proxy: {} / Timeout: (Connect: {} / Read: {}) / Download Backoff: {}",
+            "Threads: {} / Proxy: {} / Timeout: (Connect: {} / Read: {}) / Backoff: (Rate Limit: {} / Server Error: {})",
             self.threads,
-            pd(&self.api_backoff),
             self.proxy.map_or(String::from("None"), |p| p.to_string()),
             pd(&self.connect_timeout),
             pd(&self.read_timeout),
-            pd(&self.download_backoff)
+            pd(&self.rate_limit_backoff),
+            pd(&self.server_error_delay)
         )
     }
 }

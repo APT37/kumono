@@ -72,7 +72,7 @@ impl Profile {
                     }
 
                     StatusCode::TOO_MANY_REQUESTS => {
-                        sleep(ARGS.api_backoff).await;
+                        sleep(ARGS.rate_limit_backoff).await;
                     }
 
                     status => bail!("{url} returned unexpected status: {status}"),
@@ -261,10 +261,6 @@ impl PostFile {
     }
 
     async fn download_range(&self, file: &mut File, start: u64) -> Result<()> {
-        fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
-            bail!("[{status}] failed to download file: {message} ({url})")
-        }
-
         let url = self.to_url();
 
         loop {
@@ -285,15 +281,13 @@ impl PostFile {
 
                 break Ok(());
             } else if status == StatusCode::NOT_FOUND {
-                download_error(status, "file not found", &url)?;
-            } else if
-                status.is_server_error() ||
-                status == StatusCode::FORBIDDEN ||
-                status == StatusCode::TOO_MANY_REQUESTS
-            {
-                sleep(ARGS.download_backoff).await;
+                bail!("[{status}] download failed ({url})");
+            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
+                sleep(ARGS.rate_limit_backoff).await;
+            } else if status.is_server_error() {
+                sleep(ARGS.server_error_delay).await;
             } else {
-                download_error(status, "unexpected status code", &url)?;
+                bail!("[{status}] download failed: unexpected status code {url}");
             }
         }
     }
@@ -319,12 +313,10 @@ impl PostFile {
                 };
             } else if status == StatusCode::NOT_FOUND {
                 size_error(status, "file not found", &url)?;
-            } else if
-                status.is_server_error() ||
-                status == StatusCode::FORBIDDEN ||
-                status == StatusCode::TOO_MANY_REQUESTS
-            {
-                sleep(ARGS.download_backoff).await;
+            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
+                sleep(ARGS.rate_limit_backoff).await;
+            } else if status.is_server_error() {
+                sleep(ARGS.server_error_delay).await;
             } else {
                 size_error(status, "unexpected status code", &url)?;
             }
