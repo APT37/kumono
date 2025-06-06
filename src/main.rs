@@ -9,6 +9,7 @@ mod cli;
 mod http;
 mod profile;
 mod progress;
+mod services;
 
 #[tokio::main]
 async fn main() -> Result<()> {

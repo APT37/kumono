@@ -1,7 +1,6 @@
-use std::process;
-
 use clap::ValueEnum;
 use serde::Deserialize;
+use std::process;
 use strum_macros::Display;
 
 #[allow(non_camel_case_types)]

@@ -1,12 +1,10 @@
-[workspace]
-resolver = "2"
-members = ["cli", "daemon", "kumono"]
-
-[workspace.package]
+[package]
+name = "kumono"
+version = "0.30.0"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 
-[workspace.dependencies]
+[dependencies]
 axum = "0.8.*"
 axum-macros = "0.5.*"
 anyhow = "1.0.*"
