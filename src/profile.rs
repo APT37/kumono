@@ -20,7 +20,7 @@ impl fmt::Display for Profile {
         let posts = match self.posts.len() {
             0 => "no posts",
             1 => "1 post",
-            _ => &(n_fmt(self.posts.len()) + " posts"),
+            n => &(n_fmt(n) + " posts"),
         };
 
         let files = if self.posts.is_empty() {
@@ -29,7 +29,7 @@ impl fmt::Display for Profile {
             match self.files.len() {
                 0 => ", but no files",
                 1 => " with 1 file",
-                _ => &format!(" with {} files", n_fmt(self.files.len())),
+                n => &format!(" with {} files", n_fmt(n)),
             }
         };
 
@@ -46,8 +46,7 @@ impl Profile {
 
         eprintln!("{profile}");
 
-        // discard posts after collecting files
-        profile.posts = vec![];
+        profile.posts.clear();
 
         Ok(profile)
     }
