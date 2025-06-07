@@ -33,7 +33,7 @@ For more options please refer to `--help`.
 
 ### Contribution
 
-**Bugs & Feature Requests**
+**Bugs Reports and Feature Requests**
 
 Feel free to open an issue if you have a bug to report or want to request a feature and suggest something be changed. You may also discuss this in linked Discord.
 
