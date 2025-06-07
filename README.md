@@ -1,4 +1,4 @@
-## kumono coomer/kemono downloader)
+## kumono coomer/kemono downloader
 
 ### Installation
 
