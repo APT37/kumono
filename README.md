@@ -9,7 +9,7 @@ You need to compile the source code yourself. A quick rundown:
 sudo apt-get install git rustup
 
 # install cargo
-rustup default stable --profile minimal
+rustup default stable
 
 # clone the repository
 git clone <REPO_URL>
