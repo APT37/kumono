@@ -21,7 +21,7 @@ cd <REPO_DIR>
 cargo install --force --path .
 ```
 
-Make sure the cargo binary path is in your `$PATH`.
+Make sure the cargo binary location is in your `$PATH`. This is usually `~/.cargo/bin`.
 
 *Windows users need to use the WSL. Native support is not planned.*
 
