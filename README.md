@@ -18,25 +18,27 @@ git clone <REPO_URL>
 cd <REPO_DIR>
 
 # compile and install kumono
-cargo install --force --path .`
+cargo install --force --path .
 ```
 
-Make sure the cargo binary path is in your $PATH.
+Make sure the cargo binary path is in your `$PATH`.
 
 *Windows users need to use the WSL. Native support is not planned.*
 
 ### Usage and Features
 
-Usage is simple, just run `kumono <SERVICE> <USER_ID>` and the given creators's content will be downloaded into `<SERVICE>/<USER_ID>`.
+Run `kumono <SERVICE> <USER_ID>` and the given creators's content will be downloaded into `<SERVICE>/<USER_ID>`.
 
-For more information please refer to the `--help` option.
+For more options please refer to `--help`.
 
 ### Contribution
 
 **Bugs & Feature Requests**
+
 Feel free to open an issue if you have a bug to report or want to request a feature and suggest something be changed. You may also discuss this in linked Discord.
 
 **Pull Requests**
+
 This is a repository mirror, so they will not be merged directly; accepted changes will be incorporated in private and afterwards pushed here.
 
 ### Support
