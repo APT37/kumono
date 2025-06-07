@@ -5,8 +5,8 @@
 You need to compile the source code yourself. A quick rundown:
 
 ```fish
-# install git and rustup
-sudo apt-get install git rustup
+# install dependencies
+sudo apt-get install git rustup clang mold
 
 # install cargo
 rustup default stable
