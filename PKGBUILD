@@ -1,5 +1,6 @@
 pkgname=kumono
-pkgver=0.32.1
+pkgver=0.33.0
+pkgrel=1
 pkgdesc="Media ripper for coomer.su and kemono.su"
 arch=('x86_64')
 url="https://git.nospy.in/Rust/$pkgbase"

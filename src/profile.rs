@@ -145,11 +145,11 @@ pub struct PostFile {
 }
 
 impl PostFile {
-    fn to_url(&self) -> String {
+    pub fn to_url(&self) -> String {
         format!("https://{}.su/data{}", ARGS.service.site(), self.path.as_ref().unwrap())
     }
 
-    fn to_name(&self) -> String {
+    pub fn to_name(&self) -> String {
         self.path
             .as_ref()
             .unwrap()
@@ -159,23 +159,29 @@ impl PostFile {
             .to_string()
     }
 
-    fn to_temp_name(&self) -> String {
+    pub fn to_temp_name(&self) -> String {
         self.to_name() + ".temp"
     }
 
-    fn to_pathbuf(&self) -> PathBuf {
+    pub fn to_extension(&self) -> Option<String> {
+        self.to_pathbuf()
+            .extension()
+            .map(|ext| ext.to_string_lossy().to_ascii_lowercase())
+    }
+
+    pub fn to_pathbuf(&self) -> PathBuf {
         ARGS.to_pathbuf_with_file(self.to_name())
     }
 
-    fn to_temp_pathbuf(&self) -> PathBuf {
+    pub fn to_temp_pathbuf(&self) -> PathBuf {
         ARGS.to_pathbuf_with_file(self.to_temp_name())
     }
 
-    fn to_hash(&self) -> String {
+    pub fn to_hash(&self) -> String {
         self.to_name()[..64].to_string()
     }
 
-    async fn open(&self) -> Result<File, io::Error> {
+    pub async fn open(&self) -> Result<File, io::Error> {
         File::options()
             .append(true)
             .create(true)
@@ -183,19 +189,19 @@ impl PostFile {
             .open(&self.to_temp_pathbuf()).await
     }
 
-    async fn hash(&self) -> io::Result<String> {
+    pub async fn hash(&self) -> io::Result<String> {
         sha256::try_async_digest(&self.to_temp_pathbuf()).await
     }
 
-    async fn exists(&self) -> io::Result<bool> {
+    pub async fn exists(&self) -> io::Result<bool> {
         fs::try_exists(self.to_pathbuf()).await
     }
 
-    async fn r#move(&self) -> io::Result<()> {
+    pub async fn r#move(&self) -> io::Result<()> {
         fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await
     }
 
-    async fn delete(&self) -> io::Result<()> {
+    pub async fn delete(&self) -> io::Result<()> {
         fs::remove_file(self.to_temp_pathbuf()).await
     }
 
@@ -291,7 +297,7 @@ impl PostFile {
         }
     }
 
-    async fn remote_size(&self) -> Result<u64> {
+    pub async fn remote_size(&self) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
             bail!("[{status}] failed to determine remote size: {message} ({url})")
         }

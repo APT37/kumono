@@ -19,6 +19,29 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
     pub threads: u16,
 
+    #[arg(
+        short,
+        long,
+        num_args = 1..,
+        value_delimiter = ',',
+        conflicts_with = "exclude",
+        help = "File extensions to include (comma separated)"
+    )]
+    include: Option<Vec<String>>,
+
+    #[arg(
+        short,
+        long,
+        num_args = 1..,
+        value_delimiter = ',',
+        conflicts_with = "include",
+        help = "File extensions to exclude (comma separated)"
+    )]
+    exclude: Option<Vec<String>>,
+
+    #[arg(short, long, help = "List of available file extensions (per creator)")]
+    pub list_extensions: bool,
+
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
@@ -43,6 +66,38 @@ impl Args {
 
     pub fn to_pathbuf_with_file(&self, file: impl AsRef<str>) -> PathBuf {
         PathBuf::from_iter([&self.service.to_string(), &self.user_id, file.as_ref()])
+    }
+
+    pub fn included(&self) -> Option<Vec<String>> {
+        if let Some(exts) = &self.include {
+            let mut exts: Vec<String> = exts
+                .iter()
+                .map(|ext| ext.to_lowercase())
+                .collect();
+
+            exts.sort();
+            exts.dedup();
+
+            Some(exts)
+        } else {
+            None
+        }
+    }
+
+    pub fn excluded(&self) -> Option<Vec<String>> {
+        if let Some(exts) = &self.exclude {
+            let mut exts: Vec<String> = exts
+                .iter()
+                .map(|ext| ext.to_lowercase())
+                .collect();
+
+            exts.sort();
+            exts.dedup();
+
+            Some(exts)
+        } else {
+            None
+        }
     }
 }
 
