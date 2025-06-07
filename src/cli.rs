@@ -11,6 +11,7 @@ pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 pub struct Args {
     pub service: Service,
 
+    #[arg(help = "Creator ID")]
     pub user_id: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
