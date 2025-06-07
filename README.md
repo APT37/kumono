@@ -33,16 +33,16 @@ For more options please refer to `--help`.
 
 ### Contribution
 
-**Bugs Reports and Feature Requests**
+**Bug Reports and Feature Requests**
 
 Feel free to open an issue if you have a bug to report or want to request a feature and suggest something be changed. You may also discuss this in linked Discord.
 
 **Pull Requests**
 
-This is a repository mirror, so they will not be merged directly; accepted changes will be incorporated in private and afterwards pushed here.
+This is a repository mirror, so pull requests will not be merged directly; accepted changes will be incorporated in private and afterwards pushed here.
 
 ### Support
 
-Support is mainly provided via the the Discord linked in the repository description.
+Support is mainly provided via the Discord linked in the repository description.
 
 *Please do not open issues when merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
