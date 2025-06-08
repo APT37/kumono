@@ -33,7 +33,7 @@ impl fmt::Display for Profile {
             }
         };
 
-        write!(f, "{} user '{}' has {posts}{files}", ARGS.service, ARGS.user_id)
+        write!(f, "{}/{} has {posts}{files}", ARGS.service, ARGS.user_id)
     }
 }
 
