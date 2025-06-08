@@ -2,22 +2,22 @@
 
 ### Installation
 
-You need to compile the source code yourself. A quick rundown:
+*If you've previously installed `kumono` and are just looking to update, run `git pull --force` inside the <REPO_DIR>, then proceed to step 5.*
 
 ```fish
-# install dependencies
+# 1. install dependencies
 sudo apt-get install git rustup clang mold
 
-# install cargo
+# 2. install cargo
 rustup default stable
 
-# clone the repository
+# 3. clone the repository
 git clone <REPO_URL>
 
-# enter the directory
+# 4. enter the directory
 cd <REPO_DIR>
 
-# compile and install kumono
+# 5. compile and install kumono
 cargo install --force --path .
 ```
 
