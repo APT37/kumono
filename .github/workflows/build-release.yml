@@ -44,11 +44,12 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ matrix.artifact_name }}
+          draft: false
 
   # publish:
   #   name: Publish crate
   #   runs-on: ubuntu-latest
-  #   environment: catbox
+  #   environment: kumono
 
   #   steps:
   #     - name: Checkout
