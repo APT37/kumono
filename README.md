@@ -6,13 +6,13 @@
 
 Check out the [Releases](releases) for the latest versions.
 
-### Arch Linux
+<!-- ### Arch Linux -->
 
 <!-- Arch users may install via the [AUR](/AUR.md). -->
 
 ### Building from source
 
-*If you've previously installed `kumono` and are just looking to update, run `git pull --force` inside the <REPO_DIR>, then proceed to step 5.*
+*If you've previously built `kumono` from source and are just looking to update, run `git pull --force` inside the <REPO_DIR>, then proceed to step 5.*
 
 ```fish
 # 1. install dependencies
@@ -37,7 +37,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 ## Usage and Features
 
-Run `kumono <SERVICE> <USER_ID>` and the given creators's content will be downloaded into `<SERVICE>/<USER_ID>`.
+Downloaded content will be put in a dircetory called `<SERVICE>/<USER_ID>`, for example `onlyfans/belledelphine`.
 
 ```
 Usage: kumono [OPTIONS] <SERVICE> <USER_ID>
