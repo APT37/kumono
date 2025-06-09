@@ -4,7 +4,7 @@
 
 ### Binaries
 
-Check out the [Releases](releases) for the latest versions.
+Windows and Linux binaries are built for every [release](https://github.com/APT37/kumono/releases).
 
 <!-- ### Arch Linux -->
 
