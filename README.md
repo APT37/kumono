@@ -1,4 +1,4 @@
-# kumono - Media ripper for [coomer](https://coomer.su)/[kemono](https://kemono.su) downloader
+# kumono - Media ripper for [coomer](https://coomer.su)/[kemono](https://kemono.su)
 
 ## Installation
 
