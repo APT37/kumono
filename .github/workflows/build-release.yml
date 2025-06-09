@@ -1,0 +1,66 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  release:
+    name: Release for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    environment: catbox
+    strategy:
+      matrix:
+        name: [linux, windows]
+
+        include:
+          - name: linux
+            os: ubuntu-latest
+            artifact_name: target/release/catbox
+          - name: windows
+            os: windows-latest
+            artifact_name: target/release/catbox.exe
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Dependencies (Linux)
+        if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang mold
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Make Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ matrix.artifact_name }}
+
+  # publish:
+  #   name: Publish crate
+  #   runs-on: ubuntu-latest
+  #   environment: catbox
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Install Rust toolchain
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+
+  #     - name: Publish crate
+  #       run: |
+  #         cargo login ${{ secrets.CRATES_IO_TOKEN }}
+  #         cargo publish
