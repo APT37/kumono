@@ -6,9 +6,9 @@
 
 Windows and Linux binaries are built for every [release](https://github.com/APT37/kumono/releases).
 
-<!-- ### Arch Linux -->
+### Arch Linux
 
-<!-- Arch users may install via the [AUR](/AUR.md). -->
+Arch users may install via the [AUR](/AUR.md).
 
 ### Building from source
 
