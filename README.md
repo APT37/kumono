@@ -1,6 +1,16 @@
-## kumono coomer/kemono downloader
+# kumono - [coomer](https://coomer.su)/[kemono](https://kemono.su) downloader
 
-### Installation
+## Installation
+
+### Binaries
+
+Check out the [Releases](releases) for the latest versions.
+
+### Arch Linux
+
+<!-- Arch users may install via the [AUR](/AUR.md). -->
+
+### Building from source
 
 *If you've previously installed `kumono` and are just looking to update, run `git pull --force` inside the <REPO_DIR>, then proceed to step 5.*
 
@@ -23,7 +33,7 @@ cargo install --force --path .
 
 Make sure the cargo binary location is in your `$PATH`. This is usually `~/.cargo/bin`.
 
-*Windows users need to use the WSL. Native support is not planned.*
+*Windows users may use the WSL.*
 
 ### Usage and Features
 
