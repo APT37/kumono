@@ -1,4 +1,4 @@
-# kumono - [coomer](https://coomer.su)/[kemono](https://kemono.su) downloader
+# kumono - Media ripper for [coomer](https://coomer.su)/[kemono](https://kemono.su) downloader
 
 ## Installation
 
@@ -35,13 +35,28 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 *Windows users may use the WSL.*
 
-### Usage and Features
+## Usage and Features
 
 Run `kumono <SERVICE> <USER_ID>` and the given creators's content will be downloaded into `<SERVICE>/<USER_ID>`.
 
-For more options please refer to `--help`.
+```
+Usage: kumono [OPTIONS] <SERVICE> <USER_ID>
 
-### Contribution
+Options:
+  -p, --proxy <PROXY>                            SOCKS5 proxy (IP:Port)
+  -t, --threads <THREADS>                        Simultaneous downloads [default: 256]
+  -i, --include <INCLUDE>...                     File extensions to include (comma separated)
+  -e, --exclude <EXCLUDE>...                     File extensions to exclude (comma separated)
+  -l, --list-extensions                          List of available file extensions (per creator)
+      --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
+      --read-timeout <READ_TIMEOUT>              [default: 5]
+      --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
+      --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
+```
+
+*For more information please refer to `--help`.*
+
+## Contribution
 
 **Bug Reports and Feature Requests**
 
@@ -51,7 +66,7 @@ Feel free to open an issue if you have a bug to report or want to request a feat
 
 This is a repository mirror, so pull requests will not be merged directly; accepted changes will be incorporated in private and afterwards pushed here.
 
-### Support
+## Support
 
 Support is mainly provided via the Discord linked in the repository description.
 
