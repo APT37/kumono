@@ -9,7 +9,7 @@ jobs:
   release:
     name: Release for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    environment: catbox
+    environment: kumono
     strategy:
       matrix:
         name: [linux, windows]
@@ -17,10 +17,10 @@ jobs:
         include:
           - name: linux
             os: ubuntu-latest
-            artifact_name: target/release/catbox
+            artifact_name: target/release/kumono
           - name: windows
             os: windows-latest
-            artifact_name: target/release/catbox.exe
+            artifact_name: target/release/kumono.exe
 
     steps:
       - uses: actions/checkout@v2
