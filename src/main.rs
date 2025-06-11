@@ -1,4 +1,4 @@
-use crate::{ cli::ARGS, profile::Profile, progress::DownloadState };
+use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::TARGET };
 use anyhow::Result;
 use futures::future::join_all;
 use size::Size;
@@ -9,7 +9,7 @@ mod cli;
 mod http;
 mod profile;
 mod progress;
-mod services;
+mod target;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         }
 
         if no_ext > 0 {
-            eprintln!("{no_ext} files do not have extensions");
+            eprintln!("{no_ext} files do not have an extension");
         }
 
         if !extensions.is_empty() {
@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
 
         let len = files.len();
 
-        fs::create_dir_all(ARGS.to_pathbuf()).await?;
+        fs::create_dir_all(TARGET.to_pathbuf()).await?;
 
         let (tx, rx) = mpsc::channel::<DownloadState>(len);
 
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
         sleep(Duration::from_millis(1)).await;
 
         #[allow(unused_must_use)]
-        fs::remove_dir(ARGS.to_pathbuf()).await;
+        fs::remove_dir(TARGET.to_pathbuf()).await;
     }
 
     Ok(())

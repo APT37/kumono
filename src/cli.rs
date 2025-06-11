@@ -1,18 +1,15 @@
-use crate::services::Service;
 use clap::{ Parser, arg };
 use pretty_duration::pretty_duration;
-use serde::Deserialize;
-use std::{ fmt, net::SocketAddr, num, path::PathBuf, sync::LazyLock, time::Duration };
+use serde::{ Deserialize };
+use std::{ fmt, net::SocketAddr, num, sync::LazyLock, time::Duration };
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
 #[clap(about, version)]
 pub struct Args {
-    pub service: Service,
-
-    #[arg(help = "Creator ID")]
-    pub user_id: String,
+    #[arg(help = "Creator page or post URL / Discord server or channel)")]
+    pub url: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
     pub proxy: Option<SocketAddr>,
@@ -61,14 +58,6 @@ fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
 }
 
 impl Args {
-    pub fn to_pathbuf(&self) -> PathBuf {
-        PathBuf::from_iter([&self.service.to_string(), &self.user_id])
-    }
-
-    pub fn to_pathbuf_with_file(&self, file: impl AsRef<str>) -> PathBuf {
-        PathBuf::from_iter([&self.service.to_string(), &self.user_id, file.as_ref()])
-    }
-
     pub fn included(&self) -> Option<Vec<String>> {
         if let Some(exts) = &self.include {
             let mut exts: Vec<String> = exts

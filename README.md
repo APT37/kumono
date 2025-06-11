@@ -12,23 +12,15 @@ Arch users may install via the [AUR](/AUR.md).
 
 ### Building from source
 
-*If you've previously built `kumono` from source and are just looking to update, run `git pull --force` inside the <REPO_DIR>, then proceed to step 5.*
-
 ```fish
-# 1. install dependencies
+# linker dependencies
 sudo apt-get install git rustup clang mold
 
-# 2. install cargo
+# toolchain (incl. cargo)
 rustup default stable
 
-# 3. clone the repository
-git clone <REPO_URL>
-
-# 4. enter the directory
-cd <REPO_DIR>
-
-# 5. compile and install kumono
-cargo install --force --path .
+# build and install
+cargo install --git=https://github.com/APT37/kumono
 ```
 
 Make sure the cargo binary location is in your `$PATH`. This is usually `~/.cargo/bin`.

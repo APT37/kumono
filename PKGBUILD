@@ -1,6 +1,6 @@
 pkgname=kumono
-pkgver=0.33.3
-pkgrel=2
+pkgver=0.34.0
+pkgrel=1
 pkgdesc='Media ripper for coomer.su and kemono.su'
 arch=('x86_64')
 makedepends=('git' 'cargo' 'clang' 'mold')

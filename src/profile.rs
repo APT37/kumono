@@ -1,4 +1,4 @@
-use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt } };
+use crate::{ cli::ARGS, http::CLIENT, progress::{ n_fmt, DownloadState }, target::TARGET };
 use anyhow::{ Result, bail };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
@@ -25,6 +25,12 @@ impl fmt::Display for Profile {
 
         let files = if self.posts.is_empty() {
             ""
+        } else if TARGET.post.is_some() {
+            match self.files.len() {
+                0 => "no files",
+                1 => "1 file",
+                n => &format!("{} files", n_fmt(n)),
+            }
         } else {
             match self.files.len() {
                 0 => ", but no files",
@@ -33,15 +39,30 @@ impl fmt::Display for Profile {
             }
         };
 
-        write!(f, "{}/{} has {posts}{files}", ARGS.service, ARGS.user_id)
+        if let Some(p) = &TARGET.post {
+            write!(f, "{}/{}/{p} has {files}", TARGET.service, TARGET.user)
+        } else {
+            write!(f, "{}/{} has {posts}{files}", TARGET.service, TARGET.user)
+        }
     }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct Channel {
+    id: String, // "455285536341491716"
+    // name: String, // "news"
 }
 
 impl Profile {
     pub async fn init() -> Result<Self> {
         let mut profile = Self::default();
 
-        profile.init_posts().await?;
+        if TARGET.service == "discord" {
+            profile.init_posts_discord().await?;
+        } else {
+            profile.init_posts_standard().await?;
+        }
+
         profile.init_files();
 
         eprintln!("{profile}");
@@ -51,40 +72,107 @@ impl Profile {
         Ok(profile)
     }
 
-    async fn init_posts(&mut self) -> Result<()> {
-        let mut offset = 0;
+    async fn init_posts_discord(&mut self) -> Result<()> {
+        let channels: Vec<Channel> = if let Some(channel) = &TARGET.post {
+            vec![Channel { id: channel.to_string() }]
+        } else {
+            CLIENT.get(format!("https://kemono.su/api/v1/discord/channel/lookup/{}", TARGET.user))
+                .send().await?
+                .json().await?
+        };
 
-        loop {
-            let mut posts: Vec<Post>;
-
-            let url = Self::api_url_with_offset(offset);
+        for channel in channels {
+            let mut offset = 0;
 
             loop {
-                sleep(API_DELAY).await;
+                let mut posts: Vec<Post>;
 
-                let response = CLIENT.get(&url).send().await?;
+                let url = format!(
+                    "https://kemono.su/api/v1/discord/channel/{}?o={offset}",
+                    channel.id
+                );
 
-                match response.status() {
-                    StatusCode::OK => {
-                        posts = response.json().await?;
-                        break;
+                loop {
+                    sleep(API_DELAY).await;
+
+                    let response = CLIENT.get(&url).send().await?;
+
+                    match response.status() {
+                        StatusCode::OK => {
+                            posts = response.json().await?;
+                            break;
+                        }
+
+                        StatusCode::TOO_MANY_REQUESTS => {
+                            sleep(ARGS.rate_limit_backoff).await;
+                        }
+
+                        status => bail!("{url} returned unexpected status: {status}"),
                     }
-
-                    StatusCode::TOO_MANY_REQUESTS => {
-                        sleep(ARGS.rate_limit_backoff).await;
-                    }
-
-                    status => bail!("{url} returned unexpected status: {status}"),
                 }
+
+                if posts.is_empty() {
+                    break;
+                }
+
+                self.posts.append(&mut posts);
+
+                offset += 150;
             }
+        }
 
-            if posts.is_empty() {
-                break;
+        Ok(())
+    }
+
+    async fn init_posts_standard(&mut self) -> Result<()> {
+        if let Some(post) = &TARGET.post {
+            let post: Post = CLIENT.get(
+                format!(
+                    "https://{}.su/api/v1/{}/user/{}/post/{post}",
+                    TARGET.site(),
+                    TARGET.service,
+                    TARGET.user
+                )
+            )
+                .send().await?
+                .json().await?;
+
+            self.posts.append(&mut vec![post]);
+        } else {
+            let mut offset = 0;
+
+            loop {
+                let mut posts: Vec<Post>;
+
+                let url = Self::api_url_with_offset(offset);
+
+                loop {
+                    sleep(API_DELAY).await;
+
+                    let response = CLIENT.get(&url).send().await?;
+
+                    match response.status() {
+                        StatusCode::OK => {
+                            posts = response.json().await?;
+                            break;
+                        }
+
+                        StatusCode::TOO_MANY_REQUESTS => {
+                            sleep(ARGS.rate_limit_backoff).await;
+                        }
+
+                        status => bail!("{url} returned unexpected status: {status}"),
+                    }
+                }
+
+                if posts.is_empty() {
+                    break;
+                }
+
+                self.posts.append(&mut posts);
+
+                offset += 50;
             }
-
-            self.posts.append(&mut posts);
-
-            offset += 50;
         }
 
         Ok(())
@@ -93,9 +181,9 @@ impl Profile {
     fn api_url_with_offset(offset: u32) -> String {
         format!(
             "https://{}.su/api/v1/{}/user/{}?o={offset}",
-            ARGS.service.site(),
-            ARGS.service,
-            ARGS.user_id
+            TARGET.site(),
+            TARGET.service,
+            TARGET.user
         )
     }
 
@@ -110,7 +198,7 @@ impl Profile {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize, Clone, Default)]
 struct Post {
     // coomer/kemono database id
     // id: String, // "1000537173"
@@ -122,6 +210,8 @@ struct Post {
 
     // post title
     // title: String, // "What an ass"
+
+    #[serde(default)]
     file: PostFile,
     attachments: Vec<PostFile>,
 }
@@ -135,7 +225,7 @@ impl Post {
     }
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct PostFile {
     // original source file name
     // name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",
@@ -146,7 +236,7 @@ pub struct PostFile {
 
 impl PostFile {
     pub fn to_url(&self) -> String {
-        format!("https://{}.su/data{}", ARGS.service.site(), self.path.as_ref().unwrap())
+        format!("https://{}.su/data{}", TARGET.site(), self.path.as_ref().unwrap())
     }
 
     pub fn to_name(&self) -> String {
@@ -170,11 +260,11 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self) -> PathBuf {
-        ARGS.to_pathbuf_with_file(self.to_name())
+        TARGET.to_pathbuf_with_file(self.to_name())
     }
 
     pub fn to_temp_pathbuf(&self) -> PathBuf {
-        ARGS.to_pathbuf_with_file(self.to_temp_name())
+        TARGET.to_pathbuf_with_file(self.to_temp_name())
     }
 
     pub fn to_hash(&self) -> String {
