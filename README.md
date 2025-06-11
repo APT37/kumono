@@ -29,7 +29,21 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 ## Usage and Features
 
-Downloaded content will be put in a dircetory called `<SERVICE>/<USER_ID>`, for example `onlyfans/belledelphine`.
+```bash
+# download all creator content
+kumono https://coomer.su/onlyfans/user/belledelphine
+
+# download only content from the given post
+kumono https://coomer.su/onlyfans/user/belledelphine/post/1099631527
+
+# download content from all channels of the given server
+kumono https://kemono.su/discord/server/1196504962411282491
+
+# download only content from the given channel
+kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
+```
+
+Downloaded content will be put into a directory called `<SERVICE>/<CREATOR>`, for example `onlyfans/belledelphine`.
 
 ```
 Usage: kumono [OPTIONS] <URL>
@@ -46,20 +60,19 @@ Options:
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
 ```
 
-*For more information please refer to `--help`.*
 
 ## Contribution
 
 **Bug Reports and Feature Requests**
 
-Feel free to open an issue if you have a bug to report or want to request a feature and suggest something be changed. You may also discuss this in linked Discord.
+Feel free to open an issue if you have a bug to report or want to request a feature.
 
 **Pull Requests**
 
-This is a repository mirror, so pull requests will not be merged directly; accepted changes will be incorporated in private and afterwards pushed here.
+You may open pull requests, but be aware that this is a repository mirror. PRs will not be merged directly - accepted changes will be incorporated in private and then pushed here.
 
 ## Support
 
-Support is mainly provided via the Discord linked in the repository description.
+Support is provided via the Discord linked in the repository description.
 
-*Please do not open issues when merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
+*Please do not open issues when you are merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
