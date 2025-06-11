@@ -32,7 +32,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 Downloaded content will be put in a dircetory called `<SERVICE>/<USER_ID>`, for example `onlyfans/belledelphine`.
 
 ```
-Usage: kumono [OPTIONS] <SERVICE> <USER_ID>
+Usage: kumono [OPTIONS] <URL>
 
 Options:
   -p, --proxy <PROXY>                            SOCKS5 proxy (IP:Port)

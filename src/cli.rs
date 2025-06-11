@@ -6,9 +6,9 @@ use std::{ fmt, net::SocketAddr, num, sync::LazyLock, time::Duration };
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
-#[clap(about, version)]
+#[clap(about, version, arg_required_else_help = true)]
 pub struct Args {
-    #[arg(help = "Creator page or post URL / Discord server or channel)")]
+    #[arg(help = "Creator page or post / Discord server or channel)")]
     pub url: String,
 
     #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
