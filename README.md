@@ -8,7 +8,7 @@ Windows and Linux binaries are built for every [release](https://github.com/APT3
 
 ### Arch Linux
 
-Arch users may install via the [AUR](/AUR.md).
+Arch users may install via the [AUR](AUR.md).
 
 ### Building from source
 
