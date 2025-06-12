@@ -29,7 +29,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 ## Usage
 
-Downloaded content will be put into a directory called `<SERVICE>/<CREATOR>`, for example `onlyfans/belledelphine`.
+kumono automatically creates a download directory for each service/creator combination, e.g. `onlyfans/belledelphine` for `https://coomer.su/onlyfans/user/belledelphine`
 
 ```
 Usage: kumono [OPTIONS] <URL>
