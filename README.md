@@ -27,21 +27,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 *Windows users may use the WSL.*
 
-## Usage and Features
-
-```bash
-# download all creator content
-kumono https://coomer.su/onlyfans/user/belledelphine
-
-# download only content from the given post
-kumono https://coomer.su/onlyfans/user/belledelphine/post/1099631527
-
-# download content from all channels of the given server
-kumono https://kemono.su/discord/server/1196504962411282491
-
-# download only content from the given channel
-kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
-```
+## Usage
 
 Downloaded content will be put into a directory called `<SERVICE>/<CREATOR>`, for example `onlyfans/belledelphine`.
 
@@ -60,6 +46,36 @@ Options:
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
 ```
 
+### Target Selection
+
+```bash
+# download all creator content
+kumono https://coomer.su/onlyfans/user/belledelphine
+
+# download only content from the given post
+kumono https://coomer.su/onlyfans/user/belledelphine/post/1099631527
+
+# download content from all channels of the given server
+kumono https://kemono.su/discord/server/1196504962411282491
+
+# download only content from the given channel
+kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
+```
+
+### Filtering by File Extension
+
+```bash
+# list available file types for a target
+kumono https://coomer.su/onlyfans/user/belledelphine --list-extensions
+
+jpg,m4v,mp4
+
+# download only video files via inclusion
+kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
+
+# download only video files via exclusion
+kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
+```
 
 ## Contribution
 

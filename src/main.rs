@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
             extensions.dedup();
 
             eprintln!();
-            println!("{}", extensions.join("\n"));
+            println!("{}", extensions.join(","));
         }
     } else {
         if let Some(exts) = ARGS.included() {
