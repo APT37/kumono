@@ -10,13 +10,14 @@ const API_DELAY: Duration = Duration::from_millis(100);
 
 #[derive(Default)]
 pub struct Profile {
+    post_count: usize,
     posts: Vec<Post>,
     pub files: HashSet<PostFile>,
 }
 
 impl fmt::Display for Profile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let posts = match self.posts.len() as u64 {
+        let posts = match self.post_count as u64 {
             0 => "no posts",
             1 => "1 post",
             n => &(n_fmt(n) + " posts"),
@@ -187,6 +188,8 @@ impl Profile {
     }
 
     fn init_files(&mut self) {
+        self.post_count = self.posts.len();
+
         self.posts.drain(..).for_each(|post|
             post
                 .files()
