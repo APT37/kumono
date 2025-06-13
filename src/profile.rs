@@ -17,32 +17,32 @@ pub struct Profile {
 
 impl fmt::Display for Profile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let posts = match self.post_count as u64 {
-            0 => "no posts",
-            1 => "1 post",
-            n => &(n_fmt(n) + " posts"),
-        };
-
-        let files = if self.posts.is_empty() {
-            ""
-        } else if TARGET.post.is_some() {
-            match self.files.len() as u64 {
+        if let Some(post) = &TARGET.post {
+            let files = match self.files.len() {
                 0 => "no files",
                 1 => "1 file",
-                n => &format!("{} files", n_fmt(n)),
-            }
-        } else {
-            match self.files.len() as u64 {
-                0 => ", but no files",
-                1 => " with 1 file",
-                n => &format!(" with {} files", n_fmt(n)),
-            }
-        };
+                n => &format!("{} files", n_fmt(n as u64)),
+            };
 
-        if let Some(p) = &TARGET.post {
-            write!(f, "{}/{}/{p} has {files}", TARGET.service, TARGET.user)
+            return write!(f, "{}/{}/{post} has {files}", TARGET.service, TARGET.user);
         } else {
-            write!(f, "{}/{} has {posts}{files}", TARGET.service, TARGET.user)
+            let posts = match self.post_count {
+                0 => "no posts",
+                1 => "1 post",
+                n => &(n_fmt(n as u64) + " posts"),
+            };
+
+            let files = if self.post_count == 0 {
+                ""
+            } else {
+                match self.files.len() {
+                    0 => ", but no files",
+                    1 => ", containing 1 file",
+                    n => &format!(", containing {} files", n_fmt(n as u64)),
+                }
+            };
+
+            return write!(f, "{}/{} has {posts} {files}", TARGET.service, TARGET.user);
         }
     }
 }
