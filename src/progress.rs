@@ -1,28 +1,27 @@
 // use crate::cli::ARGS;
 use anyhow::Result;
-use indicatif::{ ProgressBar, ProgressStyle };
+use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use num_format::{ Locale, ToFormattedString };
-use size::Size;
 use std::{ fmt, process, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
-pub fn n_fmt(n: usize) -> String {
+pub fn n_fmt(n: u64) -> String {
     n.to_formatted_string(&Locale::en)
 }
 
 #[derive(Clone)]
 pub enum DownloadState {
-    Failure(Size, String),
+    Failure(u64, String),
     Skip,
-    Success(Size),
+    Success(u64),
 }
 
 #[derive(Default, Clone)]
 struct Stats {
-    success: usize,
-    skipped: usize,
-    failure: usize,
-    dl_size: i64,
+    success: u64,
+    skipped: u64,
+    failure: u64,
+    dl_size: u64,
     errors: Vec<String>,
 }
 
@@ -31,7 +30,7 @@ impl Stats {
     fn update(&mut self, download_state: DownloadState) {
         match download_state {
             DownloadState::Failure(size, err) => {
-                self.dl_size += size.bytes();
+                self.dl_size += size;
                 self.failure += 1;
 
                 if self.errors.len() == 3 {
@@ -44,7 +43,7 @@ impl Stats {
                 self.skipped += 1;
             }
             DownloadState::Success(size) => {
-                self.dl_size += size.bytes();
+                self.dl_size += size;
                 self.success += 1;
             }
         }
@@ -56,7 +55,7 @@ impl fmt::Display for Stats {
         writeln!(
             f,
             "downloaded approx. {} / success: {} / skipped: {} / failure: {}",
-            Size::from_bytes(self.dl_size),
+            HumanBytes(self.dl_size),
             n_fmt(self.success),
             n_fmt(self.skipped),
             n_fmt(self.failure)

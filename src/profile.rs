@@ -3,7 +3,6 @@ use anyhow::{ Result, bail };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use size::Size;
 use std::{ collections::HashSet, error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
@@ -17,7 +16,7 @@ pub struct Profile {
 
 impl fmt::Display for Profile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let posts = match self.posts.len() {
+        let posts = match self.posts.len() as u64 {
             0 => "no posts",
             1 => "1 post",
             n => &(n_fmt(n) + " posts"),
@@ -26,13 +25,13 @@ impl fmt::Display for Profile {
         let files = if self.posts.is_empty() {
             ""
         } else if TARGET.post.is_some() {
-            match self.files.len() {
+            match self.files.len() as u64 {
                 0 => "no files",
                 1 => "1 file",
                 n => &format!("{} files", n_fmt(n)),
             }
         } else {
-            match self.files.len() {
+            match self.files.len() as u64 {
                 0 => ", but no files",
                 1 => " with 1 file",
                 n => &format!(" with {} files", n_fmt(n)),
@@ -228,10 +227,10 @@ impl Post {
 
 #[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub struct PostFile {
-    // original source file name
+    // original file name
     // name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",
 
-    // remote file path, name is the file's sha256 hash
+    // CDN file path (sha256.ext)
     path: Option<String>, // "/6e/6c/6e6cf84df44c1d091a2e36b6df77b098107c18831833de1e2e9c8207206f150b.jpg"
 }
 
@@ -240,18 +239,12 @@ impl PostFile {
         format!("https://{}.su/data{}", TARGET.site(), self.path.as_ref().unwrap())
     }
 
-    pub fn to_name(&self) -> String {
-        self.path
-            .as_ref()
-            .unwrap()
-            .split('/')
-            .next_back()
-            .expect("get local name from split remote path")
-            .to_string()
+    pub fn to_hash_name(&self) -> String {
+        self.path.as_ref().unwrap()[7..].to_string()
     }
 
     pub fn to_temp_name(&self) -> String {
-        self.to_name() + ".temp"
+        self.to_hash_name() + ".temp"
     }
 
     pub fn to_extension(&self) -> Option<String> {
@@ -261,7 +254,7 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf_with_file(self.to_name())
+        TARGET.to_pathbuf_with_file(self.to_hash_name())
     }
 
     pub fn to_temp_pathbuf(&self) -> PathBuf {
@@ -269,7 +262,7 @@ impl PostFile {
     }
 
     pub fn to_hash(&self) -> String {
-        self.to_name()[..64].to_string()
+        self.to_hash_name()[..64].to_string()
     }
 
     pub async fn open(&self) -> Result<File, io::Error> {
@@ -297,8 +290,6 @@ impl PostFile {
     }
 
     pub async fn download(&self) -> Result<DownloadState> {
-        let s = |n| Size::from_bytes(n);
-
         if self.exists().await? {
             return Ok(DownloadState::Skip);
         }
@@ -322,7 +313,7 @@ impl PostFile {
                     error.push('\n');
                     error.push_str(&source.to_string());
                 }
-                return Ok(DownloadState::Failure(s(csize - isize), error));
+                return Ok(DownloadState::Failure(csize - isize, error));
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
@@ -335,13 +326,13 @@ impl PostFile {
                         error.push('\n');
                         error.push_str(&source.to_string());
                     }
-                    return Ok(DownloadState::Failure(s(csize - isize), error));
+                    return Ok(DownloadState::Failure(csize - isize, error));
                 }
             }
         }
 
         Ok({
-            let dsize = s(csize - isize);
+            let dsize = csize - isize;
 
             if self.to_hash() == self.hash().await? {
                 self.r#move().await?;
@@ -350,7 +341,7 @@ impl PostFile {
                 self.delete().await?;
                 DownloadState::Failure(
                     dsize,
-                    format!("hash mismatch (deleted): {}", self.to_name())
+                    format!("hash mismatch (deleted): {}", self.to_hash_name())
                 )
             }
         })

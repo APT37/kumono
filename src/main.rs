@@ -1,7 +1,6 @@
 use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::TARGET };
 use anyhow::Result;
 use futures::future::join_all;
-use size::Size;
 use std::{ collections::HashSet, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
@@ -90,7 +89,7 @@ async fn main() -> Result<()> {
                                 error.push('\n');
                                 error.push_str(&source.to_string());
                             }
-                            tx.send(DownloadState::Failure(Size::default(), error)).await.expect(
+                            tx.send(DownloadState::Failure(u64::default(), error)).await.expect(
                                 "send state to progress bar"
                             );
                         }
