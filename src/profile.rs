@@ -1,9 +1,9 @@
 use crate::{ cli::ARGS, http::CLIENT, progress::{ n_fmt, DownloadState }, target::TARGET };
-use anyhow::{ Result, bail };
+use anyhow::{ bail, Context, Result };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::{ collections::HashSet, error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
+use std::{ collections::HashSet, error::Error, fmt, io::SeekFrom, path::PathBuf };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
@@ -242,12 +242,12 @@ impl PostFile {
         format!("https://{}.su/data{}", TARGET.site(), self.path.as_ref().unwrap())
     }
 
-    pub fn to_hash_name(&self) -> String {
+    pub fn to_name(&self) -> String {
         self.path.as_ref().unwrap()[7..].to_string()
     }
 
     pub fn to_temp_name(&self) -> String {
-        self.to_hash_name() + ".temp"
+        self.to_name() + ".temp"
     }
 
     pub fn to_extension(&self) -> Option<String> {
@@ -257,7 +257,7 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf_with_file(self.to_hash_name())
+        TARGET.to_pathbuf_with_file(self.to_name())
     }
 
     pub fn to_temp_pathbuf(&self) -> PathBuf {
@@ -265,31 +265,40 @@ impl PostFile {
     }
 
     pub fn to_hash(&self) -> String {
-        self.to_hash_name()[..64].to_string()
+        self.to_name()[..64].to_string()
     }
 
-    pub async fn open(&self) -> Result<File, io::Error> {
+    pub async fn open(&self) -> Result<File> {
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf()).await
+            .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
-    pub async fn hash(&self) -> io::Result<String> {
-        sha256::try_async_digest(&self.to_temp_pathbuf()).await
+    pub async fn hash(&self) -> Result<String> {
+        sha256
+            ::try_async_digest(&self.to_temp_pathbuf()).await
+            .with_context(|| format!("hash tempfile: {}", self.to_temp_name()))
     }
 
-    pub async fn exists(&self) -> io::Result<bool> {
-        fs::try_exists(self.to_pathbuf()).await
+    pub async fn exists(&self) -> Result<bool> {
+        fs::try_exists(self.to_pathbuf()).await.with_context(||
+            format!("check if file exists: {}", self.to_temp_name())
+        )
     }
 
-    pub async fn r#move(&self) -> io::Result<()> {
-        fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await
+    pub async fn r#move(&self) -> Result<()> {
+        fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await.with_context(||
+            format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.to_name())
+        )
     }
 
-    pub async fn delete(&self) -> io::Result<()> {
-        fs::remove_file(self.to_temp_pathbuf()).await
+    pub async fn delete(&self) -> Result<()> {
+        fs::remove_file(self.to_temp_pathbuf()).await.with_context(||
+            format!("delete tempfile: {}", self.to_temp_name())
+        )
     }
 
     pub async fn download(&self) -> Result<DownloadState> {
@@ -344,7 +353,7 @@ impl PostFile {
                 self.delete().await?;
                 DownloadState::Failure(
                     dsize,
-                    format!("hash mismatch (deleted): {}", self.to_hash_name())
+                    format!("hash mismatch (deleted): {}", self.to_name())
                 )
             }
         })
