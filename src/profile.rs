@@ -25,25 +25,25 @@ impl fmt::Display for Profile {
             };
 
             return write!(f, "{}/{}/{post} has {files}", TARGET.service, TARGET.user);
-        } else {
-            let posts = match self.post_count {
-                0 => "no posts",
-                1 => "1 post",
-                n => &(n_fmt(n as u64) + " posts"),
-            };
-
-            let files = if self.post_count == 0 {
-                ""
-            } else {
-                match self.files.len() {
-                    0 => ", but no files",
-                    1 => ", containing 1 file",
-                    n => &format!(", containing {} files", n_fmt(n as u64)),
-                }
-            };
-
-            return write!(f, "{}/{} has {posts} {files}", TARGET.service, TARGET.user);
         }
+
+        let posts = match self.post_count {
+            0 => "no posts",
+            1 => "1 post",
+            n => &(n_fmt(n as u64) + " posts"),
+        };
+
+        let files = if self.post_count == 0 {
+            ""
+        } else {
+            match self.files.len() {
+                0 => ", but no files",
+                1 => ", containing 1 file",
+                n => &format!(", containing {} files", n_fmt(n as u64)),
+            }
+        };
+
+        write!(f, "{}/{} has {posts} {files}", TARGET.service, TARGET.user)
     }
 }
 
