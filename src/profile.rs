@@ -43,7 +43,7 @@ impl fmt::Display for Profile {
             }
         };
 
-        write!(f, "{}/{} has {posts} {files}", TARGET.service, TARGET.user)
+        write!(f, "{}/{} has {posts}{files}", TARGET.service, TARGET.user)
     }
 }
 
@@ -243,7 +243,11 @@ impl PostFile {
     }
 
     pub fn to_name(&self) -> String {
-        self.path.as_ref().unwrap()[7..].to_string()
+        PathBuf::from(self.path.as_ref().expect("get path from PostFile"))
+            .file_name()
+            .expect("get file name from CDN path")
+            .to_string_lossy()
+            .to_string()
     }
 
     pub fn to_temp_name(&self) -> String {
@@ -306,16 +310,16 @@ impl PostFile {
             return Ok(DownloadState::Skip);
         }
 
+        let rsize = self.remote_size().await?;
+
         let mut temp_file = self.open().await?;
 
         let isize = temp_file.seek(SeekFrom::End(0)).await?;
 
         let mut csize = isize;
 
-        let rsize = self.remote_size().await?;
-
         loop {
-            if csize == rsize {
+            if rsize == csize {
                 break;
             }
 
