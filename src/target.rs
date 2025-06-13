@@ -25,7 +25,7 @@ static RE_DEFAULT: LazyLock<Regex> = LazyLock::new(||
 
 static RE_DISCORD: LazyLock<Regex> = LazyLock::new(||
     Regex::new(
-        r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{19})(/(?<channel>[0-9]{19}))?"
+        r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?"
     ).unwrap()
 );
 
