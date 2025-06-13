@@ -4,7 +4,7 @@ use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use size::Size;
-use std::{ error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
+use std::{ collections::HashSet, error::Error, fmt, io::{ self, SeekFrom }, path::PathBuf };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
 
 const API_DELAY: Duration = Duration::from_millis(100);
@@ -12,7 +12,7 @@ const API_DELAY: Duration = Duration::from_millis(100);
 #[derive(Default)]
 pub struct Profile {
     posts: Vec<Post>,
-    pub files: Vec<PostFile>,
+    pub files: HashSet<PostFile>,
 }
 
 impl fmt::Display for Profile {
@@ -137,7 +137,7 @@ impl Profile {
                 .send().await?
                 .json().await?;
 
-            self.posts.append(&mut vec![post]);
+            self.posts.push(post);
         } else {
             let mut offset = 0;
 
@@ -188,13 +188,14 @@ impl Profile {
     }
 
     fn init_files(&mut self) {
-        self.posts
-            .clone() // TODO don't clone posts
-            .into_iter()
-            .for_each(|post| self.files.append(&mut post.files()));
-
-        self.files.sort();
-        self.files.dedup();
+        self.posts.drain(..).for_each(|post|
+            post
+                .files()
+                .into_iter()
+                .for_each(|file| {
+                    self.files.insert(file);
+                })
+        );
     }
 }
 
@@ -225,7 +226,7 @@ impl Post {
     }
 }
 
-#[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord, Default, Hash)]
 pub struct PostFile {
     // original source file name
     // name: Option<String>, // "1242x2208_882b040faaac0e38fba20f4caadb2e59.jpg",

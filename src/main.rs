@@ -2,7 +2,7 @@ use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::TARGE
 use anyhow::Result;
 use futures::future::join_all;
 use size::Size;
-use std::{ sync::Arc, thread };
+use std::{ collections::HashSet, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod cli;
@@ -22,12 +22,12 @@ async fn main() -> Result<()> {
     }
 
     if ARGS.list_extensions {
-        let mut extensions = Vec::new();
+        let mut extensions = HashSet::new();
         let mut no_ext = 0;
 
         for file in files {
             if let Some(ext) = file.to_extension() {
-                extensions.push(ext);
+                extensions.insert(ext.to_lowercase());
             } else {
                 no_ext += 1;
             }
@@ -38,14 +38,8 @@ async fn main() -> Result<()> {
         }
 
         if !extensions.is_empty() {
-            for ext in &mut extensions {
-                *ext = ext.to_lowercase();
-            }
-            extensions.sort();
-            extensions.dedup();
-
             eprintln!();
-            println!("{}", extensions.join(","));
+            println!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
         }
     } else {
         if let Some(exts) = ARGS.included() {
