@@ -32,7 +32,12 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 kumono automatically creates a download directory for each service/creator combination, e.g. `onlyfans/belledelphine` for `https://coomer.su/onlyfans/user/belledelphine`
 
 ```
+Media ripper for coomer.su and kemono.su
+
 Usage: kumono [OPTIONS] <URL>
+
+Arguments:
+  <URL>  Creator page or post / Discord server or channel
 
 Options:
   -p, --proxy <PROXY>                            SOCKS5 proxy (IP:Port)
@@ -44,6 +49,10 @@ Options:
       --read-timeout <READ_TIMEOUT>              [default: 5]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
+  -s, --show-config                              Print configuration before execution
+  -h, --help                                     Print help
+  -V, --version                                  Print version
+
 ```
 
 ### Target Selection
