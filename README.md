@@ -77,6 +77,13 @@ kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
 kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 ```
 
+## Userscripts
+
+These are not my creations, I'm just linking them here because you might want to use them too:
+
+- [`Kemono Browser`](https://sleazyfork.org/en/scripts/483259-kemono-browser) "Adds a button at the bottom right of all kemono, coomer & nekohouse supported creator websites that redirects to the corresponding page."
+- [`Kemono FIX+Download`](https://sleazyfork.org/en/scripts/519690-kemono-fix-download) "Embeds a "Download" button before each file element and starts downloading and saving it to your computer."
+
 ## Contribution
 
 **Bug Reports and Feature Requests**
