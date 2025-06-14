@@ -60,6 +60,8 @@ impl Profile {
         if TARGET.service == "discord" {
             profile.init_posts_discord().await?;
         } else {
+            TARGET.exists().await?;
+
             profile.init_posts_standard().await?;
         }
 

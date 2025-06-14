@@ -51,6 +51,9 @@ pub struct Args {
 
     #[arg(long, value_parser = duration_from_secs, default_value = "5")]
     pub server_error_delay: Duration,
+
+    #[arg(short, long, help = "Show configuration values at the top")]
+    pub show_config: bool,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {

@@ -1,6 +1,6 @@
 [package]
 name = "kumono"
-version = "0.35.6"
+version = "0.36.0"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 readme = "README.md"

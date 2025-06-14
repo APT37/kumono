@@ -12,7 +12,9 @@ mod target;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    eprintln!("{}", *ARGS);
+    if ARGS.show_config {
+        eprintln!("{}", *ARGS);
+    }
 
     let mut files = Profile::init().await?.files;
 
