@@ -37,7 +37,7 @@ pub struct Args {
     )]
     exclude: Option<Vec<String>>,
 
-    #[arg(short, long, help = "List of available file extensions (per creator)")]
+    #[arg(short, long, help = "List of available file extensions (per target)")]
     pub list_extensions: bool,
 
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]

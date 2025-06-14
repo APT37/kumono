@@ -1,10 +1,10 @@
-# kumono - Media ripper for [coomer](https://coomer.su)/[kemono](https://kemono.su)
+# kumono - Media ripper for [coomer.su][coomer] and [kemono.su][kemono]
 
 ## Installation
 
 ### Binaries
 
-Windows and Linux binaries are built for every [release](https://github.com/APT37/kumono/releases).
+Windows and Linux builds can be found [here][releases].
 
 ### Arch Linux
 
@@ -39,7 +39,7 @@ Options:
   -t, --threads <THREADS>                        Simultaneous downloads [default: 256]
   -i, --include <INCLUDE>...                     File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>...                     File extensions to exclude (comma separated)
-  -l, --list-extensions                          List of available file extensions (per creator)
+  -l, --list-extensions                          List of available file extensions (per target)
       --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
       --read-timeout <READ_TIMEOUT>              [default: 5]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
@@ -81,8 +81,9 @@ kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 
 These are not my creations, I'm just linking them here because you might want to use them too:
 
-- [`Kemono Browser`](https://sleazyfork.org/en/scripts/483259-kemono-browser) "Adds a button at the bottom right of all kemono, coomer & nekohouse supported creator websites that redirects to the corresponding page."
-- [`Kemono FIX+Download`](https://sleazyfork.org/en/scripts/519690-kemono-fix-download) "Embeds a "Download" button before each file element and starts downloading and saving it to your computer."
+- [Kemono Browser][us1]: Adds a button at the bottom right of all kemono, coomer & nekohouse supported creator websites that redirects to the corresponding page.
+- [Kemono FIX+Download][us2]: Embeds a "Download" button before each file element and starts downloading and saving it to your computer.
+- [Kemer Downloader][us3]: One-click download of images (compressed download/single image download), create page data for json download, one-click open all current posts.
 
 ## Contribution
 
@@ -99,3 +100,10 @@ You may open pull requests, but be aware that this is a repository mirror. PRs w
 Support is provided via the Discord linked in the repository description.
 
 *Please do not open issues when you are merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
+
+[coomer]: https://coomer.su
+[kemono]: https://kemono.su
+[releases]: https://github.com/APT37/kumono/releases
+[us1]: https://sleazyfork.org/en/scripts/483259-kemono-browser
+[us2]: https://sleazyfork.org/en/scripts/519690-kemono-fix-download
+[us3]: https://sleazyfork.org/en/scripts/472282-kemer-%E4%B8%8B%E8%BC%89%E5%99%A8
