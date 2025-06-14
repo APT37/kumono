@@ -1,16 +1,29 @@
-# kumono - Media ripper for [coomer.su][coomer] and [kemono.su][kemono]
+<h2>kumono - Media ripper for coomer.su and kemono.su</h2>
+
+For a comparison with other tools, see [features](FEATURES.md).
+
+- [Installation](#installation)
+  - [AUR](#aur)
+  - [Binaries](#binaries)
+  - [From Source](#from-source)
+- [Command Line](#command-line)
+  - [Target Selection](#target-selection)
+  - [Filtering by File Extension](#filtering-by-file-extension)
+- [Related Userscripts](#related-userscripts)
+- [Contribution](#contribution)
+- [Support](#support)
 
 ## Installation
 
+### AUR
+
+Arch users may install one of our [AUR packages](AUR.md).
+
 ### Binaries
 
-Windows and Linux builds can be found [here][releases].
+Pre-built binaries for Windows and Linux are available for every [release][releases].
 
-### Arch Linux
-
-Arch users may install via the [AUR](AUR.md).
-
-### Building from source
+### From Source
 
 ```fish
 # linker dependencies
@@ -27,7 +40,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 *Windows users may use the WSL.*
 
-## Usage
+## Command Line
 
 kumono automatically creates a download directory for each service/creator combination, e.g. `onlyfans/belledelphine` for `https://coomer.su/onlyfans/user/belledelphine`
 
@@ -86,9 +99,7 @@ kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
 kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 ```
 
-## Userscripts
-
-These are not my creations, I'm just linking them here because you might want to use them too:
+## Related Userscripts
 
 - [Kemono Browser][us1]: Adds a button at the bottom right of all kemono, coomer & nekohouse supported creator websites that redirects to the corresponding page.
 - [Kemono FIX+Download][us2]: Embeds a "Download" button before each file element and starts downloading and saving it to your computer.
@@ -110,9 +121,13 @@ Support is provided via the Discord linked in the repository description.
 
 *Please do not open issues when you are merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
 
+<!-- link definitions -->
+
 [coomer]: https://coomer.su
 [kemono]: https://kemono.su
+
 [releases]: https://github.com/APT37/kumono/releases
+
 [us1]: https://sleazyfork.org/en/scripts/483259-kemono-browser
 [us2]: https://sleazyfork.org/en/scripts/519690-kemono-fix-download
 [us3]: https://sleazyfork.org/en/scripts/472282-kemer-%E4%B8%8B%E8%BC%89%E5%99%A8
