@@ -9,7 +9,7 @@ jobs:
   release:
     name: Release for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    environment: kumono
+    environment: default
     strategy:
       matrix:
         name: [linux, windows]
@@ -49,7 +49,7 @@ jobs:
   # publish:
   #   name: Publish crate
   #   runs-on: ubuntu-latest
-  #   environment: kumono
+  #   environment: default
 
   #   steps:
   #     - name: Checkout

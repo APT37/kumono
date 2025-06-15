@@ -54,10 +54,10 @@ static RE_DISCORD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl Target {
-    fn new(service: String, user: String, post: Option<Match>) -> Self {
+    fn new(service: &str, user: &str, post: Option<Match>) -> Self {
         Target {
-            service,
-            user,
+            service: service.to_string(),
+            user: user.to_string(),
             post: post.map(|p| p.as_str().to_string()),
         }
     }
@@ -85,24 +85,11 @@ impl Target {
             match (&caps.name("service"), &caps.name("user")) {
                 (None, _) => bail!("Invalid service in URL: {url}"),
                 (Some(_), None) => bail!("Invalid user in URL: {url}"),
-                (Some(s), Some(u)) =>
-                    Ok(
-                        Target::new(
-                            s.as_str().to_string(),
-                            u.as_str().to_string(),
-                            caps.name("post")
-                        )
-                    ),
+                (Some(s), Some(u)) => Ok(Target::new(s.as_str(), u.as_str(), caps.name("post"))),
             }
         } else if let Some(caps) = RE_DISCORD.captures(&ARGS.url) {
             if let Some(server) = &caps.name("server") {
-                Ok(
-                    Target::new(
-                        "discord".to_string(),
-                        server.as_str().to_string(),
-                        caps.name("channel")
-                    )
-                )
+                Ok(Target::new("discord", server.as_str(), caps.name("channel")))
             } else {
                 bail!("Invalid Discord server in URL: {url}")
             }

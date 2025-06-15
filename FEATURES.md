@@ -5,7 +5,7 @@ Due to missing documentation, this is only a partial list.
 
 *That said, if you find this information to be inaccurate, please let me know.*
 
-| Feature \ Tool                | kumono            | [KToolBox][ktb]                      | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
+| Feature \ Tool                | [kumono][kmn]     | [KToolBox][ktb]                      | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
 | ----------------------------- | ----------------- | ------------------------------------ | ----------------- | ------------------------------------ |
 | language                      | Rust              | [Python][ktb-py]                     | [Python][gdl-py]  | [Python][kacd-py]                    |
 | issues (besides Python)       | many features TBD | [high complexity][ktb-c], messy docs | no concurrency    | no concurrency                       |
@@ -30,9 +30,11 @@ Due to missing documentation, this is only a partial list.
 | verify hashes after download  | yes               | ?                                    | ?                 | ?                                    |
 | use original file name        | no (TBD?)         | ?                                    | ?                 | ?                                    |
 | download archive              | no (TBD?)         | ?                                    | yes               | ?                                    |
-| Advanced renaming options     | no                | yes                                  | ?                 | ?                                    |
+| Advanced renaming options     | no (TBD?)         | yes                                  | ?                 | ?                                    |
 
 <!-- link definitions -->
+
+[kmn]: https://github.com/APT37/kumono
 
 [ktb]: https://github.com/Ljzd-PRO/KToolBox
 [ktb-py]: https://github.com/Ljzd-PRO/KToolBox/issues?q=is%3Aissue%20python
