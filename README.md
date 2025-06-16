@@ -29,7 +29,7 @@ Pre-built binaries for Windows and Linux are available for every [release][relea
 # linker dependencies
 sudo apt-get install git rustup clang mold
 
-# toolchain (incl. cargo)
+# rust toolchain
 rustup default stable
 
 # build and install
@@ -71,17 +71,20 @@ Options:
 ### Target Selection
 
 ```bash
-# download all creator content
+# whole creator
 kumono https://coomer.su/onlyfans/user/belledelphine
 
-# download only content from the given post
+# single page
+kumono https://coomer.su/onlyfans/user/belledelphine?o=50
+
+# single post
 kumono https://coomer.su/onlyfans/user/belledelphine/post/1099631527
 
-# download content from all channels of the given server
-kumono https://kemono.su/discord/server/1196504962411282491
-
-# download only content from the given channel
+# single channel
 kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
+
+# whole server
+kumono https://kemono.su/discord/server/1196504962411282491
 ```
 
 ### Filtering by File Extension

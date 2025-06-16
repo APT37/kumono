@@ -15,6 +15,7 @@ pub static TARGET: LazyLock<Target> = LazyLock::new(|| {
 pub struct Target {
     pub service: String,
     pub user: String,
+    pub page: Option<String>,
     pub post: Option<String>,
 }
 
@@ -43,7 +44,7 @@ struct Info {
 
 static RE_DEFAULT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>afdian|boosty|candfans|dlsite|fanbox|fansly|fantia|gumroad|onlyfans|patreon|subscribestar)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)(/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+))?"
+        r"^(https://)?(coomer|kemono)\.su/(?<service>afdian|boosty|candfans|dlsite|fanbox|fansly|fantia|gumroad|onlyfans|patreon|subscribestar)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)((\?o=(?<page>([1-9]+[0|5]+|5)?0))|(/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)))?"
     ).unwrap()
 });
 
@@ -54,30 +55,37 @@ static RE_DISCORD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl Target {
-    fn new(service: &str, user: &str, post: Option<Match>) -> Self {
+    fn new(service: &str, user: &str, page: Option<Match>, post: Option<Match>) -> Self {
+        let m = |m: Match| m.as_str().to_string();
+
         Target {
             service: service.to_string(),
             user: user.to_string(),
-            post: post.map(|p| p.as_str().to_string()),
+            page: page.map(m),
+            post: post.map(m),
         }
     }
 
     pub async fn exists(&self) -> Result<()> {
         if self.service == "discord" {
-            return Ok(());
+            let url = format!("https://kemono.su/api/v1/discord/channel/lookup/{}", self.user);
+
+            CLIENT.get(url).send().await?.error_for_status()?;
+        } else {
+            let url = format!(
+                "https://{}.su/api/v1/{}/user/{}/profile",
+                self.site(),
+                self.service,
+                self.user
+            );
+
+            match CLIENT.get(url).send().await?.json().await? {
+                User::Info(_) => {}
+                User::Error { error: err } => bail!("{err}"),
+            }
         }
 
-        let url = format!(
-            "https://{}.su/api/v1/{}/user/{}/profile",
-            self.site(),
-            self.service,
-            self.user
-        );
-
-        match CLIENT.get(url).send().await?.json().await? {
-            User::Info(_) => Ok(()),
-            User::Error { error: err } => bail!("{err}"),
-        }
+        Ok(())
     }
 
     fn from_url(url: &str) -> Result<Self> {
@@ -85,11 +93,12 @@ impl Target {
             match (&caps.name("service"), &caps.name("user")) {
                 (None, _) => bail!("Invalid service in URL: {url}"),
                 (Some(_), None) => bail!("Invalid user in URL: {url}"),
-                (Some(s), Some(u)) => Ok(Target::new(s.as_str(), u.as_str(), caps.name("post"))),
+                (Some(s), Some(u)) =>
+                    Ok(Target::new(s.as_str(), u.as_str(), caps.name("page"), caps.name("post"))),
             }
         } else if let Some(caps) = RE_DISCORD.captures(&ARGS.url) {
             if let Some(server) = &caps.name("server") {
-                Ok(Target::new("discord", server.as_str(), caps.name("channel")))
+                Ok(Target::new("discord", server.as_str(), None, caps.name("channel")))
             } else {
                 bail!("Invalid Discord server in URL: {url}")
             }
