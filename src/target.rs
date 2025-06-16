@@ -117,10 +117,10 @@ impl Target {
     }
 
     pub fn to_pathbuf(&self) -> PathBuf {
-        PathBuf::from_iter([&self.service, &self.user])
+        PathBuf::from_iter(["kumono", &self.service, &self.user])
     }
 
-    pub fn to_pathbuf_with_file(&self, file: impl AsRef<str>) -> PathBuf {
-        PathBuf::from_iter([&self.service, &self.user, file.as_ref()])
+    pub fn to_pathbuf_with_file<S: AsRef<str>>(&self, file: S) -> PathBuf {
+        PathBuf::from_iter(["kumono", &self.service, &self.user, file.as_ref()])
     }
 }

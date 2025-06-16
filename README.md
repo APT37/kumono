@@ -42,7 +42,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 ## Command Line
 
-kumono automatically creates a download directory for each service/creator combination, e.g. `onlyfans/belledelphine` for `https://coomer.su/onlyfans/user/belledelphine`
+Downloads for `https://coomer.su/onlyfans/user/belledelphine` would go into `kumono/onlyfans/belledelphine` for example.
 
 ```
 Media ripper for coomer.su and kemono.su
