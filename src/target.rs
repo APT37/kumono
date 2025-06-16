@@ -44,13 +44,13 @@ struct Info {
 
 static RE_DEFAULT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>afdian|boosty|candfans|dlsite|fanbox|fansly|fantia|gumroad|onlyfans|patreon|subscribestar)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)((\?o=(?<page>([1-9]+[0|5]+|5)?0))|(/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)))?"
+        r"^(https://)?(coomer|kemono)\.su/(?<service>afdian|boosty|candfans|dlsite|fanbox|fansly|fantia|gumroad|onlyfans|patreon|subscribestar)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)((\?o=(?<page>([1-9]+[0|5]+|5)?0))|(/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)))?$"
     ).unwrap()
 });
 
 static RE_DISCORD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?"
+        r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?$"
     ).unwrap()
 });
 
@@ -67,11 +67,7 @@ impl Target {
     }
 
     pub async fn exists(&self) -> Result<()> {
-        if self.service == "discord" {
-            let url = format!("https://kemono.su/api/v1/discord/channel/lookup/{}", self.user);
-
-            CLIENT.get(url).send().await?.error_for_status()?;
-        } else {
+        if self.service != "discord" {
             let url = format!(
                 "https://{}.su/api/v1/{}/user/{}/profile",
                 self.site(),

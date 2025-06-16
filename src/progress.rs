@@ -54,7 +54,7 @@ impl fmt::Display for Stats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "downloaded approx. {} / success: {} / skipped: {} / failure: {}",
+            "downloaded approx. {} / finished: {} / skipped: {} / failed: {}",
             HumanBytes(self.dl_size),
             n_fmt(self.success),
             n_fmt(self.skipped),

@@ -1,6 +1,6 @@
 [package]
 name = "kumono"
-version = "0.37.1"
+version = "0.37.2"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 homepage = "https://github.com/APT37/kumono"
