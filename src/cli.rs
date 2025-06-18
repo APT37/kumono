@@ -1,7 +1,7 @@
 use clap::{ Parser, arg };
 use pretty_duration::pretty_duration;
 use serde::{ Deserialize };
-use std::{ fmt, net::SocketAddr, num, sync::LazyLock, time::Duration };
+use std::{ fmt, num, sync::LazyLock, time::Duration };
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -11,8 +11,8 @@ pub struct Args {
     #[arg(help = "Creator page or post / Discord server or channel")]
     pub url: String,
 
-    #[arg(short, long, help = "SOCKS5 proxy (IP:Port)")]
-    pub proxy: Option<SocketAddr>,
+    #[arg(short, long, help = "roxy URL (scheme://host:port[/path])")]
+    pub proxy: Option<String>,
 
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
     pub threads: u16,
@@ -104,7 +104,7 @@ impl fmt::Display for Args {
             f,
             "Threads: {} / Proxy: {} / Timeout: (Connect: {} / Read: {}) / Backoff: (Rate Limit: {} / Server Error: {})",
             self.threads,
-            self.proxy.map_or(String::from("None"), |p| p.to_string()),
+            self.proxy.as_ref().map_or("None", |p| p),
             pd(&self.connect_timeout),
             pd(&self.read_timeout),
             pd(&self.rate_limit_backoff),

@@ -56,7 +56,7 @@ Arguments:
   <URL>  Creator page or post / Discord server or channel
 
 Options:
-  -p, --proxy <PROXY>                            SOCKS5 proxy (IP:Port)
+  -p, --proxy <PROXY>                            Proxy URL (scheme://host:port[/path])
   -t, --threads <THREADS>                        Simultaneous downloads [default: 256]
   -i, --include <INCLUDE>...                     File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>...                     File extensions to exclude (comma separated)
