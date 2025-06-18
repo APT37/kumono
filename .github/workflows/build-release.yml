@@ -46,22 +46,22 @@ jobs:
           files: ${{ matrix.artifact_name }}
           draft: false
 
-  # publish:
-  #   name: Publish crate
-  #   runs-on: ubuntu-latest
-  #   environment: default
+  publish:
+    name: Publish crate
+    runs-on: ubuntu-latest
+    environment: default
 
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
-  #     - name: Install Rust toolchain
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         profile: minimal
-  #         toolchain: stable
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
 
-  #     - name: Publish crate
-  #       run: |
-  #         cargo login ${{ secrets.CRATES_IO_TOKEN }}
-  #         cargo publish
+      - name: Publish crate
+        run: |
+          cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          cargo publish
