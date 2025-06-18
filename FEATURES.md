@@ -15,7 +15,7 @@ Due to missing documentation, this is only a partial list.
 | creator all posts             | yes               | yes                      | yes               | yes                                  |
 | creator single page           | yes               | ?                        | ?                 | yes                                  |
 | creator single post           | yes               | yes                      | yes               | yes                                  |
-| creator + all linked accounts | not (TBD)         | no                       | no                | no                                   |
+| creator + all linked accounts | no (TBD)          | no                       | no                | no                                   |
 | discord server                | yes               | no                       | yes               | ?                                    |
 | discord channel               | yes               | no                       | no                | ?                                    |
 | favorites (creator)           | no (TBD)          | ?                        | ?                 | ?                                    |
