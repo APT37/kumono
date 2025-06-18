@@ -25,12 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Dependencies (Linux)
-        if: matrix.name == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang mold
-
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

@@ -113,13 +113,9 @@ kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 
 ## Contribution
 
-**Bug Reports and Feature Requests**
-
 Feel free to open an issue if you have a bug to report or want to request a feature.
 
-**Pull Requests**
-
-You may open pull requests, but be aware that this is a repository mirror. PRs will not be merged directly - accepted changes will be incorporated in private and then pushed here.
+Please use proper code formatting when creating a pull request.
 
 ## Support
 
