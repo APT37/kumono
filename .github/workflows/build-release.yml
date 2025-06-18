@@ -50,6 +50,7 @@ jobs:
     name: Publish crate
     runs-on: ubuntu-latest
     environment: default
+    needs: release
 
     steps:
       - name: Checkout
