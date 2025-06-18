@@ -27,7 +27,7 @@ Pre-built binaries for Windows and Linux are available for every [release][relea
 
 ```fish
 # 1. build dependencies
-sudo apt-get install git rustup clang mold
+sudo apt-get install git rustup
 
 # 2. Rust toolchain
 rustup default stable
