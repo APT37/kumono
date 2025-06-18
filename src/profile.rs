@@ -160,12 +160,7 @@ impl Profile {
 
             self.posts.push(post);
         } else {
-            let mut offset = if let Some(page) = TARGET.page.as_ref() {
-                eprintln!("{page}");
-                page.parse()?
-            } else {
-                0
-            };
+            let mut offset = if let Some(page) = TARGET.page.as_ref() { page.parse()? } else { 0 };
 
             loop {
                 let mut posts: Vec<Post>;
