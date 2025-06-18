@@ -5,7 +5,7 @@ For a comparison with other tools, see [features](FEATURES.md).
 - [Installation](#installation)
   - [AUR](#aur)
   - [Binaries](#binaries)
-  - [From Source](#from-source)
+  - [From Source (with cargo)](#from-source-with-cargo)
 - [Command Line](#command-line)
   - [Target Selection](#target-selection)
   - [Filtering by File Extension](#filtering-by-file-extension)
@@ -23,16 +23,19 @@ Arch users may install one of our [AUR packages](AUR.md).
 
 Pre-built binaries for Windows and Linux are available for every [release][releases].
 
-### From Source
+### From Source (with cargo)
 
 ```fish
-# linker dependencies
+# 1. build dependencies
 sudo apt-get install git rustup clang mold
 
-# rust toolchain
+# 2. Rust toolchain
 rustup default stable
 
-# build and install
+# 3a. latest release (via crates.io)
+cargo install kumono
+
+# 3b. latest commit (via GitHub)
 cargo install --git=https://github.com/APT37/kumono
 ```
 
