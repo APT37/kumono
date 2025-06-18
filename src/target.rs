@@ -29,7 +29,7 @@ enum User {
     },
 }
 
-#[allow(dead_code)]
+#[allow(unused)]
 #[derive(Debug, Clone, Deserialize)]
 struct Info {
     id: String, // "5564244",
@@ -39,7 +39,7 @@ struct Info {
     updated: String, // "2025-05-30T14:07:16.596525",
     public_id: String, // "theobrobine",
     relation_id: Option<u64>, // 8,
-    has_chats: bool, // false
+    has_chats: Option<bool>, // false
 }
 
 static RE_DEFAULT: LazyLock<Regex> = LazyLock::new(|| {
