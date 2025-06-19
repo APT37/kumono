@@ -121,11 +121,13 @@ impl Target {
         }
     }
 
-    pub fn to_pathbuf(&self) -> PathBuf {
-        PathBuf::from_iter(["kumono", &self.service, &self.user])
-    }
+    pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
+        let mut path = PathBuf::from_iter(["kumono", &self.service, &self.user]);
 
-    pub fn to_pathbuf_with_file<S: AsRef<str>>(&self, file: S) -> PathBuf {
-        PathBuf::from_iter(["kumono", &self.service, &self.user, file.as_ref()])
+        if let Some(file) = file {
+            path.push(file);
+        }
+
+        path
     }
 }

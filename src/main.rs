@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
 
         let len = files.len();
 
-        fs::create_dir_all(TARGET.to_pathbuf()).await?;
+        fs::create_dir_all(TARGET.to_pathbuf(None)).await?;
 
         let (tx, rx) = mpsc::channel::<DownloadState>(len);
 
@@ -102,11 +102,11 @@ async fn main() -> Result<()> {
 
         join_all(tasks).await;
 
-        // wait as bit so the bar can finish properly
+        // wait so the bar can finish properly
         sleep(Duration::from_millis(1)).await;
 
         #[allow(unused_must_use)]
-        fs::remove_dir(TARGET.to_pathbuf()).await;
+        fs::remove_dir(TARGET.to_pathbuf(None)).await;
     }
 
     Ok(())

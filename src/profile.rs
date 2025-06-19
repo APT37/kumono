@@ -286,11 +286,11 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf_with_file(self.to_name())
+        TARGET.to_pathbuf(Some(&self.to_name()))
     }
 
     pub fn to_temp_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf_with_file(self.to_temp_name())
+        TARGET.to_pathbuf(Some(&self.to_temp_name()))
     }
 
     pub fn to_hash(&self) -> String {
