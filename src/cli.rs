@@ -11,7 +11,7 @@ pub struct Args {
     #[arg(help = "Creator page or post / Discord server or channel")]
     pub url: String,
 
-    #[arg(short, long, help = "roxy URL (scheme://host:port[/path])")]
+    #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,
 
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
@@ -20,7 +20,6 @@ pub struct Args {
     #[arg(
         short,
         long,
-        num_args = 1..,
         value_delimiter = ',',
         conflicts_with = "exclude",
         help = "File extensions to include (comma separated)"
@@ -30,7 +29,6 @@ pub struct Args {
     #[arg(
         short,
         long,
-        num_args = 1..,
         value_delimiter = ',',
         conflicts_with = "include",
         help = "File extensions to exclude (comma separated)"

@@ -59,6 +59,11 @@ async fn main() -> Result<()> {
 
         let len = files.len();
 
+        if len == 0 {
+            eprintln!("No files match the current extension filters.\nPlease use '--list' to view available extensions.");
+            return Ok(());
+        }
+
         fs::create_dir_all(TARGET.to_pathbuf(None)).await?;
 
         let (tx, rx) = mpsc::channel::<DownloadState>(len);
