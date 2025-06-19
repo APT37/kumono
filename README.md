@@ -119,7 +119,7 @@ Please use proper code formatting when creating a pull request.
 
 ## Support
 
-Support is provided via the Discord linked in the repository description.
+Support is provided via the Matrix room linked in the repository description.
 
 *Please do not open issues when you are merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
 
