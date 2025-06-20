@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
         eprintln!("{}", *ARGS);
     }
 
-    for target in TARGETS.iter() {
+    for (i, target) in TARGETS.iter().enumerate() {
         let mut files = Profile::new(target).await?.files;
 
         if files.is_empty() {
@@ -41,6 +41,9 @@ async fn main() -> Result<()> {
 
             if !extensions.is_empty() {
                 eprintln!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
+                if i != TARGETS.len() - 1 {
+                    eprintln!();
+                }
             }
         } else {
             if let Some(exts) = ARGS.included() {
@@ -72,7 +75,7 @@ async fn main() -> Result<()> {
 
             thread::spawn(move || progress::bar(rx, len as u64));
 
-            let mut tasks = vec![];
+            let mut tasks = Vec::new();
 
             let sem = Arc::new(Semaphore::new(ARGS.threads.into()));
 

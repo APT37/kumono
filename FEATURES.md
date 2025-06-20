@@ -1,36 +1,40 @@
 
 ## Feature Comparison
 
-Due to missing documentation, this is only a partial list.
+Due to missing/unclear documentation and scope limitations, this is only a partial comparison.
 
 *That said, if you find this information to be inaccurate, please let me know.*
 
-| Feature \ Tool                | [kumono][kmn]     | [KToolBox][ktb]          | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
-| ----------------------------- | ----------------- | ------------------------ | ----------------- | ------------------------------------ |
-| language                      | Rust              | [Python][ktb-py]         | [Python][gdl-py]  | [Python][kacd-py]                    |
-| issues (besides Python)       | many features TBD | [high complexity][ktb-c] | no concurrency    | no concurrency                       |
-| user interface                | CLI               | CLI                      | CLI               | TUI (kind of a chore to use)         |
-| direct URL parser             | yes               | yes                      | yes               | no                                   |
-| concurrency                   | yes (default 256) | yes (default 10)         | no                | no                                   |
-| creator all posts             | yes               | yes                      | yes               | yes                                  |
-| creator single page           | yes               | ?                        | ?                 | yes                                  |
-| creator single post           | yes               | yes                      | yes               | yes                                  |
-| creator + all linked accounts | no (TBD)          | no                       | no                | no                                   |
-| discord server                | yes               | no                       | yes               | ?                                    |
-| discord channel               | yes               | no                       | no                | ?                                    |
-| favorites (creator)           | no (TBD)          | ?                        | ?                 | ?                                    |
-| favorites (post)              | no (TBD)          | ?                        | ?                 | ?                                    |
-| skip existing files           | yes               | yes                      | yes               | ?                                    |
-| file type filtering           | yes               | yes                      | yes               | ?                                    |
-| proxy                         | yes               | ?                        | yes               | ?                                    |
-| retry API calls               | no (TBD)          | yes                      | ?                 | ?                                    |
-| retry (server error)          | yes               | yes                      | ?                 | ?                                    |
-| retry (connection error)      | no (TBD)          | ?                        | yes               | ?                                    |
-| resume downloads              | yes               | ?                        | ?                 | ?                                    |
-| verify hashes after download  | yes               | ?                        | ?                 | ?                                    |
-| use original file name        | no (TBD?)         | ?                        | ?                 | ?                                    |
-| download archive              | no (TBD?)         | ?                        | yes               | ?                                    |
-| Advanced renaming options     | no (TBD?)         | yes                      | ?                 | ?                                    |
+| Feature \ Tool            | [kumono][kmn]     | [KToolBox][ktb]                | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
+| ------------------------- | ----------------- | ------------------------------ | ----------------- | ------------------------------------ |
+| language                  | Rust              | [Python][ktb-py]               | [Python][gdl-py]  | [Python][kacd-py]                    |
+| issues (besides Python)   | some features TBD | lack of features and UX        | no concurrency    | no concurrency                       |
+| kemono support            | yes               | yes                            | yes               | yes                                  |
+| coomer support            | yes               | [extra config required][ktb-c] | yes               | yes                                  |
+| user interface            | CLI               | CLI                            | CLI               | TUI (kind of a chore to use)         |
+| direct URL parser         | yes               | yes                            | yes               | no                                   |
+| read multiple URLs        | yes               | ?                              | yes               | yes                                  |
+| concurrency               | yes (default 256) | yes (default 10)               | no                | no                                   |
+| creator all posts         | yes               | yes                            | yes               | yes                                  |
+| creator single page       | yes               | manual                         | yes               | yes                                  |
+| creator single post       | yes               | yes                            | yes               | yes                                  |
+| creator + linked accounts | no (TBD)          | no                             | no                | no                                   |
+| discord server            | yes               | no                             | yes               | ?                                    |
+| discord channel           | yes               | no                             | no                | ?                                    |
+| favorites (creator)       | no (TBD)          | ?                              | ?                 | ?                                    |
+| favorites (post)          | no (TBD)          | ?                              | ?                 | ?                                    |
+| skip existing files       | yes               | yes                            | yes               | ?                                    |
+| file type filtering       | yes               | yes                            | yes               | ?                                    |
+| proxy support             | yes               | ?                              | yes               | ?                                    |
+| retry API calls           | no (TBD)          | yes                            | ?                 | ?                                    |
+| retry (server error)      | yes               | yes                            | ?                 | ?                                    |
+| retry (connection error)  | no (TBD)          | ?                              | yes               | ?                                    |
+| resume downloads          | yes               | ?                              | ?                 | ?                                    |
+| verify hashes             | yes               | ?                              | ?                 | ?                                    |
+
+<!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
+<!-- | download archive          | no (TBD?)         | ?                              | yes               | ?                                    | -->
+<!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
 
 <!-- link definitions -->
 
@@ -38,7 +42,7 @@ Due to missing documentation, this is only a partial list.
 
 [ktb]: https://github.com/Ljzd-PRO/KToolBox
 [ktb-py]: https://github.com/Ljzd-PRO/KToolBox/issues?q=is%3Aissue%20python
-[ktb-c]: https://github.com/Ljzd-PRO/KToolBox/issues/141
+[ktb-c]: https://ktoolbox.readthedocs.io/latest/coomer/
 
 [gdl]: https://github.com/mikf/gallery-dl
 [gdl-py]: https://github.com/mikf/gallery-dl/issues?q=is%3Aissue%20python
