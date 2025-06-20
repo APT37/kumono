@@ -9,7 +9,7 @@ pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 #[clap(about, version, arg_required_else_help = true)]
 pub struct Args {
     #[arg(help = "Creator page or post / Discord server or channel")]
-    pub url: String,
+    pub urls: Vec<String>,
 
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,

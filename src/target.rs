@@ -4,14 +4,27 @@ use regex::{ Match, Regex };
 use serde::Deserialize;
 use std::{ path::PathBuf, process::exit, sync::LazyLock };
 
-pub static TARGET: LazyLock<Target> = LazyLock::new(|| {
-    Target::from_url(&ARGS.url).unwrap_or_else(|err| {
-        eprintln!("{err}");
-        exit(1)
-    })
+pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
+    let mut targets = Vec::new();
+
+    for url in &ARGS.urls {
+        match Target::from_url(url) {
+            Ok(target) => targets.push(target),
+            Err(err) => eprintln!("{err}"),
+        }
+    }
+
+    if targets.is_empty() {
+        eprintln!("No valid target URLs found.");
+        exit(1);
+    }
+
+    targets.sort();
+    targets.dedup();
+    targets
 });
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Target {
     pub service: String,
     pub user: String,
@@ -22,8 +35,7 @@ pub struct Target {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum User {
-    #[allow(dead_code)] Info(Info),
-
+    #[allow(unused)] Info(Info),
     Error {
         error: String,
     },
@@ -92,7 +104,7 @@ impl Target {
                 (Some(s), Some(u)) =>
                     Ok(Target::new(s.as_str(), u.as_str(), caps.name("page"), caps.name("post"))),
             }
-        } else if let Some(caps) = RE_DISCORD.captures(&ARGS.url) {
+        } else if let Some(caps) = RE_DISCORD.captures(url) {
             if let Some(server) = &caps.name("server") {
                 Ok(Target::new("discord", server.as_str(), None, caps.name("channel")))
             } else {

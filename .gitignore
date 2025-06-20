@@ -1,6 +1,5 @@
 # ignore cargo build artifacts
-target/
+/target
 
-# ignore makepkg build artifacts
-pkg/
-*.pkg.tar.zst
+# ignore kumono downloads
+/kumono

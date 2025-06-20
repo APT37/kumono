@@ -1,5 +1,5 @@
-use crate::{ cli::ARGS, http::CLIENT, progress::{ n_fmt, DownloadState }, target::TARGET };
-use anyhow::{ bail, Context, Result };
+use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt }, target::Target };
+use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
 use reqwest::StatusCode;
 use serde::Deserialize;
@@ -10,6 +10,7 @@ const API_DELAY: Duration = Duration::from_millis(100);
 
 #[derive(Default)]
 pub struct Profile {
+    pub target: Target,
     post_count: usize,
     posts: Vec<Post>,
     pub files: HashSet<PostFile>,
@@ -17,15 +18,15 @@ pub struct Profile {
 
 impl fmt::Display for Profile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(post) = &TARGET.post {
+        if let Some(post) = &self.target.post {
             let files = match self.files.len() {
                 0 => "no files",
                 1 => "1 file",
                 n => &format!("{} files", n_fmt(n as u64)),
             };
 
-            write!(f, "{}/{}/{post} has {files}", TARGET.service, TARGET.user)
-        } else if let Some(page) = &TARGET.page {
+            write!(f, "{}/{}/{post} has {files}", self.target.service, self.target.user)
+        } else if let Some(page) = &self.target.page {
             let posts = match self.post_count {
                 0 => "no posts",
                 1 => "1 post",
@@ -41,8 +42,8 @@ impl fmt::Display for Profile {
             write!(
                 f,
                 "{}/{} page {} has {posts}{files}",
-                TARGET.service,
-                TARGET.user,
+                self.target.service,
+                self.target.user,
                 (page.parse::<usize>().unwrap() + 50) / 50
             )
         } else {
@@ -62,7 +63,7 @@ impl fmt::Display for Profile {
                 }
             };
 
-            write!(f, "{}/{} has {posts}{files}", TARGET.service, TARGET.user)
+            write!(f, "{}/{} has {posts}{files}", self.target.service, self.target.user)
         }
     }
 }
@@ -74,13 +75,13 @@ struct Channel {
 }
 
 impl Profile {
-    pub async fn init() -> Result<Self> {
-        let mut profile = Self::default();
+    pub async fn new(target: &Target) -> Result<Self> {
+        let mut profile = Self { target: target.clone(), ..Default::default() };
 
-        if TARGET.service == "discord" {
+        if profile.target.service == "discord" {
             profile.init_posts_discord().await?;
         } else {
-            TARGET.exists().await?;
+            profile.target.exists().await?;
             profile.init_posts_standard().await?;
         }
 
@@ -94,10 +95,14 @@ impl Profile {
     }
 
     async fn init_posts_discord(&mut self) -> Result<()> {
-        let channels: Vec<Channel> = if let Some(channel) = &TARGET.post {
-            vec![Channel { id: channel.to_string() }]
+        let channels: Vec<Channel> = if let Some(channel) = &self.target.post {
+            vec![Channel {
+                id: channel.to_string(),
+            }]
         } else {
-            CLIENT.get(format!("https://kemono.su/api/v1/discord/channel/lookup/{}", TARGET.user))
+            CLIENT.get(
+                format!("https://kemono.su/api/v1/discord/channel/lookup/{}", self.target.user)
+            )
                 .send().await?
                 .json().await?
         };
@@ -146,13 +151,13 @@ impl Profile {
     }
 
     async fn init_posts_standard(&mut self) -> Result<()> {
-        if let Some(post) = &TARGET.post {
+        if let Some(post) = &self.target.post {
             let post: Post = CLIENT.get(
                 format!(
                     "https://{}.su/api/v1/{}/user/{}/post/{post}",
-                    TARGET.site(),
-                    TARGET.service,
-                    TARGET.user
+                    self.target.site(),
+                    self.target.service,
+                    self.target.user
                 )
             )
                 .send().await?
@@ -160,12 +165,16 @@ impl Profile {
 
             self.posts.push(post);
         } else {
-            let mut offset = if let Some(page) = TARGET.page.as_ref() { page.parse()? } else { 0 };
+            let mut offset = if let Some(page) = self.target.page.as_ref() {
+                page.parse()?
+            } else {
+                0
+            };
 
             loop {
                 let mut posts: Vec<Post>;
 
-                let url = Self::api_url_with_offset(offset);
+                let url = Self::api_url_with_offset(&self.target, offset);
 
                 loop {
                     sleep(API_DELAY).await;
@@ -192,7 +201,7 @@ impl Profile {
 
                 self.posts.append(&mut posts);
 
-                if TARGET.page.is_some() {
+                if self.target.page.is_some() {
                     break;
                 }
 
@@ -203,26 +212,25 @@ impl Profile {
         Ok(())
     }
 
-    fn api_url_with_offset(offset: u32) -> String {
+    fn api_url_with_offset(target: &Target, offset: u32) -> String {
         format!(
             "https://{}.su/api/v1/{}/user/{}?o={offset}",
-            TARGET.site(),
-            TARGET.service,
-            TARGET.user
+            target.site(),
+            target.service,
+            target.user
         )
     }
 
     fn init_files(&mut self) {
         self.post_count = self.posts.len();
 
-        self.posts.drain(..).for_each(|post|
-            post
-                .files()
+        self.posts.drain(..).for_each(|post| {
+            post.files()
                 .into_iter()
                 .for_each(|file| {
                     self.files.insert(file);
-                })
-        );
+                });
+        });
     }
 }
 
@@ -238,7 +246,6 @@ struct Post {
 
     // post title
     // title: String, // "What an ass"
-
     #[serde(default)]
     file: PostFile,
     attachments: Vec<PostFile>,
@@ -263,8 +270,8 @@ pub struct PostFile {
 }
 
 impl PostFile {
-    pub fn to_url(&self) -> String {
-        format!("https://{}.su/data{}", TARGET.site(), self.path.as_ref().unwrap())
+    pub fn to_url(&self, target: &Target) -> String {
+        format!("https://{}.su/data{}", target.site(), self.path.as_ref().unwrap())
     }
 
     pub fn to_name(&self) -> String {
@@ -279,65 +286,65 @@ impl PostFile {
         self.to_name() + ".temp"
     }
 
-    pub fn to_extension(&self) -> Option<String> {
-        self.to_pathbuf()
+    pub fn to_extension(&self, target: &Target) -> Option<String> {
+        self.to_pathbuf(target)
             .extension()
             .map(|ext| ext.to_string_lossy().to_ascii_lowercase())
     }
 
-    pub fn to_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf(Some(&self.to_name()))
+    pub fn to_pathbuf(&self, target: &Target) -> PathBuf {
+        target.to_pathbuf(Some(&self.to_name()))
     }
 
-    pub fn to_temp_pathbuf(&self) -> PathBuf {
-        TARGET.to_pathbuf(Some(&self.to_temp_name()))
+    pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
+        target.to_pathbuf(Some(&self.to_temp_name()))
     }
 
     pub fn to_hash(&self) -> String {
         self.to_name()[..64].to_string()
     }
 
-    pub async fn open(&self) -> Result<File> {
+    pub async fn open(&self, target: &Target) -> Result<File> {
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_temp_pathbuf()).await
+            .open(&self.to_temp_pathbuf(target)).await
             .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
-    pub async fn hash(&self) -> Result<String> {
+    pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
-            ::try_async_digest(&self.to_temp_pathbuf()).await
+            ::try_async_digest(&self.to_temp_pathbuf(target)).await
             .with_context(|| format!("hash tempfile: {}", self.to_temp_name()))
     }
 
-    pub async fn exists(&self) -> Result<bool> {
-        fs::try_exists(self.to_pathbuf()).await.with_context(||
+    pub async fn exists(&self, target: &Target) -> Result<bool> {
+        fs::try_exists(self.to_pathbuf(target)).await.with_context(||
             format!("check if file exists: {}", self.to_temp_name())
         )
     }
 
-    pub async fn r#move(&self) -> Result<()> {
-        fs::rename(self.to_temp_pathbuf(), self.to_pathbuf()).await.with_context(||
+    pub async fn r#move(&self, target: &Target) -> Result<()> {
+        fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
             format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.to_name())
-        )
+        })
     }
 
-    pub async fn delete(&self) -> Result<()> {
-        fs::remove_file(self.to_temp_pathbuf()).await.with_context(||
+    pub async fn delete(&self, target: &Target) -> Result<()> {
+        fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(||
             format!("delete tempfile: {}", self.to_temp_name())
         )
     }
 
-    pub async fn download(&self) -> Result<DownloadState> {
-        if self.exists().await? {
+    pub async fn download(&self, target: &Target) -> Result<DownloadState> {
+        if self.exists(target).await? {
             return Ok(DownloadState::Skip);
         }
 
-        let rsize = self.remote_size().await?;
+        let rsize = self.remote_size(target).await?;
 
-        let mut temp_file = self.open().await?;
+        let mut temp_file = self.open(target).await?;
 
         let isize = temp_file.seek(SeekFrom::End(0)).await?;
 
@@ -348,7 +355,7 @@ impl PostFile {
                 break;
             }
 
-            if let Err(err) = self.download_range(&mut temp_file, csize).await {
+            if let Err(err) = self.download_range(&mut temp_file, csize, target).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
@@ -375,11 +382,11 @@ impl PostFile {
         Ok({
             let dsize = csize - isize;
 
-            if self.to_hash() == self.hash().await? {
-                self.r#move().await?;
+            if self.to_hash() == self.hash(target).await? {
+                self.r#move(target).await?;
                 DownloadState::Success(dsize)
             } else {
-                self.delete().await?;
+                self.delete(target).await?;
                 DownloadState::Failure(
                     dsize,
                     format!("hash mismatch (deleted): {}", self.to_name())
@@ -388,8 +395,8 @@ impl PostFile {
         })
     }
 
-    async fn download_range(&self, file: &mut File, start: u64) -> Result<()> {
-        let url = self.to_url();
+    async fn download_range(&self, file: &mut File, start: u64, target: &Target) -> Result<()> {
+        let url = self.to_url(target);
 
         loop {
             let response = CLIENT.get(&url)
@@ -420,12 +427,12 @@ impl PostFile {
         }
     }
 
-    pub async fn remote_size(&self) -> Result<u64> {
+    pub async fn remote_size(&self, target: &Target) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
             bail!("[{status}] failed to determine remote size: {message} ({url})")
         }
 
-        let url = self.to_url();
+        let url = self.to_url(target);
 
         loop {
             let response = CLIENT.head(&url).send().await?;

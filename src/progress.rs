@@ -1,8 +1,7 @@
-// use crate::cli::ARGS;
 use anyhow::Result;
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use num_format::{ Locale, ToFormattedString };
-use std::{ fmt, process, time::Duration };
+use std::{ fmt, process::exit, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
 pub fn n_fmt(n: u64) -> String {
@@ -91,7 +90,7 @@ pub fn bar(mut rx: Receiver<DownloadState>, length: u64) -> Result<()> {
     bar.finish();
 
     if stats.failure > 0 {
-        process::exit(1);
+        exit(1);
     }
 
     Ok(())
