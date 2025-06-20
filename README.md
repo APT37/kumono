@@ -1,6 +1,8 @@
-<h2>kumono - Media ripper for coomer.su and kemono.su</h2>
+<h2>kumono - Media ripper for <a href="https://coomer.su">coomer.su</a> and <a href="https://kemono.su">kemono.su</a></h2>
 
 For a comparison with other tools, see [features](FEATURES.md).
+
+Support is provided in the [discussions][discussions] section.
 
 - [Installation](#installation)
   - [AUR](#aur)
@@ -11,7 +13,6 @@ For a comparison with other tools, see [features](FEATURES.md).
   - [Filtering by File Extension](#filtering-by-file-extension)
 - [Related Userscripts](#related-userscripts)
 - [Contribution](#contribution)
-- [Support](#support)
 
 ## Installation
 
@@ -117,17 +118,9 @@ Feel free to open an issue if you have a bug to report or want to request a feat
 
 Please use proper code formatting when creating a pull request.
 
-## Support
-
-Support is provided via the Matrix room linked in the repository description.
-
-*Please do not open issues when you are merely seeking support. Your issues will be closed without comment and you may be banned from opening issues altogether.*
-
 <!-- link definitions -->
 
-[coomer]: https://coomer.su
-[kemono]: https://kemono.su
-
+[discussions]: https://github.com/APT37/kumono/discussions
 [releases]: https://github.com/APT37/kumono/releases
 
 [us1]: https://sleazyfork.org/en/scripts/483259-kemono-browser
