@@ -51,16 +51,16 @@ Downloads for `https://coomer.su/onlyfans/user/belledelphine` would go into `kum
 ```
 Media ripper for coomer.su and kemono.su
 
-Usage: kumono [OPTIONS] <URL>
+Usage: kumono [OPTIONS] [URLS]...
 
 Arguments:
-  <URL>  Creator page or post / Discord server or channel
+  [URLS]...  Creator page or post / Discord server or channel
 
 Options:
   -p, --proxy <PROXY>                            Proxy URL (scheme://host:port[/path])
   -t, --threads <THREADS>                        Simultaneous downloads [default: 256]
-  -i, --include <INCLUDE>...                     File extensions to include (comma separated)
-  -e, --exclude <EXCLUDE>...                     File extensions to exclude (comma separated)
+  -i, --include <INCLUDE>                        File extensions to include (comma separated)
+  -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
   -l, --list-extensions                          List of available file extensions (per target)
       --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
       --read-timeout <READ_TIMEOUT>              [default: 5]

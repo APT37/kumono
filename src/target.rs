@@ -111,7 +111,7 @@ impl Target {
                 bail!("Invalid Discord server in URL: {url}")
             }
         } else {
-            bail!("invalid URL: {url}");
+            bail!("Invalid URL: {url}");
         }
     }
 
@@ -129,7 +129,7 @@ impl Target {
             | "patreon"
             | "subscribestar" => "kemono",
 
-            _ => unimplemented!("unknown service"),
+            _ => unimplemented!("Unknown Service"),
         }
     }
 
