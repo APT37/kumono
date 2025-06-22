@@ -12,7 +12,7 @@ pub struct Args {
     pub urls: Vec<String>,
 
     #[arg(short, long, default_value = "./kumono/", help = "Custom output path")]
-    pub output_path: Option<PathBuf>,
+    pub output_path: PathBuf,
 
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,

@@ -134,11 +134,7 @@ impl Target {
     }
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
-        let mut path = if let Some(output_path) = &ARGS.output_path {
-            output_path.clone()
-        } else {
-            PathBuf::from("kumono")
-        };
+        let mut path = ARGS.output_path.clone();
 
         path.push(&self.service);
         path.push(&self.user);
