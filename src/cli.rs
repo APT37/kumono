@@ -1,7 +1,7 @@
 use clap::{ Parser, arg };
 use pretty_duration::pretty_duration;
-use serde::{ Deserialize };
-use std::{ fmt, num, sync::LazyLock, time::Duration };
+use serde::Deserialize;
+use std::{fmt, num, path::PathBuf, sync::LazyLock, time::Duration};
 
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -10,6 +10,9 @@ pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 pub struct Args {
     #[arg(help = "Creator page or post / Discord server or channel")]
     pub urls: Vec<String>,
+
+    #[arg(short, long, default_value = "kumono", help = "Custom output path")]
+    pub output_path: PathBuf,
 
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,
