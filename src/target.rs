@@ -134,10 +134,7 @@ impl Target {
     }
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
-        let mut path = ARGS.output_path.clone();
-
-        path.push(&self.service);
-        path.push(&self.user);
+        let mut path = PathBuf::from_iter([&ARGS.output_path, &self.service, &self.user]);
 
         if let Some(file) = file {
             path.push(file);
