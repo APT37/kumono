@@ -59,14 +59,15 @@ Arguments:
 Options:
   -p, --proxy <PROXY>                            Proxy URL (scheme://host:port[/path])
   -t, --threads <THREADS>                        Simultaneous downloads [default: 256]
+  -o, --output-path <OUTPUT_PATH>                Base directory for downloads [default: kumono]
+  -l, --list-extensions                          List of available file extensions (per target)
   -i, --include <INCLUDE>                        File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
-  -l, --list-extensions                          List of available file extensions (per target)
+  -s, --show-config                              Print configuration before execution
       --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
       --read-timeout <READ_TIMEOUT>              [default: 5]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
-  -s, --show-config                              Print configuration before execution
   -h, --help                                     Print help
   -V, --version                                  Print version
 
