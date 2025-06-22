@@ -11,7 +11,7 @@ pub struct Args {
     #[arg(help = "Creator page or post / Discord server or channel")]
     pub urls: Vec<String>,
 
-    #[arg(short, long, default_value = ".", help = "Custom output path")]
+    #[arg(short, long, default_value = "./kumono/", help = "Custom output path")]
     pub output_path: Option<PathBuf>,
 
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
