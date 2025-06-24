@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
 
             let mut tasks = Vec::new();
 
-            let sem = Arc::new(Semaphore::new(ARGS.threads.into()));
+            let sem = Arc::new(Semaphore::new(ARGS.threads()));
 
             for file in files {
                 let permit = sem.clone().acquire_owned().await;

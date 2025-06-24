@@ -9,6 +9,7 @@ Support is provided in the [discussions][discussions] section.
   - [Binaries](#binaries)
   - [From Source (with cargo)](#from-source-with-cargo)
 - [Command Line](#command-line)
+  - [Options](#options)
   - [Target Selection](#target-selection)
   - [Filtering by File Extension](#filtering-by-file-extension)
 - [Related Userscripts](#related-userscripts)
@@ -37,7 +38,7 @@ rustup default stable
 cargo install kumono
 
 # 3b. latest commit (via GitHub)
-cargo install --git=https://github.com/APT37/kumono
+cargo install --git https://github.com/APT37/kumono
 ```
 
 Make sure the cargo binary location is in your `$PATH`. This is usually `~/.cargo/bin`.
@@ -46,7 +47,11 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 ## Command Line
 
-Downloads for `https://coomer.su/onlyfans/user/belledelphine` would go into `kumono/onlyfans/belledelphine` for example.
+<img src="kumono.gif">
+
+### Options
+
+Downloads for `https://coomer.su/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
 
 ```
 Media ripper for coomer.su and kemono.su

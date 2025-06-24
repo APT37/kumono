@@ -14,8 +14,8 @@ pub struct Args {
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,
 
-    #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads")]
-    pub threads: u16,
+    #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-4096)")]
+    threads: usize,
 
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
     pub output_path: String,
@@ -62,6 +62,10 @@ fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
 }
 
 impl Args {
+    pub fn threads(&self) -> usize {
+        self.threads.clamp(1, 4096)
+    }
+
     pub fn included(&self) -> Option<Vec<String>> {
         if let Some(exts) = &self.include {
             let mut exts: Vec<String> = exts
@@ -72,10 +76,12 @@ impl Args {
             exts.sort();
             exts.dedup();
 
-            Some(exts)
-        } else {
-            None
+            if !exts.is_empty() {
+                return Some(exts);
+            }
         }
+
+        None
     }
 
     pub fn excluded(&self) -> Option<Vec<String>> {
@@ -84,14 +90,15 @@ impl Args {
                 .iter()
                 .map(|ext| ext.to_lowercase())
                 .collect();
-
             exts.sort();
             exts.dedup();
 
-            Some(exts)
-        } else {
-            None
+            if !exts.is_empty() {
+                return Some(exts);
+            }
         }
+
+        None
     }
 }
 
