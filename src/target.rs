@@ -49,7 +49,7 @@ struct Info {
     service: String, // "patreon",
     indexed: String, // "2020-09-30T06:13:38.348472",
     updated: String, // "2025-05-30T14:07:16.596525",
-    public_id: String, // "theobrobine",
+    public_id: Option<String>, // "theobrobine",
     relation_id: Option<u64>, // 8,
     has_chats: Option<bool>, // false
 }

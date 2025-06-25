@@ -44,6 +44,9 @@ pub struct Args {
     #[arg(short, long, help = "Print configuration before execution")]
     pub show_config: bool,
 
+    #[arg(short, long, help = "Print verbose output")]
+    pub verbose: bool,
+
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 

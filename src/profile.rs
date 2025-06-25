@@ -111,6 +111,15 @@ impl Profile {
             let mut offset = 0;
 
             loop {
+                if ARGS.verbose {
+                    eprintln!(
+                        "Retrieving posts for discord/{}/{} page #{}",
+                        self.target.user,
+                        channel.id,
+                        (offset + 150) / 150
+                    );
+                }
+
                 let mut posts: Vec<Post>;
 
                 let url = format!(
@@ -172,6 +181,15 @@ impl Profile {
             };
 
             loop {
+                if ARGS.verbose {
+                    eprintln!(
+                        "Retrieving posts for {}/{} page #{}",
+                        self.target.service,
+                        self.target.user,
+                        (offset + 50) / 50
+                    );
+                }
+
                 let mut posts: Vec<Post>;
 
                 let url = Self::api_url_with_offset(&self.target, offset);
