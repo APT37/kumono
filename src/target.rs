@@ -15,7 +15,7 @@ pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
     }
 
     if targets.is_empty() {
-        eprintln!("No valid target URLs found.");
+        eprintln!("No valid target URLs were provided.");
         exit(1);
     }
 
