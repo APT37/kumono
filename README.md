@@ -69,7 +69,6 @@ Options:
   -i, --include <INCLUDE>                        File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
   -s, --show-config                              Print configuration before execution
-  -v, --verbose                                  Print verbose output
       --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
       --read-timeout <READ_TIMEOUT>              [default: 5]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
