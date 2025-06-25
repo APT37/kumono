@@ -1,10 +1,16 @@
 use crate::{ cli::ARGS, http::CLIENT, progress::{ DownloadState, n_fmt }, target::Target };
 use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
+use indicatif::{ ProgressBar, ProgressStyle };
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::{ collections::HashSet, error::Error, fmt, io::SeekFrom, path::PathBuf };
-use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::{ Duration, sleep } };
+use std::{ collections::HashSet, error::Error, fmt, io::SeekFrom, path::PathBuf, thread };
+use tokio::{
+    fs::{ self, File },
+    io::{ AsyncSeekExt, AsyncWriteExt },
+    sync::mpsc,
+    time::{ Duration, sleep },
+};
 
 const API_DELAY: Duration = Duration::from_millis(100);
 
@@ -74,6 +80,20 @@ struct Channel {
     // name: String, // "news"
 }
 
+fn page_progress(mut msg_rx: mpsc::UnboundedReceiver<String>) {
+    let bar = ProgressBar::new_spinner();
+
+    bar.set_style(ProgressStyle::with_template("[{elapsed_precise}] {msg}").unwrap());
+
+    bar.enable_steady_tick(Duration::from_millis(200));
+
+    while let Some(msg) = msg_rx.blocking_recv() {
+        bar.set_message(msg);
+    }
+
+    bar.finish();
+}
+
 impl Profile {
     pub async fn new(target: &Target) -> Result<Self> {
         let mut profile = Self { target: target.clone(), ..Default::default() };
@@ -107,18 +127,22 @@ impl Profile {
                 .json().await?
         };
 
+        let (msg_tx, msg_rx) = mpsc::unbounded_channel::<String>();
+
+        thread::spawn(move || page_progress(msg_rx));
+
         for channel in channels {
             let mut offset = 0;
 
             loop {
-                if ARGS.verbose {
-                    eprintln!(
+                msg_tx.send(
+                    format!(
                         "Retrieving posts for discord/{}/{} page #{}",
                         self.target.user,
                         channel.id,
                         (offset + 150) / 150
-                    );
-                }
+                    )
+                )?;
 
                 let mut posts: Vec<Post>;
 
@@ -180,15 +204,19 @@ impl Profile {
                 0
             };
 
+            let (msg_tx, msg_rx) = mpsc::unbounded_channel::<String>();
+
+            thread::spawn(move || page_progress(msg_rx));
+
             loop {
-                if ARGS.verbose {
-                    eprintln!(
+                msg_tx.send(
+                    format!(
                         "Retrieving posts for {}/{} page #{}",
                         self.target.service,
                         self.target.user,
                         (offset + 50) / 50
-                    );
-                }
+                    )
+                )?;
 
                 let mut posts: Vec<Post>;
 
