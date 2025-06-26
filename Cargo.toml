@@ -1,6 +1,6 @@
 [package]
 name = "kumono"
-version = "0.43.0"
+version = "0.43.1"
 edition = "2024"
 description = "Media ripper for coomer.su and kemono.su"
 homepage = "https://github.com/APT37/kumono"
@@ -8,6 +8,7 @@ repository = "https://github.com/APT37/kumono"
 readme = "README.md"
 documentation = "https://github.com/APT37/kumono"
 license = "MIT-0"
+keywords = ["kemono", "coomer", "filter", "api"]
 
 [dependencies]
 anyhow = "1.0.*"
