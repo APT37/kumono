@@ -8,7 +8,7 @@ pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
     let mut targets = Vec::new();
 
     for url in &ARGS.urls {
-        match Target::from_url(url) {
+        match Target::from_url(url.strip_suffix('/').unwrap_or(url)) {
             Ok(target) => targets.push(target),
             Err(err) => eprintln!("{err}"),
         }
