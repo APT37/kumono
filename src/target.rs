@@ -1,8 +1,9 @@
-use crate::{ cli::ARGS, http::CLIENT };
+use crate::cli::ARGS;
 use anyhow::{ Result, bail };
-use regex::{ Match, Regex };
+use regex::{ Captures, Regex };
 use serde::Deserialize;
-use std::{ path::PathBuf, process::exit, sync::LazyLock };
+use strum_macros::{ Display, EnumString };
+use std::{ fmt, path::PathBuf, process::exit, sync::LazyLock };
 
 pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
     let mut targets = Vec::new();
@@ -24,21 +25,41 @@ pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
     targets
 });
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct Target {
-    pub service: String,
-    pub user: String,
-    pub page: Option<String>,
-    pub post: Option<String>,
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Target {
+    Creator {
+        service: Service,
+        user: String,
+        subtype: SubType,
+    },
+    Discord {
+        server: String,
+        channel: Option<String>,
+    },
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged)]
-enum User {
-    #[allow(unused)] Info(Info),
-    Error {
-        error: String,
-    },
+impl fmt::Display for Target {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", match self {
+            Target::Creator { service, user, subtype } =>
+                format!("{service}/{user}{}", match subtype {
+                    SubType::Post(p) => format!("/{p}"),
+                    _ => String::new(),
+                }),
+            Target::Discord { server, channel } =>
+                format!(
+                    "discord/{server}{}",
+                    channel.as_ref().map_or(String::new(), |c| format!("/{c}"))
+                ),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SubType {
+    PageOffset(usize),
+    Post(String),
+    None,
 }
 
 #[allow(unused)]
@@ -54,9 +75,27 @@ struct Info {
     has_chats: Option<bool>, // false
 }
 
-static RE_DEFAULT: LazyLock<Regex> = LazyLock::new(|| {
+// static RE_LINKED: LazyLock<Regex> = LazyLock::new(|| {
+//     Regex::new(
+//         r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
+//     ).unwrap()
+// });
+
+static RE_CREATOR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>afdian|boosty|candfans|dlsite|fanbox|fansly|fantia|gumroad|onlyfans|patreon|subscribestar)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)((\?o=(?<page>([1-9]+[0|5]+|5)?0))|(/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)))?$"
+        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)$"
+    ).unwrap()
+});
+
+static RE_PAGE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)\?o=(?<offset>(0|50|[1-9]+(0|5)0))$"
+    ).unwrap()
+});
+
+static RE_POST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)$"
     ).unwrap()
 });
 
@@ -67,79 +106,100 @@ static RE_DISCORD: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 impl Target {
-    fn new(service: &str, user: &str, page: Option<Match>, post: Option<Match>) -> Self {
-        let m = |m: Match| m.as_str().to_string();
-
-        Target {
-            service: service.to_string(),
-            user: user.to_string(),
-            page: page.map(m),
-            post: post.map(m),
+    pub fn service(&self) -> Service {
+        match self {
+            Target::Creator { service, .. } => *service,
+            Target::Discord { .. } => Service::Discord,
         }
-    }
-
-    pub async fn exists(&self) -> Result<()> {
-        if self.service != "discord" {
-            let url = format!(
-                "https://{}.su/api/v1/{}/user/{}/profile",
-                self.site(),
-                self.service,
-                self.user
-            );
-
-            match CLIENT.get(url).send().await?.json().await? {
-                User::Info(_) => {}
-                User::Error { error: err } => bail!("{err}"),
-            }
-        }
-
-        Ok(())
     }
 
     fn from_url(url: &str) -> Result<Self> {
-        if let Some(caps) = RE_DEFAULT.captures(url) {
-            match (&caps.name("service"), &caps.name("user")) {
-                (None, _) => bail!("Invalid service in URL: {url}"),
-                (Some(_), None) => bail!("Invalid user in URL: {url}"),
-                (Some(s), Some(u)) =>
-                    Ok(Target::new(s.as_str(), u.as_str(), caps.name("page"), caps.name("post"))),
-            }
-        } else if let Some(caps) = RE_DISCORD.captures(url) {
-            if let Some(server) = &caps.name("server") {
-                Ok(Target::new("discord", server.as_str(), None, caps.name("channel")))
+        let capture = |re: &Regex| { re.captures(url).expect("get captures") };
+        let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
+        let extract_unwrap = |caps: &Captures, name: &str| {
+            extract(caps, name).expect("extract values from captures")
+        };
+
+        Ok(
+            if RE_CREATOR.is_match(url) {
+                let caps = capture(&RE_CREATOR);
+                Target::Creator {
+                    service: extract_unwrap(&caps, "service").parse()?,
+                    user: extract_unwrap(&caps, "user"),
+                    subtype: SubType::None,
+                }
+            } else if RE_PAGE.is_match(url) {
+                let caps = capture(&RE_PAGE);
+                Target::Creator {
+                    service: extract_unwrap(&caps, "service").parse()?,
+                    user: extract_unwrap(&caps, "user"),
+                    subtype: SubType::PageOffset(extract_unwrap(&caps, "offset").parse()?),
+                }
+            } else if RE_POST.is_match(url) {
+                let caps = capture(&RE_POST);
+                Target::Creator {
+                    service: extract_unwrap(&caps, "service").parse()?,
+                    user: extract_unwrap(&caps, "user"),
+                    subtype: SubType::Post(extract_unwrap(&caps, "post")),
+                }
+            } else if RE_DISCORD.is_match(url) {
+                let caps = capture(&RE_DISCORD);
+                Target::Discord {
+                    server: extract_unwrap(&caps, "server"),
+                    channel: extract(&caps, "channel"),
+                }
             } else {
-                bail!("Invalid Discord server in URL: {url}")
+                bail!("Invalid URL: {url}");
             }
-        } else {
-            bail!("Invalid URL: {url}");
-        }
+        )
     }
 
-    pub fn site(&self) -> &'static str {
-        match self.service.as_str() {
-            "candfans" | "fansly" | "onlyfans" => "coomer",
-
-            | "afdian"
-            | "boosty"
-            | "discord"
-            | "dlsite"
-            | "fanbox"
-            | "fantia"
-            | "gumroad"
-            | "patreon"
-            | "subscribestar" => "kemono",
-
-            _ => unimplemented!("Unknown Service"),
+    fn user(&self) -> String {
+        match self {
+            Target::Creator { user, .. } => user.to_string(),
+            Target::Discord { server, .. } => server.to_string(),
         }
     }
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
-        let mut path = PathBuf::from_iter([&ARGS.output_path, &self.service, &self.user]);
+        let mut path = PathBuf::from_iter([
+            &ARGS.output_path,
+            &self.service().to_string(),
+            &self.user(),
+        ]);
 
         if let Some(file) = file {
             path.push(file);
         }
 
         path
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumString, Display)]
+#[strum(ascii_case_insensitive, serialize_all = "lowercase")]
+pub enum Service {
+    Afdian,
+    Boosty,
+    CandFans,
+    Discord,
+    DlSite,
+    Fanbox,
+    Fansly,
+    Fantia,
+    Gumroad,
+    OnlyFans,
+    Patreon,
+    SubscribeStar,
+}
+
+impl Service {
+    pub fn site(self) -> &'static str {
+        #[allow(clippy::enum_glob_use)]
+        use Service::*;
+        match self {
+            CandFans | Fansly | OnlyFans => "coomer",
+            _ => "kemono",
+        }
     }
 }

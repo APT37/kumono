@@ -41,11 +41,11 @@ pub struct Args {
     )]
     exclude: Option<Vec<String>>,
 
-    #[arg(short, long, help = "Print configuration before execution")]
-    pub show_config: bool,
+    #[arg(short, long, default_value = "5")]
+    pub max_retries: usize,
 
-    // #[arg(short, long, help = "Print verbose output")]
-    // pub verbose: bool,
+    #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
+    pub retry_delay: Duration,
 
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
@@ -58,10 +58,16 @@ pub struct Args {
 
     #[arg(long, value_parser = duration_from_secs, default_value = "5")]
     pub server_error_delay: Duration,
+
+    #[arg(short, long, help = "Print configuration before execution")]
+    pub show_config: bool,
+
+    // #[arg(short, long, help = "Print verbose output")]
+    // pub verbose: bool,
 }
 
 fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
-    Ok(Duration::from_secs(arg.parse()?))
+    Ok(Duration::from_secs(arg.parse::<u64>()?.clamp(1, u64::MAX)))
 }
 
 impl Args {
@@ -114,7 +120,7 @@ impl fmt::Display for Args {
         write!(
             f,
             "Threads: {} / Proxy: {} / Timeout: (Connect: {} / Read: {}) / Backoff: (Rate Limit: {} / Server Error: {})",
-            self.threads,
+            self.threads(),
             self.proxy.as_ref().map_or("None", |p| p),
             pd(&self.connect_timeout),
             pd(&self.read_timeout),

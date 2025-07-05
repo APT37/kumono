@@ -4,7 +4,9 @@ use futures::future::join_all;
 use std::{ collections::HashSet, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
+mod api;
 mod cli;
+mod file;
 mod http;
 mod profile;
 mod progress;
@@ -47,17 +49,15 @@ async fn main() -> Result<()> {
             }
         } else {
             if let Some(exts) = ARGS.included() {
-                files.retain(
-                    |file|
-                        file.to_extension(target).is_some() &&
+                files.retain(|file| {
+                    file.to_extension(target).is_some() &&
                         exts.contains(&file.to_extension(target).unwrap().to_lowercase())
-                );
+                });
             } else if let Some(exts) = ARGS.excluded() {
-                files.retain(
-                    |file|
-                        file.to_extension(target).is_none() ||
+                files.retain(|file| {
+                    file.to_extension(target).is_none() ||
                         !exts.contains(&file.to_extension(target).unwrap().to_lowercase())
-                );
+                });
             }
 
             let len = files.len();

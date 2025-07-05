@@ -12,7 +12,6 @@ Support is provided in the [discussions][discussions] section.
   - [Options](#options)
   - [Target Selection](#target-selection)
   - [Filtering by File Extension](#filtering-by-file-extension)
-- [Related Userscripts](#related-userscripts)
 - [Contribution](#contribution)
 
 ## Installation
@@ -68,14 +67,15 @@ Options:
   -l, --list-extensions                          List of available file extensions (per target)
   -i, --include <INCLUDE>                        File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
-  -s, --show-config                              Print configuration before execution
+  -m, --max-retries <MAX_RETRIES>                [default: 5]
+  -r, --retry-delay <RETRY_DELAY>                [default: 1]
       --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
       --read-timeout <READ_TIMEOUT>              [default: 5]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
+  -s, --show-config                              Print configuration before execution
   -h, --help                                     Print help
   -V, --version                                  Print version
-
 ```
 
 ### Target Selection
@@ -95,6 +95,9 @@ kumono https://kemono.su/discord/server/1196504962411282491
 
 # single channel
 kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
+
+# multiple targets
+kumono https://coomer.su/onlyfans/user/belledelphine https://kemono.su/discord/server/1196504962411282491
 ```
 
 ### Filtering by File Extension
@@ -111,12 +114,6 @@ kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
 # download only video files via exclusion
 kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 ```
-
-## Related Userscripts
-
-- [Kemono Browser][us1]: Adds a button at the bottom right of all kemono, coomer & nekohouse supported creator websites that redirects to the corresponding page.
-- [Kemono FIX+Download][us2]: Embeds a "Download" button before each file element and starts downloading and saving it to your computer.
-- [Kemer Downloader][us3]: One-click download of images (compressed download/single image download), create page data for json download, one-click open all current posts.
 
 ## Contribution
 

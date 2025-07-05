@@ -26,9 +26,8 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | skip existing files       | yes               | yes                            | yes               | ?                                    |
 | file type filtering       | yes               | yes                            | yes               | ?                                    |
 | proxy support             | yes               | ?                              | yes               | ?                                    |
-| retry API calls           | no (TBD)          | yes                            | ?                 | ?                                    |
-| retry (server error)      | yes               | yes                            | ?                 | ?                                    |
-| retry (connection error)  | no (TBD)          | ?                              | yes               | ?                                    |
+| retry on server error     | yes               | yes                            | ?                 | ?                                    |
+| retry on connection error | yes               | ?                              | yes               | ?                                    |
 | resume downloads          | yes               | ?                              | ?                 | ?                                    |
 | verify hashes             | yes               | ?                              | ?                 | ?                                    |
 
