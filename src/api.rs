@@ -157,8 +157,8 @@ pub async fn page(target: &Target, user: &str, offset: usize) -> Result<Vec<Page
 
     let url = format!(
         "https://{site}.su/api/v1/{service}/user/{user}?o={offset}",
-        site = target.service().site(),
-        service = target.service()
+        site = target.as_service().site(),
+        service = target.as_service()
     );
 
     let res = CLIENT.get(url)

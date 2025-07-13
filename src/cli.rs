@@ -1,4 +1,6 @@
+use anyhow::Result;
 use clap::{ Parser, arg };
+use itertools::Itertools;
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
 use std::{ fmt, num, sync::LazyLock, time::Duration };
@@ -41,6 +43,9 @@ pub struct Args {
     )]
     exclude: Option<Vec<String>>,
 
+    #[arg(short, long, help = "Store hashes to skip previously downloaded files")]
+    pub download_archive: bool,
+
     #[arg(short, long, default_value = "5")]
     pub max_retries: usize,
 
@@ -76,38 +81,25 @@ impl Args {
     }
 
     pub fn included(&self) -> Option<Vec<String>> {
-        if let Some(exts) = &self.include {
-            let mut exts: Vec<String> = exts
-                .iter()
-                .map(|ext| ext.to_lowercase())
-                .collect();
-
-            exts.sort();
-            exts.dedup();
-
-            if !exts.is_empty() {
-                return Some(exts);
-            }
-        }
-
-        None
+        Self::process_exts(self.exclude.as_ref()?)
     }
 
     pub fn excluded(&self) -> Option<Vec<String>> {
-        if let Some(exts) = &self.exclude {
-            let mut exts: Vec<String> = exts
-                .iter()
-                .map(|ext| ext.to_lowercase())
-                .collect();
-            exts.sort();
-            exts.dedup();
+        Self::process_exts(self.exclude.as_ref()?)
+    }
 
-            if !exts.is_empty() {
-                return Some(exts);
-            }
+    fn process_exts(exts: &[String]) -> Option<Vec<String>> {
+        let exts: Vec<String> = exts
+            .iter()
+            .unique()
+            .map(|ext| ext.to_lowercase())
+            .collect();
+
+        if exts.is_empty() {
+            None
+        } else {
+            Some(exts)
         }
-
-        None
     }
 }
 

@@ -14,7 +14,7 @@ pub struct PostFile {
 
 impl PostFile {
     pub fn to_url(&self, target: &Target) -> String {
-        format!("https://{}.su/data{}", target.service().site(), self.path.as_ref().unwrap())
+        format!("https://{}.su/data{}", target.as_service().site(), self.path.as_ref().unwrap())
     }
 
     pub fn to_name(&self) -> String {
@@ -43,6 +43,9 @@ impl PostFile {
         target.to_pathbuf(Some(&self.to_temp_name()))
     }
 
+    /// Converts the file's name to a SHA256 hash.
+    ///
+    /// This does no work for legacy files, as their names are not hashes.
     pub fn to_hash(&self) -> String {
         self.to_name()[..64].to_string()
     }
@@ -56,6 +59,7 @@ impl PostFile {
             .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
+    /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
             ::try_async_digest(&self.to_temp_pathbuf(target)).await
@@ -82,7 +86,7 @@ impl PostFile {
 
     pub async fn download(&self, target: &Target) -> Result<DownloadState> {
         if self.exists(target).await? {
-            return Ok(DownloadState::Skip);
+            return Ok(DownloadState::Skip(self.to_hash()));
         }
 
         let rsize = self.remote_size(target).await?;
@@ -125,9 +129,11 @@ impl PostFile {
         Ok({
             let dsize = csize - isize;
 
-            if self.to_hash() == self.hash(target).await? {
+            let hash = self.to_hash();
+
+            if hash == self.hash(target).await? {
                 self.r#move(target).await?;
-                DownloadState::Success(dsize)
+                DownloadState::Success(dsize, hash)
             } else {
                 self.delete(target).await?;
                 DownloadState::Failure(
@@ -139,6 +145,10 @@ impl PostFile {
     }
 
     async fn download_range(&self, file: &mut File, start: u64, target: &Target) -> Result<()> {
+        fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
+            bail!("[{status}] download failed: {message} ({url})")
+        }
+
         let url = self.to_url(target);
 
         loop {
@@ -154,25 +164,24 @@ impl PostFile {
                 while let Some(Ok(bytes)) = stream.next().await {
                     file.write_all(&bytes).await?;
                 }
-
                 file.flush().await?;
 
                 break Ok(());
             } else if status == StatusCode::NOT_FOUND {
-                bail!("[{status}] download failed ({url})");
+                download_error(status, "no file", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
                 sleep(ARGS.rate_limit_backoff).await;
             } else if status.is_server_error() {
                 sleep(ARGS.server_error_delay).await;
             } else {
-                bail!("[{status}] download failed: unexpected status code {url}");
+                download_error(status, "unexpected status code", &url)?;
             }
         }
     }
 
     pub async fn remote_size(&self, target: &Target) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
-            bail!("[{status}] failed to determine remote size: {message} ({url})")
+            bail!("[{status}] remote size determination failed: {message} ({url})")
         }
 
         let url = self.to_url(target);
@@ -183,12 +192,12 @@ impl PostFile {
             let status = response.status();
 
             if status == StatusCode::OK {
-                return match response.content_length() {
-                    Some(length) => Ok(length),
-                    None => {
-                        return size_error(status, "Content-Length header is not present", &url);
-                    }
-                };
+                return response
+                    .content_length()
+                    .map_or_else(
+                        || size_error(status, "Content-Length header is not present", &url),
+                        Ok
+                    );
             } else if status == StatusCode::NOT_FOUND {
                 size_error(status, "file not found", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {

@@ -1,5 +1,6 @@
 use crate::{
     api::{ self, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
+    cli::ARGS,
     file::PostFile,
     http::CLIENT,
     progress::n_fmt,
@@ -79,7 +80,7 @@ impl Profile {
         match target {
             Target::Creator { user, subtype, .. } =>
                 profile.init_posts_standard(user, subtype).await?,
-            Target::Discord { server, channel } => {
+            Target::Discord { server, channel, .. } => {
                 profile.init_posts_discord(server, channel).await?;
             }
         }
@@ -91,6 +92,24 @@ impl Profile {
 
         eprintln!("{profile}");
 
+        if ARGS.download_archive {
+            let total = profile.files.len();
+
+            let archive = target.archive();
+
+            profile.files.retain(|f| !archive.contains(&f.to_hash()));
+
+            let new = profile.files.len();
+
+            if new != total {
+                eprintln!(
+                    "skipping {} files from download archive, {} files left to download/check",
+                    n_fmt((total - new) as u64),
+                    n_fmt(new as u64)
+                );
+            }
+        }
+
         profile.posts.clear();
 
         Ok(profile)
@@ -101,8 +120,8 @@ impl Profile {
             let post: SinglePost = CLIENT.get(
                 format!(
                     "https://{}.su/api/v1/{}/user/{user}/post/{post}",
-                    self.target.service().site(),
-                    self.target.service()
+                    self.target.as_service().site(),
+                    self.target.as_service()
                 )
             )
                 .send().await?

@@ -1,7 +1,7 @@
 use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::TARGETS };
 use anyhow::Result;
 use futures::future::join_all;
-use std::{ collections::HashSet, sync::Arc, thread };
+use std::{ collections::HashSet, path::PathBuf, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod api;
@@ -18,8 +18,14 @@ async fn main() -> Result<()> {
         eprintln!("{}", *ARGS);
     }
 
-    for (i, target) in TARGETS.iter().enumerate() {
-        let mut files = Profile::new(target).await?.files;
+    if ARGS.download_archive {
+        fs::create_dir_all(PathBuf::from_iter([&ARGS.output_path, "db"])).await?;
+    }
+
+    for (i, target) in TARGETS.clone().into_iter().enumerate() {
+        fs::create_dir_all(target.to_pathbuf(None)).await?;
+
+        let mut files = Profile::new(&target).await?.files;
 
         if files.is_empty() {
             continue;
@@ -30,7 +36,7 @@ async fn main() -> Result<()> {
             let mut no_ext = 0;
 
             for file in files {
-                if let Some(ext) = file.to_extension(target) {
+                if let Some(ext) = file.to_extension(&target) {
                     extensions.insert(ext.to_lowercase());
                 } else {
                     no_ext += 1;
@@ -43,6 +49,7 @@ async fn main() -> Result<()> {
 
             if !extensions.is_empty() {
                 eprintln!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
+
                 if i != TARGETS.len() - 1 {
                     eprintln!();
                 }
@@ -50,13 +57,13 @@ async fn main() -> Result<()> {
         } else {
             if let Some(exts) = ARGS.included() {
                 files.retain(|file| {
-                    file.to_extension(target).is_some() &&
-                        exts.contains(&file.to_extension(target).unwrap().to_lowercase())
+                    file.to_extension(&target).is_some() &&
+                        exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
                 });
             } else if let Some(exts) = ARGS.excluded() {
                 files.retain(|file| {
-                    file.to_extension(target).is_none() ||
-                        !exts.contains(&file.to_extension(target).unwrap().to_lowercase())
+                    file.to_extension(&target).is_none() ||
+                        !exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
                 });
             }
 
@@ -73,7 +80,9 @@ async fn main() -> Result<()> {
 
             let (tx, rx) = mpsc::channel::<DownloadState>(len);
 
-            thread::spawn(move || progress::bar(rx, len as u64));
+            let archive_path = target.to_archive_pathbuf();
+
+            thread::spawn(move || progress::bar(rx, archive_path, len as u64));
 
             let mut tasks = Vec::new();
 
@@ -84,12 +93,14 @@ async fn main() -> Result<()> {
 
                 let tx = tx.clone();
 
+                let target = target.clone();
+
                 tasks.push(
                     task::spawn(async move {
                         #[allow(clippy::no_effect_underscore_binding)]
                         let _permit = permit;
 
-                        let result = file.download(target).await;
+                        let result = file.download(&target).await;
 
                         match result {
                             Ok(dl_state) => {
@@ -114,9 +125,6 @@ async fn main() -> Result<()> {
 
             // wait so the bar can finish properly
             sleep(Duration::from_millis(1)).await;
-
-            #[allow(unused_must_use)]
-            fs::remove_dir(target.to_pathbuf(None)).await;
         }
     }
 
