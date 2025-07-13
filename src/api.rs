@@ -142,7 +142,7 @@ struct SinglePostInner {
 
 impl Post for SinglePost {
     fn files(&mut self) -> Vec<PostFile> {
-        let mut files: Vec<PostFile> = Vec::new();
+        let mut files = Vec::new();
         if let Some(file) = self.post.file.as_ref() {
             files.push(file.clone());
         }
@@ -194,7 +194,7 @@ pub struct PagePost {
 
 impl Post for PagePost {
     fn files(&mut self) -> Vec<PostFile> {
-        let mut files: Vec<PostFile> = Vec::new();
+        let mut files = Vec::new();
         if let Some(file) = self.file.as_ref() {
             files.push(file.clone());
         }
@@ -235,7 +235,7 @@ pub struct DiscordPost {
 
 impl Post for DiscordPost {
     fn files(&mut self) -> Vec<PostFile> {
-        let mut files: Vec<PostFile> = Vec::new();
+        let mut files = Vec::new();
         files.append(&mut self.attachments);
         files.retain(|pf| pf.path.is_some());
         files

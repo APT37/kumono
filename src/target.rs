@@ -121,13 +121,15 @@ impl Target {
             extract(caps, name).expect("extract values from captures")
         };
 
+        let archive = Vec::new();
+
         let mut target = if RE_CREATOR.is_match(url) {
             let caps = capture(&RE_CREATOR);
             Target::Creator {
                 service: extract_unwrap(&caps, "service").parse()?,
                 user: extract_unwrap(&caps, "user"),
                 subtype: SubType::None,
-                archive: Vec::new(),
+                archive,
             }
         } else if RE_PAGE.is_match(url) {
             let caps = capture(&RE_PAGE);
@@ -135,7 +137,7 @@ impl Target {
                 service: extract_unwrap(&caps, "service").parse()?,
                 user: extract_unwrap(&caps, "user"),
                 subtype: SubType::PageOffset(extract_unwrap(&caps, "offset").parse()?),
-                archive: Vec::new(),
+                archive,
             }
         } else if RE_POST.is_match(url) {
             let caps = capture(&RE_POST);
@@ -143,14 +145,14 @@ impl Target {
                 service: extract_unwrap(&caps, "service").parse()?,
                 user: extract_unwrap(&caps, "user"),
                 subtype: SubType::Post(extract_unwrap(&caps, "post")),
-                archive: Vec::new(),
+                archive,
             }
         } else if RE_DISCORD.is_match(url) {
             let caps = capture(&RE_DISCORD);
             Target::Discord {
                 server: extract_unwrap(&caps, "server"),
                 channel: extract(&caps, "channel"),
-                archive: Vec::new(),
+                archive,
             }
         } else {
             bail!("Invalid URL: {url}");
