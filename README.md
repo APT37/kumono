@@ -9,9 +9,10 @@ Support is provided in the [discussions][discussions] section.
   - [Binaries](#binaries)
   - [From Source (with cargo)](#from-source-with-cargo)
 - [Command Line](#command-line)
-  - [Options](#options)
+  - [Available Options](#available-options)
   - [Target Selection](#target-selection)
-  - [Filtering by File Extension](#filtering-by-file-extension)
+  - [Extension Selection](#extension-selection)
+  - [Download Archive](#download-archive)
 - [Contribution](#contribution)
 
 ## Installation
@@ -48,7 +49,7 @@ Make sure the cargo binary location is in your `$PATH`. This is usually `~/.carg
 
 <img src="kumono.gif">
 
-### Options
+### Available Options
 
 Downloads for `https://coomer.su/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
 
@@ -101,7 +102,7 @@ kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
 kumono https://coomer.su/onlyfans/user/belledelphine https://kemono.su/discord/server/1196504962411282491
 ```
 
-### Filtering by File Extension
+### Extension Selection
 
 ```bash
 # list available file types for a target
@@ -115,6 +116,12 @@ kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
 # download only video files via exclusion
 kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 ```
+
+### Download Archive
+
+When using the `--download-archive` option, `kumono` will create log files for each target in `{output-path}/db` to save hashes of previously downloaded files.
+
+Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.
 
 ## Contribution
 
