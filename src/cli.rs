@@ -43,7 +43,7 @@ pub struct Args {
     )]
     exclude: Option<Vec<String>>,
 
-    #[arg(short, long, help = "Store hashes to skip previously downloaded files")]
+    #[arg(short, long, help = "Log hashes, skip moved/deleted file download")]
     pub download_archive: bool,
 
     #[arg(short, long, default_value = "5")]
@@ -64,7 +64,7 @@ pub struct Args {
     #[arg(long, value_parser = duration_from_secs, default_value = "5")]
     pub server_error_delay: Duration,
 
-    #[arg(short, long, help = "Print configuration before execution")]
+    #[arg(short, long, help = "Print configuration")]
     pub show_config: bool,
 
     // #[arg(short, long, help = "Print verbose output")]

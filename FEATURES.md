@@ -24,6 +24,7 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | favorites (creator)       | no (TBD)          | ?                              | ?                 | ?                                    |
 | favorites (post)          | no (TBD)          | ?                              | ?                 | ?                                    |
 | skip existing files       | yes               | yes                            | yes               | ?                                    |
+| download archive          | yes               | ?                              | ?                 | ?                                    |
 | file type filtering       | yes               | yes                            | yes               | ?                                    |
 | proxy support             | yes               | ?                              | yes               | ?                                    |
 | retry on server error     | yes               | yes                            | ?                 | ?                                    |
