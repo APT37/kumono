@@ -218,7 +218,7 @@ impl Target {
             &ARGS.output_path,
             &self.as_service().to_string(),
             &self.user(),
-        ]).with_file_name(file.unwrap_or_default())
+        ]).join(file.unwrap_or_default())
     }
 }
 

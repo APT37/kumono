@@ -51,11 +51,16 @@ impl PostFile {
     }
 
     pub async fn open(&self, target: &Target) -> Result<File> {
+        let path = self.to_temp_pathbuf(target);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).await?;
+        }
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_temp_pathbuf(target)).await
+            .open(&path)
+            .await
             .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
@@ -73,7 +78,11 @@ impl PostFile {
     }
 
     pub async fn r#move(&self, target: &Target) -> Result<()> {
-        fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
+        let dest = self.to_pathbuf(target);
+        if let Some(parent) = dest.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::rename(self.to_temp_pathbuf(target), dest).await.with_context(|| {
             format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.to_name())
         })
     }
