@@ -23,8 +23,6 @@ async fn main() -> Result<()> {
     }
 
     for (i, target) in TARGETS.clone().into_iter().enumerate() {
-        fs::create_dir_all(target.to_pathbuf(None)).await?;
-
         let mut files = Profile::new(&target).await?.files;
 
         if files.is_empty() {
