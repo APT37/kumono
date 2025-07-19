@@ -5,9 +5,9 @@ For a comparison with other tools, see [features](FEATURES.md).
 Support is provided in the [discussions][discussions] section.
 
 - [Installation](#installation)
-  - [AUR](#aur)
-  - [Binaries](#binaries)
-  - [From Source (with cargo)](#from-source-with-cargo)
+  - [AUR Packages](#aur-packages)
+  - [Pre-built Binaries](#pre-built-binaries)
+  - [Source Code](#source-code)
 - [Command Line](#command-line)
   - [Available Options](#available-options)
   - [Target Selection](#target-selection)
@@ -17,15 +17,23 @@ Support is provided in the [discussions][discussions] section.
 
 ## Installation
 
-### AUR
+### AUR Packages
 
-Arch users may install one of our [AUR packages](AUR.md).
+You need an AUR helper like [paru][paru] to install on of these packages.
 
-### Binaries
+[![][kmn-aur-ver]][kmn-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
-Pre-built binaries for Windows and Linux are available for every [release][releases].
+### Pre-built Binaries
 
-### From Source (with cargo)
+[![][build-status]][build-runs] [![][release-date]][latest-release]
+
+Binaries are built for Linux and Windows on every release.
+
+[![][linux-badge]][linux-dl] [![][windows-badge]][windows-dl]
+
+### Source Code
+
+![][version] ![][dependencies]
 
 ```fish
 # 1. build dependencies
@@ -131,9 +139,27 @@ Please use proper code formatting when creating a pull request.
 
 <!-- link definitions -->
 
-[discussions]: https://github.com/APT37/kumono/discussions
-[releases]: https://github.com/APT37/kumono/releases
+[discussions]: https://github.com/APT37/kumono/discussions/categories/support
 
-[us1]: https://sleazyfork.org/en/scripts/483259-kemono-browser
-[us2]: https://sleazyfork.org/en/scripts/519690-kemono-fix-download
-[us3]: https://sleazyfork.org/en/scripts/472282-kemer-%E4%B8%8B%E8%BC%89%E5%99%A8
+[kmn-aur]: https://aur.archlinux.org/packages/kumono
+[kmn-bin-aur]: https://aur.archlinux.org/packages/kumono-bin
+[kmn-git-aur]: https://aur.archlinux.org/packages/kumono-git
+
+[kmn-aur-ver]: https://img.shields.io/aur/version/kumono?logo=archlinux&label=kumono
+[kmn-bin-aur-ver]: https://img.shields.io/aur/version/kumono-bin?logo=archlinux&label=kumono-bin
+[kmn-git-aur-ver]: https://img.shields.io/aur/version/kumono-git?logo=archlinux&label=kumono-git
+
+[build-status]: https://img.shields.io/github/actions/workflow/status/APT37/kumono/build-release.yml?logo=github&label=CI
+[build-runs]: https://github.com/APT37/kumono/actions/workflows/build-release.yml
+
+[release-date]: https://img.shields.io/github/release-date/APT37/kumono?logo=github&label=Latest%20Release
+[latest-release]: https://github.com/APT37/kumono/releases/latest
+
+[linux-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux&color=darkgreen
+[windows-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows&color=darkblue
+
+[windows-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono.exe
+[linux-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono
+
+[version]: https://img.shields.io/crates/v/kumono?color=red
+[dependencies]: https://img.shields.io/deps-rs/kumono/latest
