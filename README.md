@@ -163,8 +163,8 @@ Please use proper code formatting when creating a pull request.
 [windows-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono.exe
 [linux-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono
 
-[crate-ver]: https://img.shields.io/crates/v/kumono?color=red
+[crate-ver]: https://img.shields.io/crates/v/kumono?logo=rust&label=Crates.io&color=red
 [crate-url]: https://crates.io/crates/kumono
 
-[crate-deps]: https://img.shields.io/deps-rs/kumono/latest
+[crate-deps]: https://img.shields.io/deps-rs/kumono/latest?logo=rust&label=Dependencies
 [crate-deps-url]: https://crates.io/crates/kumono/dependencies
