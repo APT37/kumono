@@ -121,7 +121,7 @@ kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
 
 When using the `--download-archive` option, `kumono` will create log files for each target in `{output-path}/db` to save hashes of previously downloaded files.
 
-Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.
+*Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.*
 
 ## Contribution
 
