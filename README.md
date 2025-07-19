@@ -33,7 +33,7 @@ Binaries are built for Linux and Windows on every release.
 
 ### Source Code
 
-![][version] ![][dependencies]
+[![][crate-ver]][crate-url] [![][crate-deps]][crate-deps-url]
 
 ```fish
 # 1. build dependencies
@@ -141,6 +141,8 @@ Please use proper code formatting when creating a pull request.
 
 [discussions]: https://github.com/APT37/kumono/discussions/categories/support
 
+[paru]: https://github.com/Morganamilo/paru
+
 [kmn-aur]: https://aur.archlinux.org/packages/kumono
 [kmn-bin-aur]: https://aur.archlinux.org/packages/kumono-bin
 [kmn-git-aur]: https://aur.archlinux.org/packages/kumono-git
@@ -161,5 +163,8 @@ Please use proper code formatting when creating a pull request.
 [windows-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono.exe
 [linux-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono
 
-[version]: https://img.shields.io/crates/v/kumono?color=red
-[dependencies]: https://img.shields.io/deps-rs/kumono/latest
+[crate-ver]: https://img.shields.io/crates/v/kumono?color=red
+[crate-url]: https://crates.io/crates/kumono
+
+[crate-deps]: https://img.shields.io/deps-rs/kumono/latest
+[crate-deps-url]: https://crates.io/crates/kumono/dependencies
