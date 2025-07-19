@@ -121,11 +121,11 @@ pub struct SinglePost {
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct SinglePostInner {
-    id: String, // "1080444052",
-    user: String, // "belledelphine",
-    service: String, // "onlyfans",
-    title: String, // "silly lil dancing videos i did ☺️",
-    content: String, // "silly lil dancing videos i did ☺️",
+    // id: String, // "1080444052",
+    // user: String, // "belledelphine",
+    // service: String, // "onlyfans",
+    // title: String, // "silly lil dancing videos i did ☺️",
+    // content: String, // "silly lil dancing videos i did ☺️",
     //   embed: {}, // again, we might need to fetch this too, IF any posts happen to have it
     //   shared_file: false,
     //   added: "2024-05-26T03:04:55.971848",
@@ -175,11 +175,11 @@ pub async fn page(target: &Target, user: &str, offset: usize) -> Result<Vec<Page
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PagePost {
-    id: String, // "132018745"
-    user: String, // "5564244"
-    service: String, // "patreon",
-    title: String, // "[wip,short,color,gif,png] futanari hasumi paizuri",
-    content: String, // "<p>I will also post an update on the progress of the One Piece animation this month.</p>",
+    // id: String, // "132018745"
+    // user: String, // "5564244"
+    // service: String, // "patreon",
+    // title: String, // "[wip,short,color,gif,png] futanari hasumi paizuri",
+    // content: String, // "<p>I will also post an update on the progress of the One Piece animation this month.</p>",
     // "embed": {}, // find out if posts ever have this
     // "shared_file": false,
     // "added": "2025-06-24T03:04:27.561458",
