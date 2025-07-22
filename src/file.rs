@@ -1,10 +1,13 @@
 use crate::{ cli::ARGS, http::CLIENT, progress::DownloadState, target::Target };
 use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
+use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::{ error::Error, io::SeekFrom, path::PathBuf };
+use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
+
+static HASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[0-9|a-f]{64}\.*").unwrap());
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
@@ -43,11 +46,11 @@ impl PostFile {
         target.to_pathbuf(Some(&self.to_temp_name()))
     }
 
-    /// Converts the file's name to a SHA256 hash.
+    /// Tries to extract the file's SHA256 hash from its name.
     ///
-    /// This does no work for legacy files, as their names are not hashes.
-    pub fn to_hash(&self) -> String {
-        self.to_name()[..64].to_string()
+    /// Returns `None` if no such hash can be found.
+    pub fn to_hash(&self) -> Option<String> {
+        HASH_RE.find(&self.to_name()).map(|m| m.as_str().to_string())
     }
 
     pub async fn open(&self, target: &Target) -> Result<File> {
@@ -129,17 +132,20 @@ impl PostFile {
         Ok({
             let dsize = csize - isize;
 
-            let hash = self.to_hash();
-
-            if hash == self.hash(target).await? {
-                self.r#move(target).await?;
-                DownloadState::Success(dsize, hash)
-            } else {
-                self.delete(target).await?;
-                DownloadState::Failure(
-                    dsize,
-                    format!("hash mismatch (deleted): {}", self.to_name())
-                )
+            match self.to_hash() {
+                Some(hash) => {
+                    if hash == self.hash(target).await? {
+                        self.r#move(target).await?;
+                        DownloadState::Success(dsize, Some(hash))
+                    } else {
+                        self.delete(target).await?;
+                        DownloadState::Failure(
+                            dsize,
+                            format!("hash mismatch (deleted): {}", self.to_name())
+                        )
+                    }
+                }
+                None => DownloadState::Success(dsize, None),
             }
         })
     }

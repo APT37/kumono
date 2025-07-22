@@ -97,7 +97,13 @@ impl Profile {
 
             let archive = target.archive();
 
-            profile.files.retain(|f| !archive.contains(&f.to_hash()));
+            profile.files.retain(|f| (
+                if let Some(hash) = f.to_hash() {
+                    !archive.contains(&hash)
+                } else {
+                    true
+                }
+            ));
 
             let new = profile.files.len();
 

@@ -11,8 +11,8 @@ pub fn n_fmt(n: u64) -> String {
 
 #[derive(Clone)]
 pub enum DownloadState {
-    Success(u64, String),
-    Skip(String),
+    Success(u64, Option<String>),
+    Skip(Option<String>),
     Failure(u64, String),
 }
 
@@ -53,11 +53,15 @@ impl Stats {
             })
     }
 
-    fn write_to_archive(&mut self, hash: String) {
-        if let Some(ref mut archive) = self.archive {
-            if let Err(err) = archive.write_all((hash + "\n").as_bytes()) {
-                self.errors.push(err.to_string());
-                exit(1);
+    fn write_to_archive(&mut self, hash: Option<String>) {
+        if ARGS.download_archive {
+            if let Some(hash) = hash {
+                if let Some(ref mut archive) = self.archive {
+                    if let Err(err) = archive.write_all((hash + "\n").as_bytes()) {
+                        self.errors.push(err.to_string());
+                        exit(1);
+                    }
+                }
             }
         }
     }
@@ -77,17 +81,13 @@ impl Stats {
             DownloadState::Skip(hash) => {
                 self.skipped += 1;
 
-                if ARGS.download_archive {
-                    self.write_to_archive(hash);
-                }
+                self.write_to_archive(hash);
             }
             DownloadState::Success(size, hash) => {
                 self.dl_size += size;
                 self.success += 1;
 
-                if ARGS.download_archive {
-                    self.write_to_archive(hash);
-                }
+                self.write_to_archive(hash);
             }
         }
     }

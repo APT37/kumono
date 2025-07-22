@@ -18,7 +18,7 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | creator all posts         | yes               | yes                            | yes               | yes                                  |
 | creator single page       | yes               | manual                         | yes               | yes                                  |
 | creator single post       | yes               | yes                            | yes               | yes                                  |
-| creator + linked accounts | no (TBD)          | no                             | no                | no                                   |
+| creator + linked accounts | yes               | no                             | no                | no                                   |
 | discord server            | yes               | no                             | yes               | ?                                    |
 | discord channel           | yes               | no                             | no                | ?                                    |
 | favorites (creator)       | no (TBD)          | ?                              | ?                 | ?                                    |
@@ -33,7 +33,6 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | verify hashes             | yes               | ?                              | ?                 | ?                                    |
 
 <!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
-<!-- | download archive          | no (TBD?)         | ?                              | yes               | ?                                    | -->
 <!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
 
 <!-- link definitions -->

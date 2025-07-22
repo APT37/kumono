@@ -91,6 +91,9 @@ Options:
 ### Target Selection
 
 ```bash
+# whole creator + linked profiles
+kumono https://coomer.su/onlyfans/user/belledelphine/links
+
 # whole creator
 kumono https://coomer.su/onlyfans/user/belledelphine
 
