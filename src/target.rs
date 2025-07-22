@@ -1,28 +1,10 @@
-use crate::cli::ARGS;
+use crate::{ cli::ARGS, http::CLIENT };
 use anyhow::{ bail, Context, Result };
 use itertools::Itertools;
 use regex::{ Captures, Regex };
 use serde::Deserialize;
 use strum_macros::{ Display, EnumString };
 use std::{ fmt, fs::File, io::Read, path::PathBuf, process::exit, sync::LazyLock };
-
-pub static TARGETS: LazyLock<Vec<Target>> = LazyLock::new(|| {
-    let mut targets = Vec::new();
-
-    for url in &ARGS.urls {
-        match Target::from_url(url.strip_suffix('/').unwrap_or(url)) {
-            Ok(target) => targets.push(target),
-            Err(err) => eprintln!("{err}"),
-        }
-    }
-
-    if targets.is_empty() {
-        eprintln!("No valid target URLs were provided.");
-        exit(1);
-    }
-
-    targets.into_iter().unique().collect()
-});
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Target {
@@ -76,35 +58,45 @@ struct Info {
     has_chats: Option<bool>, // false
 }
 
-// static RE_LINKED: LazyLock<Regex> = LazyLock::new(|| {
-//     Regex::new(
-//         r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
-//     ).unwrap()
-// });
+type LazyRegex = LazyLock<Regex>;
 
-static RE_CREATOR: LazyLock<Regex> = LazyLock::new(|| {
+static RE_LINKED: LazyRegex = LazyLock::new(|| {
+    Regex::new(
+        r"^(https://)?(?<site>(coomer|kemono))\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
+    ).unwrap()
+});
+
+static RE_CREATOR: LazyRegex = LazyLock::new(|| {
     Regex::new(
         r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)$"
     ).unwrap()
 });
 
-static RE_PAGE: LazyLock<Regex> = LazyLock::new(|| {
+static RE_PAGE: LazyRegex = LazyLock::new(|| {
     Regex::new(
         r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)\?o=(?<offset>(0|50|[1-9]+(0|5)0))$"
     ).unwrap()
 });
 
-static RE_POST: LazyLock<Regex> = LazyLock::new(|| {
+static RE_POST: LazyRegex = LazyLock::new(|| {
     Regex::new(
         r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)$"
     ).unwrap()
 });
 
-static RE_DISCORD: LazyLock<Regex> = LazyLock::new(|| {
+static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     Regex::new(
         r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?$"
     ).unwrap()
 });
+
+async fn linked_accounts(site: &str, service: &str, user: &str) -> Result<Vec<Info>> {
+    let url = format!("https://{site}.su/api/v1/{service}/user/{user}/links");
+
+    let linked: Vec<Info> = CLIENT.get(url).send().await?.json().await?;
+
+    Ok(linked)
+}
 
 impl Target {
     pub fn as_service(&self) -> Service {
@@ -114,12 +106,63 @@ impl Target {
         }
     }
 
-    fn from_url(url: &str) -> Result<Self> {
+    pub async fn from_args() -> Vec<Target> {
+        let mut targets = Vec::new();
+
+        for url in &ARGS.urls {
+            match Target::from_url(url.strip_suffix('/').unwrap_or(url)).await {
+                Ok(mut target) => targets.append(&mut target),
+                Err(err) => eprintln!("{err}"),
+            }
+        }
+
+        if targets.is_empty() {
+            eprintln!("No valid target URLs were provided.");
+            exit(1);
+        }
+
+        targets.into_iter().unique().collect()
+    }
+
+    async fn from_url(url: &str) -> Result<Vec<Self>> {
         let capture = |re: &Regex| { re.captures(url).expect("get captures") };
         let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
         let extract_unwrap = |caps: &Captures, name: &str| {
             extract(caps, name).expect("extract values from captures")
         };
+
+        if RE_LINKED.is_match(url) {
+            let caps = capture(&RE_LINKED);
+
+            let linked = linked_accounts(
+                &extract_unwrap(&caps, "site"),
+                &extract_unwrap(&caps, "service").parse::<Service>()?.to_string(),
+                &extract_unwrap(&caps, "user")
+            ).await?;
+
+            let mut targets = Vec::new();
+
+            for info in linked {
+                let mut target = if info.service == "discord" {
+                    Target::Discord { server: info.id, channel: None, archive: Vec::new() }
+                } else {
+                    Target::Creator {
+                        service: info.service.parse()?,
+                        user: info.id,
+                        subtype: SubType::None,
+                        archive: Vec::new(),
+                    }
+                };
+
+                if ARGS.download_archive {
+                    target.read_archive()?;
+                }
+
+                targets.push(target);
+            }
+
+            return Ok(targets);
+        }
 
         let archive = Vec::new();
 
@@ -162,7 +205,7 @@ impl Target {
             target.read_archive()?;
         }
 
-        Ok(target)
+        Ok(vec![target])
     }
 
     fn user(&self) -> String {

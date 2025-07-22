@@ -1,4 +1,4 @@
-use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::TARGETS };
+use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::Target };
 use anyhow::Result;
 use futures::future::join_all;
 use std::{ collections::HashSet, path::PathBuf, sync::Arc, thread };
@@ -22,7 +22,9 @@ async fn main() -> Result<()> {
         fs::create_dir_all(PathBuf::from_iter([&ARGS.output_path, "db"])).await?;
     }
 
-    for (i, target) in TARGETS.clone().into_iter().enumerate() {
+    let targets = Target::from_args().await;
+
+    for (i, target) in targets.clone().into_iter().enumerate() {
         let mut files = Profile::new(&target).await?.files;
 
         if files.is_empty() {
@@ -48,7 +50,7 @@ async fn main() -> Result<()> {
             if !extensions.is_empty() {
                 eprintln!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
 
-                if i != TARGETS.len() - 1 {
+                if i != targets.len() - 1 {
                     eprintln!();
                 }
             }
