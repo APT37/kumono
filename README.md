@@ -27,7 +27,7 @@ You need an AUR helper like [paru][paru] to install one of these packages.
 
 [![][build-status]][build-runs] [![][release-date]][latest-release]
 
-Windows and Linux binaries are built for every release.
+Binaries are built for every release.
 
 [![][linux-badge]][linux-dl] [![][windows-badge]][windows-dl]
 
