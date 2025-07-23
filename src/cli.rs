@@ -46,7 +46,7 @@ pub struct Args {
     #[arg(short, long, help = "Log hashes, skip moved/deleted file download")]
     pub download_archive: bool,
 
-    #[arg(short, long, default_value = "5")]
+    #[arg(short, long, default_value_t = 5)]
     pub max_retries: usize,
 
     #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
