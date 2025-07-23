@@ -49,7 +49,9 @@ cargo install kumono
 cargo install --git https://github.com/APT37/kumono
 ```
 
-Make sure the cargo binary location is in your `$PATH`. This is usually `~/.cargo/bin`. *Windows users may use the WSL.*
+Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
+
+*Windows users may use the WSL.*
 
 ## Command Line
 
