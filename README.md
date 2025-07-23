@@ -19,7 +19,7 @@ Support is provided in the [discussions][discussions] section.
 
 ### AUR Packages
 
-You need an AUR helper like [paru][paru] to install on of these packages.
+You need an AUR helper like [paru][paru] to install one of these packages.
 
 [![][kmn-aur-ver]][kmn-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
@@ -27,7 +27,7 @@ You need an AUR helper like [paru][paru] to install on of these packages.
 
 [![][build-status]][build-runs] [![][release-date]][latest-release]
 
-Binaries are built for Linux and Windows on every release.
+Windows and Linux binaries are built for every release.
 
 [![][linux-badge]][linux-dl] [![][windows-badge]][windows-dl]
 
