@@ -8,10 +8,7 @@ use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
 static HASH_RE: LazyLock<Regex> = LazyLock::new(|| 
-    Regex::new(r"^([0-9a-f]{64})(?:\..+)?$").unwrap()
-    // Matches:
-    // - Exactly 64 hex chars at the start (captured)
-    // - Optional: a dot followed by any extension (not captured)
+    Regex::new(r"^(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
 );
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -52,9 +49,7 @@ impl PostFile {
     }
 
     pub fn to_hash(&self) -> Option<String> {
-        HASH_RE.captures(&self.to_name())
-            .and_then(|caps| caps.get(1))
-            .map(|m| m.as_str().to_ascii_lowercase())
+        Some(HASH_RE.captures(&self.to_name())?.name("hash")?.as_str().to_string())
     }
 
     pub async fn open(&self, target: &Target) -> Result<File> {
