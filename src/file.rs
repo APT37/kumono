@@ -7,7 +7,9 @@ use serde::Deserialize;
 use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
-static HASH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[0-9|a-f]{64}\.*").unwrap());
+static HASH_RE: LazyLock<Regex> = LazyLock::new(|| 
+    Regex::new(r"^(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
+);
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
@@ -46,11 +48,8 @@ impl PostFile {
         target.to_pathbuf(Some(&self.to_temp_name()))
     }
 
-    /// Tries to extract the file's SHA256 hash from its name.
-    ///
-    /// Returns `None` if no such hash can be found.
     pub fn to_hash(&self) -> Option<String> {
-        HASH_RE.find(&self.to_name()).map(|m| m.as_str().to_string())
+        Some(HASH_RE.captures(&self.to_name())?.name("hash")?.as_str().to_string())
     }
 
     pub async fn open(&self, target: &Target) -> Result<File> {
