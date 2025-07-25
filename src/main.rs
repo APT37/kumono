@@ -114,7 +114,7 @@ async fn main() -> Result<()> {
             join_all(tasks).await;
 
             // wait so the bar can finish properly
-            sleep(Duration::from_millis(1)).await;
+            sleep(Duration::from_millis((len / 10).try_into().unwrap_or_default())).await;
         }
     }
 

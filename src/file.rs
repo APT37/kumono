@@ -7,13 +7,18 @@ use serde::Deserialize;
 use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock };
 use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
 
-static HASH_RE: LazyLock<Regex> = LazyLock::new(|| 
+static HASH_RE: LazyLock<Regex> = LazyLock::new(||
     Regex::new(r"^(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
 );
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
-    pub name: Option<String>,
+    // deserializing the name breaks our hashset's uniqueness guarantee; the same file
+    // may be known under different names, leading to a race condition where multiple
+    // concurrent tasks write to the same file.
+    // effects: corruption, size mismatch => deletion (2nd race condition), HTTP 426
+    //
+    // pub name: Option<String>,
     pub path: Option<String>,
 }
 
@@ -100,11 +105,25 @@ impl PostFile {
         let mut csize = isize;
 
         loop {
-            if rsize == csize {
+            if csize > rsize {
+                self.delete(target).await?;
+
+                return Ok(
+                    DownloadState::Failure(
+                        0,
+                        format!(
+                            "size mismatch (deleting): {} [l: {csize} | r: {rsize}]",
+                            self.to_name()
+                        )
+                    )
+                );
+            }
+
+            if csize == rsize {
                 break;
             }
 
-            if let Err(err) = self.download_range(&mut temp_file, csize, target).await {
+            if let Err(err) = self.download_range(&mut temp_file, target, csize).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
@@ -140,7 +159,7 @@ impl PostFile {
                         self.delete(target).await?;
                         DownloadState::Failure(
                             dsize,
-                            format!("hash mismatch (deleted): {}", self.to_name())
+                            format!("hash mismatch (deleting): {}", self.to_name())
                         )
                     }
                 }
@@ -149,7 +168,7 @@ impl PostFile {
         })
     }
 
-    async fn download_range(&self, file: &mut File, start: u64, target: &Target) -> Result<()> {
+    async fn download_range(&self, file: &mut File, target: &Target, start: u64) -> Result<()> {
         fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
             bail!("[{status}] download failed: {message} ({url})")
         }
