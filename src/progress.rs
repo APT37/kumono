@@ -1,4 +1,4 @@
-use crate::cli::ARGS;
+use crate::{ cli::ARGS };
 use anyhow::Result;
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use num_format::{ Locale, ToFormattedString };
@@ -106,9 +106,20 @@ impl fmt::Display for Stats {
     }
 }
 
+static mut DOWNLOADS_FAILED: bool = false;
+
+pub fn downloads_failed() -> bool {
+    unsafe { DOWNLOADS_FAILED }
+}
+
 #[allow(clippy::needless_pass_by_value)]
-pub fn bar(mut rx: Receiver<DownloadState>, archive: PathBuf, length: u64) -> Result<()> {
-    let bar = ProgressBar::new(length);
+pub fn bar(
+    files: u64,
+    archive: PathBuf,
+    mut msg_rx: Receiver<DownloadState>,
+    last_target: bool
+) -> Result<()> {
+    let bar = ProgressBar::new(files);
 
     bar.set_style(
         ProgressStyle::with_template(
@@ -120,7 +131,7 @@ pub fn bar(mut rx: Receiver<DownloadState>, archive: PathBuf, length: u64) -> Re
 
     let mut stats = Stats::new(&archive);
 
-    while let Some(dl_state) = rx.blocking_recv() {
+    while let Some(dl_state) = msg_rx.blocking_recv() {
         stats.update(dl_state);
 
         if !stats.errors.is_empty() {
@@ -134,8 +145,14 @@ pub fn bar(mut rx: Receiver<DownloadState>, archive: PathBuf, length: u64) -> Re
 
     bar.finish();
 
+    if !last_target {
+        eprintln!("\n");
+    }
+
     if stats.failure > 0 {
-        exit(1);
+        unsafe {
+            DOWNLOADS_FAILED = true;
+        }
     }
 
     Ok(())

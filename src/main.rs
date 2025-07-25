@@ -1,11 +1,12 @@
 use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::Target };
 use anyhow::Result;
 use futures::future::join_all;
-use std::{ collections::HashSet, path::PathBuf, sync::Arc, thread };
+use std::{ path::PathBuf, process::exit, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod api;
 mod cli;
+mod ext;
 mod file;
 mod http;
 mod profile;
@@ -24,6 +25,8 @@ async fn main() -> Result<()> {
 
     let targets = Target::from_args().await;
 
+    let mut last_target = false;
+
     for (i, target) in targets.clone().into_iter().enumerate() {
         let mut files = Profile::new(&target).await?.files;
 
@@ -32,29 +35,16 @@ async fn main() -> Result<()> {
         }
 
         if ARGS.list_extensions {
-            let mut extensions = HashSet::new();
-            let mut no_ext = 0;
+            ext::list(files, &target);
 
-            for file in files {
-                if let Some(ext) = file.to_extension(&target) {
-                    extensions.insert(ext.to_lowercase());
-                } else {
-                    no_ext += 1;
-                }
-            }
-
-            if no_ext > 0 {
-                eprintln!("{no_ext} files do not have an extension");
-            }
-
-            if !extensions.is_empty() {
-                eprintln!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
-
-                if i != targets.len() - 1 {
-                    eprintln!();
-                }
+            if i != targets.len() - 1 {
+                eprintln!();
             }
         } else {
+            if i == targets.len() - 1 {
+                last_target = true;
+            }
+
             if let Some(exts) = ARGS.included() {
                 files.retain(|file| {
                     file.to_extension(&target).is_some() &&
@@ -71,18 +61,18 @@ async fn main() -> Result<()> {
 
             if len == 0 {
                 eprintln!(
-                    "No files match the current extension filters.\nPlease use '--list' to view available extensions."
+                    "No matches for current extension filters.\nUse '--list' to view available extensions."
                 );
                 return Ok(());
             }
 
             fs::create_dir_all(target.to_pathbuf(None)).await?;
 
-            let (tx, rx) = mpsc::channel::<DownloadState>(len);
-
             let archive_path = target.to_archive_pathbuf();
 
-            thread::spawn(move || progress::bar(rx, archive_path, len as u64));
+            let (msg_tx, msg_rx) = mpsc::channel::<DownloadState>(len);
+
+            thread::spawn(move || progress::bar(len as u64, archive_path, msg_rx, last_target));
 
             let mut tasks = Vec::new();
 
@@ -91,7 +81,7 @@ async fn main() -> Result<()> {
             for file in files {
                 let permit = sem.clone().acquire_owned().await;
 
-                let tx = tx.clone();
+                let msg_tx = msg_tx.clone();
 
                 let target = target.clone();
 
@@ -104,7 +94,7 @@ async fn main() -> Result<()> {
 
                         match result {
                             Ok(dl_state) => {
-                                tx.send(dl_state).await.expect("send state to progress bar");
+                                msg_tx.send(dl_state).await.expect("send state to progress bar");
                             }
                             Err(err) => {
                                 let mut error = err.to_string();
@@ -112,9 +102,9 @@ async fn main() -> Result<()> {
                                     error.push('\n');
                                     error.push_str(&source.to_string());
                                 }
-                                tx.send(DownloadState::Failure(u64::default(), error)).await.expect(
-                                    "send state to progress bar"
-                                );
+                                msg_tx
+                                    .send(DownloadState::Failure(u64::default(), error)).await
+                                    .expect("send state to progress bar");
                             }
                         }
                     })
@@ -126,6 +116,10 @@ async fn main() -> Result<()> {
             // wait so the bar can finish properly
             sleep(Duration::from_millis(1)).await;
         }
+    }
+
+    if progress::downloads_failed() {
+        exit(1);
     }
 
     Ok(())
