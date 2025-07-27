@@ -62,36 +62,36 @@ type LazyRegex = LazyLock<Regex>;
 
 static RE_LINKED: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(?<site>(coomer|kemono))\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
+        r"^(https://)?(?<site>(coomer\.(su|st)|kemono\.(su|cr)))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
     ).unwrap()
 });
 
 static RE_CREATOR: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)$"
+        r"^(https://)?(coomer\.(su|st)|kemono\.(su|cr))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)$"
     ).unwrap()
 });
 
 static RE_PAGE: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)\?o=(?<offset>(0|50|[1-9]+(0|5)0))$"
+        r"^(https://)?(coomer\.(su|st)|kemono\.(su|cr))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)\?o=(?<offset>(0|50|[1-9]+(0|5)0))$"
     ).unwrap()
 });
 
 static RE_POST: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(coomer|kemono)\.su/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)$"
+        r"^(https://)?(coomer\.(su|st)|kemono\.(su|cr))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/post/(?<post>[a-z|A-Z|0-9|\-|_|\.]+)$"
     ).unwrap()
 });
 
 static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?kemono\.su/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?$"
+        r"^(https://)?kemono\.(su|cr)/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?$"
     ).unwrap()
 });
 
 async fn linked_accounts(site: &str, service: &str, user: &str) -> Result<Vec<Info>> {
-    let url = format!("https://{site}.su/api/v1/{service}/user/{user}/links");
+    let url = format!("https://{site}/api/v1/{service}/user/{user}/links");
 
     let linked: Vec<Info> = CLIENT.get(url).send().await?.json().await?;
 
@@ -288,8 +288,8 @@ impl Service {
         #[allow(clippy::enum_glob_use)]
         use Service::*;
         match self {
-            CandFans | Fansly | OnlyFans => "coomer",
-            _ => "kemono",
+            CandFans | Fansly | OnlyFans => "coomer.st",
+            _ => "kemono.cr",
         }
     }
 }

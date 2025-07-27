@@ -156,7 +156,7 @@ pub async fn page(target: &Target, user: &str, offset: usize) -> Result<Vec<Page
     sleep(API_DELAY).await;
 
     let url = format!(
-        "https://{site}.su/api/v1/{service}/user/{user}?o={offset}",
+        "https://{site}/api/v1/{service}/user/{user}?o={offset}",
         site = target.as_service().site(),
         service = target.as_service()
     );
@@ -245,7 +245,7 @@ impl Post for DiscordPost {
 pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
     sleep(API_DELAY).await;
 
-    let url = format!("https://kemono.su/api/v1/discord/channel/{channel}?o={offset}");
+    let url = format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}");
 
     let res = CLIENT.get(url)
         .send().await
@@ -266,5 +266,5 @@ pub struct DiscordChannel {
 }
 
 pub async fn discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
-    fetch(&format!("https://kemono.su/api/v1/discord/channel/lookup/{server}")).await
+    fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
 }

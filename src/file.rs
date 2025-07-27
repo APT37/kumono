@@ -24,7 +24,7 @@ pub struct PostFile {
 
 impl PostFile {
     pub fn to_url(&self, target: &Target) -> String {
-        format!("https://{}.su/data{}", target.as_service().site(), self.path.as_ref().unwrap())
+        format!("https://{}/data{}", target.as_service().site(), self.path.as_ref().unwrap())
     }
 
     pub fn to_name(&self) -> String {

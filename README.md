@@ -1,4 +1,4 @@
-<h2>kumono - Media ripper for <a href="https://coomer.su">coomer.su</a> and <a href="https://kemono.su">kemono.su</a></h2>
+<h2>kumono - Media ripper for <a href="https://coomer.st">coomer.st</a> and <a href="https://kemono.cr">kemono.cr</a></h2>
 
 For a comparison with other tools, see [features](FEATURES.md).
 
@@ -59,10 +59,10 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
 ### Available Options
 
-Downloads for `https://coomer.su/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
+Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
 
 ```
-Media ripper for coomer.su and kemono.su
+Media ripper for coomer.st and kemono.cr
 
 Usage: kumono [OPTIONS] [URLS]...
 
@@ -92,40 +92,40 @@ Options:
 
 ```bash
 # whole creator + linked profiles
-kumono https://coomer.su/onlyfans/user/belledelphine/links
+kumono https://coomer.st/onlyfans/user/belledelphine/links
 
 # whole creator
-kumono https://coomer.su/onlyfans/user/belledelphine
+kumono https://coomer.st/onlyfans/user/belledelphine
 
 # single page
-kumono https://coomer.su/onlyfans/user/belledelphine?o=50
+kumono https://coomer.st/onlyfans/user/belledelphine?o=50
 
 # single post
-kumono https://coomer.su/onlyfans/user/belledelphine/post/1099631527
+kumono https://coomer.st/onlyfans/user/belledelphine/post/1099631527
 
 # whole server
-kumono https://kemono.su/discord/server/1196504962411282491
+kumono https://kemono.st/discord/server/1196504962411282491
 
 # single channel
-kumono https://kemono.su/discord/server/1196504962411282491/1196521501059469463
+kumono https://kemono.st/discord/server/1196504962411282491/1196521501059469463
 
 # multiple targets
-kumono https://coomer.su/onlyfans/user/belledelphine https://kemono.su/discord/server/1196504962411282491
+kumono https://coomer.st/onlyfans/user/belledelphine https://kemono.cr/discord/server/1196504962411282491
 ```
 
 ### Extension Selection
 
 ```bash
 # list available file types for a target
-kumono https://coomer.su/onlyfans/user/belledelphine --list-extensions
+kumono https://coomer.st/onlyfans/user/belledelphine --list-extensions
 
 jpg,m4v,mp4
 
 # download only video files via inclusion
-kumono https://coomer.su/onlyfans/user/belledelphine --include m4v,mp4
+kumono https://coomer.st/onlyfans/user/belledelphine --include m4v,mp4
 
 # download only video files via exclusion
-kumono https://coomer.su/onlyfans/user/belledelphine --exclude jpg
+kumono https://coomer.st/onlyfans/user/belledelphine --exclude jpg
 ```
 
 ### Download Archive

@@ -105,13 +105,21 @@ impl Profile {
                 }
             ));
 
-            let new = profile.files.len();
+            let files = |n: usize| {
+                match n {
+                    0 => "no files".to_string(),
+                    1 => "1 file".to_string(),
+                    _ => format!("{} files", n_fmt(n as u64)),
+                }
+            };
 
-            if new != total {
+            let left = profile.files.len();
+
+            if total != left {
                 eprintln!(
-                    "skipping {} files from download archive, {} files left to download/check",
-                    n_fmt((total - new) as u64),
-                    n_fmt(new as u64)
+                    "skipping {} from download archive, {} left to download/check",
+                    files(total - left),
+                    files(left)
                 );
             }
         }
@@ -125,7 +133,7 @@ impl Profile {
         if let SubType::Post(post) = subtype {
             let post: SinglePost = CLIENT.get(
                 format!(
-                    "https://{}.su/api/v1/{}/user/{user}/post/{post}",
+                    "https://{}/api/v1/{}/user/{user}/post/{post}",
                     self.target.as_service().site(),
                     self.target.as_service()
                 )
