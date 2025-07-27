@@ -1,4 +1,4 @@
-<h2>kumono - Media ripper for <a href="https://coomer.st">coomer.st</a> and <a href="https://kemono.cr">kemono.cr</a></h2>
+<h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
 For a comparison with other tools, see [features](FEATURES.md).
 
@@ -62,7 +62,7 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
 
 ```
-Media ripper for coomer.st and kemono.cr
+Media ripper for coomer and kemono
 
 Usage: kumono [OPTIONS] [URLS]...
 
