@@ -3,6 +3,3 @@
 
 # ignore kumono downloads
 /kumono
-
-# bacon exports (for bacon-ls)
-/.bacon-locations

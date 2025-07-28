@@ -81,7 +81,7 @@ impl Args {
     }
 
     pub fn included(&self) -> Option<Vec<String>> {
-        Self::process_exts(self.exclude.as_ref()?)
+        Self::process_exts(self.include.as_ref()?)
     }
 
     pub fn excluded(&self) -> Option<Vec<String>> {

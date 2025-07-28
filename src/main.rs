@@ -57,12 +57,9 @@ async fn main() -> Result<()> {
                 });
             }
 
-            let len = files.len();
+            let left = files.len();
 
-            if len == 0 {
-                eprintln!(
-                    "No matches for current extension filters.\nUse '--list' to view available extensions."
-                );
+            if left == 0 {
                 return Ok(());
             }
 
@@ -70,9 +67,9 @@ async fn main() -> Result<()> {
 
             let archive_path = target.to_archive_pathbuf();
 
-            let (msg_tx, msg_rx) = mpsc::channel::<DownloadState>(len);
+            let (msg_tx, msg_rx) = mpsc::channel::<DownloadState>(left);
 
-            thread::spawn(move || progress::bar(len as u64, archive_path, msg_rx, last_target));
+            thread::spawn(move || progress::bar(left as u64, archive_path, msg_rx, last_target));
 
             let mut tasks = Vec::new();
 
@@ -114,7 +111,7 @@ async fn main() -> Result<()> {
             join_all(tasks).await;
 
             // wait so the bar can finish properly
-            sleep(Duration::from_millis((len / 10).try_into().unwrap_or_default())).await;
+            sleep(Duration::from_millis((left / 10).try_into().unwrap_or_default())).await;
         }
     }
 
