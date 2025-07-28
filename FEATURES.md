@@ -5,32 +5,33 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 
 *That said, if you find this information to be inaccurate, please let me know.*
 
-| Feature \ Tool            | [kumono][kmn]     | [KToolBox][ktb]                | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
-| ------------------------- | ----------------- | ------------------------------ | ----------------- | ------------------------------------ |
-| language                  | Rust              | [Python][ktb-py]               | [Python][gdl-py]  | [Python][kacd-py]                    |
-| issues (besides Python)   | some features TBD | lack of features and UX        | no concurrency    | no concurrency                       |
-| kemono support            | yes               | yes                            | yes               | yes                                  |
-| coomer support            | yes               | [extra config required][ktb-c] | yes               | yes                                  |
-| user interface            | CLI               | CLI                            | CLI               | TUI (kind of a chore to use)         |
-| direct URL parser         | yes               | yes                            | yes               | no                                   |
-| read multiple URLs        | yes               | ?                              | yes               | yes                                  |
-| concurrency               | yes (default 256) | yes (default 10)               | no                | no                                   |
-| creator all posts         | yes               | yes                            | yes               | yes                                  |
-| creator single page       | yes               | manual                         | yes               | yes                                  |
-| creator single post       | yes               | yes                            | yes               | yes                                  |
-| creator + linked accounts | yes               | no                             | no                | no                                   |
-| discord server            | yes               | no                             | yes               | ?                                    |
-| discord channel           | yes               | no                             | no                | ?                                    |
-| favorites (creator)       | no (TBD)          | ?                              | ?                 | ?                                    |
-| favorites (post)          | no (TBD)          | ?                              | ?                 | ?                                    |
-| skip existing files       | yes               | yes                            | yes               | ?                                    |
-| download archive          | yes               | ?                              | ?                 | ?                                    |
-| file type filtering       | yes               | yes                            | yes               | ?                                    |
-| proxy support             | yes               | ?                              | yes               | ?                                    |
-| retry on server error     | yes               | yes                            | ?                 | ?                                    |
-| retry on connection error | yes               | ?                              | yes               | ?                                    |
-| resume downloads          | yes               | ?                              | ?                 | ?                                    |
-| verify hashes             | yes               | ?                              | ?                 | ?                                    |
+| Feature \ Tool            | [kumono][kmn]      | [KToolBox][ktb]                | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
+| ------------------------- | ------------------ | ------------------------------ | ----------------- | ------------------------------------ |
+| language                  | Rust               | [Python][ktb-py]               | [Python][gdl-py]  | [Python][kacd-py]                    |
+| issues (besides Python)   | -                  | lack of features and UX        | no concurrency    | no concurrency                       |
+| kemono support            | yes                | yes                            | yes               | yes                                  |
+| coomer support            | yes                | [extra config required][ktb-c] | yes               | yes                                  |
+| user interface            | CLI                | CLI                            | CLI               | TUI (kind of a chore to use)         |
+| direct URL parser         | yes                | yes                            | yes               | no                                   |
+| read multiple URLs        | yes                | ?                              | yes               | yes                                  |
+| concurrency               | yes (default 256)  | yes (default 10)               | no                | no                                   |
+| creator all posts         | yes                | yes                            | yes               | yes                                  |
+| creator single page       | yes                | manual                         | yes               | yes                                  |
+| creator single post       | yes                | yes                            | yes               | yes                                  |
+| creator + linked accounts | yes                | no                             | no                | no                                   |
+| discord server            | yes                | no                             | yes               | ?                                    |
+| discord channel           | yes                | no                             | no                | ?                                    |
+| favorites (creator)       | [planned][favs]    | ?                              | ?                 | ?                                    |
+| favorites (post)          | [planned][favs]    | ?                              | ?                 | ?                                    |
+| DM/fancard/community      | [planned][dms-etc] | ?                              | ?                 | ?                                    |
+| skip existing files       | yes                | yes                            | yes               | ?                                    |
+| download archive          | yes                | ?                              | ?                 | ?                                    |
+| file type filtering       | yes                | yes                            | yes               | ?                                    |
+| proxy support             | yes                | ?                              | yes               | ?                                    |
+| retry on server error     | yes                | yes                            | ?                 | ?                                    |
+| retry on connection error | yes                | ?                              | yes               | ?                                    |
+| resume downloads          | yes                | ?                              | ?                 | ?                                    |
+| verify hashes             | yes                | ?                              | ?                 | ?                                    |
 
 <!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
 <!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
@@ -48,3 +49,6 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 
 [kacd]: https://github.com/e43b/Kemono-and-Coomer-Downloader
 [kacd-py]: https://github.com/e43b/Kemono-and-Coomer-Downloader/issues?q=is%3Aissue%20python
+
+[favs]: https://github.com/APT37/kumono/issues/5
+[dms-etc]: https://github.com/APT37/kumono/issues/3

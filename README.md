@@ -13,7 +13,6 @@ Support is provided in the [discussions][discussions] section.
   - [Target Selection](#target-selection)
   - [Extension Selection](#extension-selection)
   - [Download Archive](#download-archive)
-- [Contribution](#contribution)
 
 ## Installation
 
@@ -133,12 +132,6 @@ kumono https://coomer.st/onlyfans/user/belledelphine --exclude jpg
 When using the `--download-archive` option, `kumono` will create log files for each target in `{output-path}/db` to save hashes of previously downloaded files.
 
 *Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.*
-
-## Contribution
-
-Feel free to open an issue if you have a bug to report or want to request a feature.
-
-Please use proper code formatting when creating a pull request.
 
 <!-- link definitions -->
 
