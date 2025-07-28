@@ -766,7 +766,7 @@ dependencies = [
 
 [[package]]
 name = "kumono"
-version = "0.48.4"
+version = "0.49.0"
 dependencies = [
  "anyhow",
  "clap",

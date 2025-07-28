@@ -1,13 +1,8 @@
-use crate::{ cli::ARGS };
+use crate::{ cli::ARGS, pretty::n_fmt };
 use anyhow::Result;
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
-use num_format::{ Locale, ToFormattedString };
 use std::{ fmt, fs::File, io::Write, path::PathBuf, process::exit, time::Duration };
 use tokio::sync::mpsc::Receiver;
-
-pub fn n_fmt(n: u64) -> String {
-    n.to_formatted_string(&Locale::en)
-}
 
 #[derive(Clone)]
 pub enum DownloadState {

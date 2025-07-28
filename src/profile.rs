@@ -1,9 +1,8 @@
 use crate::{
     api::{ self, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
-    cli::ARGS,
     file::PostFile,
     http::CLIENT,
-    progress::n_fmt,
+    pretty::{ self, n_fmt },
     target::{ SubType, Target },
 };
 use anyhow::Result;
@@ -25,32 +24,20 @@ impl fmt::Display for Profile {
             | Target::Creator { subtype: SubType::Post(_), .. }
             | Target::Discord { channel: None, .. } = &self.target
         {
-            let files = match self.files.len() {
-                0 => "no files",
-                1 => "1 file",
-                n => &(n_fmt(n as u64) + " files"),
+            write!(f, "{} has {}", self.target, pretty::files(self.files.len()))
+        } else {
+            let files = if self.post_count == 0 {
+                ""
+            } else {
+                match self.files.len() {
+                    0 => ", but no files",
+                    1 => ", containing 1 file",
+                    n => &format!(", containing {} files", n_fmt(n as u64)),
+                }
             };
 
-            return write!(f, "{} has {files}", self.target);
+            write!(f, "{} has {}{files}", self.target, pretty::posts(self.post_count))
         }
-
-        let posts = match self.post_count {
-            0 => "no posts",
-            1 => "1 post",
-            n => &(n_fmt(n as u64) + " posts"),
-        };
-
-        let files = if self.post_count == 0 {
-            ""
-        } else {
-            match self.files.len() {
-                0 => ", but no files",
-                1 => ", containing 1 file",
-                n => &format!(", containing {} files", n_fmt(n as u64)),
-            }
-        };
-
-        write!(f, "{} has {posts}{files}", self.target)
     }
 }
 
@@ -91,38 +78,6 @@ impl Profile {
         profile.init_files();
 
         eprintln!("{profile}");
-
-        if ARGS.download_archive {
-            let total = profile.files.len();
-
-            let archive = target.archive();
-
-            profile.files.retain(|f| (
-                if let Some(hash) = f.to_hash() {
-                    !archive.contains(&hash)
-                } else {
-                    true
-                }
-            ));
-
-            let files = |n: usize| {
-                match n {
-                    0 => "no files".to_string(),
-                    1 => "1 file".to_string(),
-                    _ => format!("{} files", n_fmt(n as u64)),
-                }
-            };
-
-            let left = profile.files.len();
-
-            if total != left {
-                eprintln!(
-                    "skipping {} from download archive, {} left to download/check",
-                    files(total - left),
-                    files(left)
-                );
-            }
-        }
 
         profile.posts.clear();
 

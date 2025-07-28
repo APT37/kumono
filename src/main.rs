@@ -9,10 +9,12 @@ mod cli;
 mod ext;
 mod file;
 mod http;
+mod pretty;
 mod profile;
 mod progress;
 mod target;
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
     if ARGS.show_config {
@@ -25,9 +27,9 @@ async fn main() -> Result<()> {
 
     let targets = Target::from_args().await;
 
-    let mut last_target = false;
+    let (total_targets, mut last_target) = (targets.len(), false);
 
-    for (i, target) in targets.clone().into_iter().enumerate() {
+    for (i, target) in targets.into_iter().enumerate() {
         let mut files = Profile::new(&target).await?.files;
 
         if files.is_empty() {
@@ -37,24 +39,46 @@ async fn main() -> Result<()> {
         if ARGS.list_extensions {
             ext::list(files, &target);
 
-            if i != targets.len() - 1 {
+            if i != total_targets - 1 {
                 eprintln!();
             }
         } else {
-            if i == targets.len() - 1 {
+            if i == total_targets - 1 {
                 last_target = true;
             }
+
+            let mut total = files.len();
 
             if let Some(exts) = ARGS.included() {
                 files.retain(|file| {
                     file.to_extension(&target).is_some() &&
                         exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
                 });
+
+                files_left_msg("inclusive filter", total, files.len());
             } else if let Some(exts) = ARGS.excluded() {
                 files.retain(|file| {
                     file.to_extension(&target).is_none() ||
                         !exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
                 });
+
+                files_left_msg("exclusive filter", total, files.len());
+            }
+
+            if ARGS.download_archive {
+                total = files.len();
+
+                let archive = target.archive();
+
+                files.retain(|f| {
+                    if let Some(hash) = f.to_hash() { !archive.contains(&hash) } else { true }
+                });
+
+                let left = files.len();
+
+                if total != left {
+                    files_left_msg("download archive", total, left);
+                }
             }
 
             let left = files.len();
@@ -120,4 +144,12 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn files_left_msg(filter: &str, total: usize, left: usize) {
+    eprintln!(
+        "{filter}: skipping {}, {} left to download/check",
+        pretty::files(total - left),
+        pretty::files(left)
+    );
 }
