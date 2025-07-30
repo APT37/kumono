@@ -16,7 +16,7 @@ pub struct Args {
     #[arg(short, long, help = "Proxy URL (scheme://host:port[/path])")]
     pub proxy: Option<String>,
 
-    #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-4096)")]
+    #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-512)")]
     threads: usize,
 
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
@@ -77,7 +77,7 @@ fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
 
 impl Args {
     pub fn threads(&self) -> usize {
-        self.threads.clamp(1, 4096)
+        self.threads.clamp(1, 512)
     }
 
     pub fn included(&self) -> Option<Vec<String>> {

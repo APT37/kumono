@@ -1,4 +1,9 @@
-use crate::{ cli::ARGS, profile::Profile, progress::DownloadState, target::Target };
+use crate::{
+    cli::ARGS,
+    profile::Profile,
+    progress::{ DownloadState, TaskAction, TaskState },
+    target::Target,
+};
 use anyhow::Result;
 use futures::future::join_all;
 use std::{ path::PathBuf, process::exit, sync::Arc, thread };
@@ -101,7 +106,7 @@ async fn main() -> Result<()> {
 
             let archive_path = target.to_archive_pathbuf();
 
-            let (msg_tx, msg_rx) = mpsc::channel::<DownloadState>(left);
+            let (msg_tx, msg_rx) = mpsc::channel::<TaskState>(left);
 
             thread::spawn(move || progress::bar(left as u64, archive_path, msg_rx, last_target));
 
@@ -121,11 +126,17 @@ async fn main() -> Result<()> {
                         #[allow(clippy::no_effect_underscore_binding)]
                         let _permit = permit;
 
-                        let result = file.download(&target).await;
+                        let result = file.download(&target, msg_tx.clone()).await;
+
+                        msg_tx
+                            .send(TaskState::TaskAction(TaskAction::Finish)).await
+                            .expect("send state to progress bar");
 
                         match result {
                             Ok(dl_state) => {
-                                msg_tx.send(dl_state).await.expect("send state to progress bar");
+                                msg_tx
+                                    .send(TaskState::DownloadState(dl_state)).await
+                                    .expect("send state to progress bar");
                             }
                             Err(err) => {
                                 let mut error = err.to_string();
@@ -134,7 +145,11 @@ async fn main() -> Result<()> {
                                     error.push_str(&source.to_string());
                                 }
                                 msg_tx
-                                    .send(DownloadState::Failure(u64::default(), error)).await
+                                    .send(
+                                        TaskState::DownloadState(
+                                            DownloadState::Failure(u64::default(), error)
+                                        )
+                                    ).await
                                     .expect("send state to progress bar");
                             }
                         }

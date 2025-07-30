@@ -4,6 +4,11 @@ use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use std::{ fmt, fs::File, io::Write, path::PathBuf, process::exit, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
+pub enum TaskState {
+    DownloadState(DownloadState),
+    TaskAction(TaskAction),
+}
+
 #[derive(Clone)]
 pub enum DownloadState {
     Success(u64, Option<String>),
@@ -18,6 +23,7 @@ struct Stats {
     dl_size: u64,
     errors: Vec<String>,
     archive: Option<File>,
+    tasks: Tasks,
 }
 
 impl Stats {
@@ -33,6 +39,7 @@ impl Stats {
             } else {
                 None
             },
+            tasks: Tasks::default(),
         }
     }
 
@@ -101,6 +108,50 @@ impl fmt::Display for Stats {
     }
 }
 
+pub enum TaskAction {
+    Start,
+    Wait,
+    Wake,
+    Finish,
+}
+
+#[derive(Default)]
+struct Tasks {
+    total: u64,
+    active: u64,
+    waiting: u64,
+}
+
+impl Tasks {
+    #[allow(clippy::needless_pass_by_value)]
+    fn update(&mut self, action: TaskAction) {
+        match action {
+            TaskAction::Start => {
+                self.total += 1;
+                self.active += 1;
+            }
+            TaskAction::Wait => {
+                self.active -= 1;
+                self.waiting += 1;
+            }
+            TaskAction::Wake => {
+                self.waiting -= 1;
+                self.active += 1;
+            }
+            TaskAction::Finish => {
+                self.active -= 1;
+                self.total -= 1;
+            }
+        }
+    }
+}
+
+impl fmt::Display for Tasks {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "threads: {} active / {} sleeping", self.active, self.waiting)
+    }
+}
+
 static mut DOWNLOADS_FAILED: bool = false;
 
 pub fn downloads_failed() -> bool {
@@ -111,7 +162,7 @@ pub fn downloads_failed() -> bool {
 pub fn bar(
     files: u64,
     archive: PathBuf,
-    mut msg_rx: Receiver<DownloadState>,
+    mut msg_rx: Receiver<TaskState>,
     last_target: bool
 ) -> Result<()> {
     let bar = ProgressBar::new(files);
@@ -126,16 +177,24 @@ pub fn bar(
 
     let mut stats = Stats::new(&archive);
 
-    while let Some(dl_state) = msg_rx.blocking_recv() {
-        stats.update(dl_state);
+    while let Some(state) = msg_rx.blocking_recv() {
+        match state {
+            TaskState::DownloadState(dl) => {
+                stats.update(dl);
+                bar.inc(1);
+            }
+            TaskState::TaskAction(ta) => stats.tasks.update(ta),
+        }
 
         if !stats.errors.is_empty() {
             bar.set_message(format!("\n{}", stats.errors.join("\n")));
         }
 
-        bar.inc(1);
-
-        bar.set_prefix(stats.to_string());
+        if stats.tasks.total == 0 {
+            bar.set_prefix(stats.to_string());
+        } else {
+            bar.set_prefix(format!("{stats}{}\n", stats.tasks));
+        }
     }
 
     bar.finish();

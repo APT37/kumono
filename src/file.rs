@@ -1,11 +1,21 @@
-use crate::{ cli::ARGS, http::CLIENT, progress::DownloadState, target::Target };
+use crate::{
+    cli::ARGS,
+    http::CLIENT,
+    progress::{ DownloadState, TaskAction, TaskState },
+    target::Target,
+};
 use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock };
-use tokio::{ fs::{ self, File }, io::{ AsyncSeekExt, AsyncWriteExt }, time::sleep };
+use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock, time::Duration };
+use tokio::{
+    fs::{ self, File },
+    io::{ AsyncSeekExt, AsyncWriteExt },
+    sync::mpsc::Sender,
+    time::sleep,
+};
 
 static HASH_RE: LazyLock<Regex> = LazyLock::new(||
     Regex::new(r"^(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
@@ -91,12 +101,18 @@ impl PostFile {
         )
     }
 
-    pub async fn download(&self, target: &Target) -> Result<DownloadState> {
+    pub async fn download(
+        &self,
+        target: &Target,
+        mut msg_tx: Sender<TaskState>
+    ) -> Result<DownloadState> {
+        msg_tx.send(TaskState::TaskAction(TaskAction::Start)).await?;
+
         if self.exists(target).await? {
             return Ok(DownloadState::Skip(self.to_hash()));
         }
 
-        let rsize = self.remote_size(target).await?;
+        let rsize = self.remote_size(target, &mut msg_tx).await?;
 
         let mut temp_file = self.open(target).await?;
 
@@ -123,7 +139,7 @@ impl PostFile {
                 break;
             }
 
-            if let Err(err) = self.download_range(&mut temp_file, target, csize).await {
+            if let Err(err) = self.download_range(&mut temp_file, target, csize, &mut msg_tx).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
@@ -161,7 +177,7 @@ impl PostFile {
                         DownloadState::Failure(
                             dsize,
                             format!(
-                                "hash mismatch (deleted): {} [expected: {rhash} | found: {lhash}]",
+                                "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}]",
                                 self.to_name()
                             )
                         )
@@ -172,7 +188,13 @@ impl PostFile {
         })
     }
 
-    async fn download_range(&self, file: &mut File, target: &Target, start: u64) -> Result<()> {
+    async fn download_range(
+        &self,
+        file: &mut File,
+        target: &Target,
+        start: u64,
+        msg_tx: &mut Sender<TaskState>
+    ) -> Result<()> {
         fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
             bail!("[{status}] download failed: {message} ({url})")
         }
@@ -198,16 +220,20 @@ impl PostFile {
             } else if status == StatusCode::NOT_FOUND {
                 download_error(status, "no file", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                sleep(ARGS.rate_limit_backoff).await;
+                wait(ARGS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
-                sleep(ARGS.server_error_delay).await;
+                wait(ARGS.server_error_delay, msg_tx).await?;
             } else {
                 download_error(status, "unexpected status code", &url)?;
             }
         }
     }
 
-    pub async fn remote_size(&self, target: &Target) -> Result<u64> {
+    pub async fn remote_size(
+        &self,
+        target: &Target,
+        msg_tx: &mut Sender<TaskState>
+    ) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
             bail!("[{status}] remote size determination failed: {message} ({url})")
         }
@@ -229,12 +255,19 @@ impl PostFile {
             } else if status == StatusCode::NOT_FOUND {
                 size_error(status, "file not found", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                sleep(ARGS.rate_limit_backoff).await;
+                wait(ARGS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
-                sleep(ARGS.server_error_delay).await;
+                wait(ARGS.server_error_delay, msg_tx).await?;
             } else {
                 size_error(status, "unexpected status code", &url)?;
             }
         }
     }
+}
+
+async fn wait(duration: Duration, msg_tx: &mut Sender<TaskState>) -> Result<()> {
+    msg_tx.send(TaskState::TaskAction(TaskAction::Wait)).await?;
+    sleep(duration).await;
+    msg_tx.send(TaskState::TaskAction(TaskAction::Wake)).await?;
+    Ok(())
 }
