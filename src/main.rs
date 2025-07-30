@@ -65,6 +65,11 @@ async fn main() -> Result<()> {
                 files_left_msg("exclusive filter", total, files.len());
             }
 
+            if files.is_empty() {
+                eprintln!();
+                continue;
+            }
+
             if ARGS.download_archive {
                 total = files.len();
 
@@ -81,11 +86,12 @@ async fn main() -> Result<()> {
                 }
             }
 
-            let left = files.len();
-
-            if left == 0 {
+            if files.is_empty() {
+                eprintln!();
                 continue;
             }
+
+            let left = files.len();
 
             fs::create_dir_all(target.to_pathbuf(None)).await?;
 
