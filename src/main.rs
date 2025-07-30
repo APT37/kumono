@@ -66,7 +66,9 @@ async fn main() -> Result<()> {
             }
 
             if files.is_empty() {
-                eprintln!();
+                if !last_target {
+                    eprintln!();
+                }
                 continue;
             }
 
@@ -87,7 +89,9 @@ async fn main() -> Result<()> {
             }
 
             if files.is_empty() {
-                eprintln!();
+                if !last_target {
+                    eprintln!();
+                }
                 continue;
             }
 
