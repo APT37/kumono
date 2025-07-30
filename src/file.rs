@@ -112,7 +112,7 @@ impl PostFile {
                     DownloadState::Failure(
                         0,
                         format!(
-                            "size mismatch (deleting): {} [l: {csize} | r: {rsize}]",
+                            "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
                             self.to_name()
                         )
                     )
@@ -151,15 +151,19 @@ impl PostFile {
             let dsize = csize - isize;
 
             match self.to_hash() {
-                Some(hash) => {
-                    if hash == self.hash(target).await? {
+                Some(rhash) => {
+                    let lhash = self.hash(target).await?;
+                    if rhash == lhash {
                         self.r#move(target).await?;
-                        DownloadState::Success(dsize, Some(hash))
+                        DownloadState::Success(dsize, Some(rhash))
                     } else {
                         self.delete(target).await?;
                         DownloadState::Failure(
                             dsize,
-                            format!("hash mismatch (deleting): {}", self.to_name())
+                            format!(
+                                "hash mismatch (deleted): {} [expected: {rhash} | found: {lhash}]",
+                                self.to_name()
+                            )
                         )
                     }
                 }
