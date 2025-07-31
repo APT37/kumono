@@ -30,9 +30,12 @@ async fn main() -> Result<()> {
     let (total_targets, mut last_target) = (targets.len(), false);
 
     for (i, target) in targets.into_iter().enumerate() {
-        let mut files = Profile::new(&target).await?.files;
+        let mut files = Profile::new(&target, i + 1).await?.files;
 
         if files.is_empty() {
+            if !last_target {
+                eprintln!();
+            }
             continue;
         }
 

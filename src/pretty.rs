@@ -14,7 +14,7 @@ pub fn posts(posts: usize) -> String {
 
 pub fn anything(count: usize, singular: &str, plural: &str) -> String {
     match count {
-        0 => format!("0 {plural}"),
+        0 => format!("no {plural}"),
         1 => format!("1 {singular}"),
         n => format!("{} {plural}", n_fmt(n as u64)),
     }

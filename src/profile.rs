@@ -11,6 +11,7 @@ use std::{ collections::HashSet, fmt, thread };
 use tokio::{ sync::mpsc, time::{ Duration, sleep } };
 
 pub struct Profile {
+    target_id: usize,
     pub target: Target,
     post_count: usize,
     posts: Vec<Box<dyn Post>>,
@@ -24,7 +25,13 @@ impl fmt::Display for Profile {
             | Target::Creator { subtype: SubType::Post(_), .. }
             | Target::Discord { channel: None, .. } = &self.target
         {
-            write!(f, "{} has {}", self.target, pretty::files(self.files.len()))
+            write!(
+                f,
+                "#{}: {} has {}",
+                n_fmt(self.target_id as u64),
+                self.target,
+                pretty::files(self.files.len())
+            )
         } else {
             let files = if self.post_count == 0 {
                 ""
@@ -36,7 +43,13 @@ impl fmt::Display for Profile {
                 }
             };
 
-            write!(f, "{} has {}{files}", self.target, pretty::posts(self.post_count))
+            write!(
+                f,
+                "#{}: {} has {}{files}",
+                n_fmt(self.target_id as u64),
+                self.target,
+                pretty::posts(self.post_count)
+            )
         }
     }
 }
@@ -56,8 +69,9 @@ fn page_progress(mut msg_rx: mpsc::UnboundedReceiver<String>) {
 }
 
 impl Profile {
-    pub async fn new(target: &Target) -> Result<Self> {
+    pub async fn new(target: &Target, target_id: usize) -> Result<Self> {
         let mut profile = Self {
+            target_id,
             target: target.clone(),
             post_count: 0,
             posts: Vec::new(),
