@@ -9,7 +9,8 @@ pub enum DownloadAction {
     Start,
     Wait,
     Continue,
-    Report(u64),
+    ReportSize(u64),
+    LegacyHashSkip(String),
     Skip(Option<String>),
     Fail(String),
     Complete(Option<String>),
@@ -92,9 +93,22 @@ impl Stats {
                 self.active += 1;
                 false
             }
-            DownloadAction::Report(size) => {
+            DownloadAction::ReportSize(size) => {
                 self.dl_size += size;
                 false
+            }
+            DownloadAction::LegacyHashSkip(name) => {
+                if self.errors.len() == 3 {
+                    self.errors.remove(0);
+                }
+                self.errors.push(format!("skipped hash verification for legacy file: {name}"));
+                false
+            }
+            DownloadAction::Skip(hash) => {
+                self.active -= 1;
+                self.skipped += 1;
+                self.write_to_archive(hash);
+                true
             }
             DownloadAction::Fail(err) => {
                 self.active -= 1;
@@ -103,12 +117,6 @@ impl Stats {
                     self.errors.remove(0);
                 }
                 self.errors.push(err);
-                true
-            }
-            DownloadAction::Skip(hash) => {
-                self.active -= 1;
-                self.skipped += 1;
-                self.write_to_archive(hash);
                 true
             }
             DownloadAction::Complete(hash) => {

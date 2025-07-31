@@ -174,7 +174,10 @@ impl PostFile {
                         )
                     }
                 }
-                None => DownloadAction::Complete(None),
+                None => {
+                    msg_tx.send(DownloadAction::LegacyHashSkip(self.to_name())).await?;
+                    DownloadAction::Complete(None)
+                }
             }
         })
     }
@@ -204,7 +207,7 @@ impl PostFile {
 
                 while let Some(Ok(bytes)) = stream.next().await {
                     file.write_all(&bytes).await?;
-                    msg_tx.send(DownloadAction::Report(bytes.len() as u64)).await?;
+                    msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
                 }
                 file.flush().await?;
 
