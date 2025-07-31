@@ -168,7 +168,7 @@ impl PostFile {
                         self.delete(target).await?;
                         DownloadAction::Fail(
                             format!(
-                                "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}]",
+                                "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}",
                                 self.to_name()
                             )
                         )
