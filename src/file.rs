@@ -1,9 +1,4 @@
-use crate::{
-    cli::ARGS,
-    http::CLIENT,
-    progress::{ DownloadState, TaskAction, TaskState },
-    target::Target,
-};
+use crate::{ cli::ARGS, http::CLIENT, progress::DownloadAction, target::Target };
 use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
 use regex::Regex;
@@ -104,12 +99,12 @@ impl PostFile {
     pub async fn download(
         &self,
         target: &Target,
-        mut msg_tx: Sender<TaskState>
-    ) -> Result<DownloadState> {
-        msg_tx.send(TaskState::TaskAction(TaskAction::Start)).await?;
+        mut msg_tx: Sender<DownloadAction>
+    ) -> Result<DownloadAction> {
+        msg_tx.send(DownloadAction::Start).await?;
 
         if self.exists(target).await? {
-            return Ok(DownloadState::Skip(self.to_hash()));
+            return Ok(DownloadAction::Skip(self.to_hash()));
         }
 
         let rsize = self.remote_size(target, &mut msg_tx).await?;
@@ -125,8 +120,7 @@ impl PostFile {
                 self.delete(target).await?;
 
                 return Ok(
-                    DownloadState::Failure(
-                        0,
+                    DownloadAction::Fail(
                         format!(
                             "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
                             self.to_name()
@@ -145,7 +139,7 @@ impl PostFile {
                     error.push('\n');
                     error.push_str(&source.to_string());
                 }
-                return Ok(DownloadState::Failure(csize - isize, error));
+                return Ok(DownloadAction::Fail(error));
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
@@ -158,24 +152,21 @@ impl PostFile {
                         error.push('\n');
                         error.push_str(&source.to_string());
                     }
-                    return Ok(DownloadState::Failure(csize - isize, error));
+                    return Ok(DownloadAction::Fail(error));
                 }
             }
         }
 
         Ok({
-            let dsize = csize - isize;
-
             match self.to_hash() {
                 Some(rhash) => {
                     let lhash = self.hash(target).await?;
                     if rhash == lhash {
                         self.r#move(target).await?;
-                        DownloadState::Success(dsize, Some(rhash))
+                        DownloadAction::Complete(Some(rhash))
                     } else {
                         self.delete(target).await?;
-                        DownloadState::Failure(
-                            dsize,
+                        DownloadAction::Fail(
                             format!(
                                 "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}]",
                                 self.to_name()
@@ -183,7 +174,7 @@ impl PostFile {
                         )
                     }
                 }
-                None => DownloadState::Success(dsize, None),
+                None => DownloadAction::Complete(None),
             }
         })
     }
@@ -193,7 +184,7 @@ impl PostFile {
         file: &mut File,
         target: &Target,
         start: u64,
-        msg_tx: &mut Sender<TaskState>
+        msg_tx: &mut Sender<DownloadAction>
     ) -> Result<()> {
         fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
             bail!("[{status}] download failed: {message} ({url})")
@@ -213,6 +204,7 @@ impl PostFile {
 
                 while let Some(Ok(bytes)) = stream.next().await {
                     file.write_all(&bytes).await?;
+                    msg_tx.send(DownloadAction::Report(bytes.len() as u64)).await?;
                 }
                 file.flush().await?;
 
@@ -232,7 +224,7 @@ impl PostFile {
     pub async fn remote_size(
         &self,
         target: &Target,
-        msg_tx: &mut Sender<TaskState>
+        msg_tx: &mut Sender<DownloadAction>
     ) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
             bail!("[{status}] remote size determination failed: {message} ({url})")
@@ -265,9 +257,9 @@ impl PostFile {
     }
 }
 
-async fn wait(duration: Duration, msg_tx: &mut Sender<TaskState>) -> Result<()> {
-    msg_tx.send(TaskState::TaskAction(TaskAction::Wait)).await?;
+async fn wait(duration: Duration, msg_tx: &mut Sender<DownloadAction>) -> Result<()> {
+    msg_tx.send(DownloadAction::Wait).await?;
     sleep(duration).await;
-    msg_tx.send(TaskState::TaskAction(TaskAction::Wake)).await?;
+    msg_tx.send(DownloadAction::Continue).await?;
     Ok(())
 }

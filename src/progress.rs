@@ -4,42 +4,48 @@ use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use std::{ fmt, fs::File, io::Write, path::PathBuf, process::exit, time::Duration };
 use tokio::sync::mpsc::Receiver;
 
-pub enum TaskState {
-    DownloadState(DownloadState),
-    TaskAction(TaskAction),
-}
-
 #[derive(Clone)]
-pub enum DownloadState {
-    Success(u64, Option<String>),
+pub enum DownloadAction {
+    Start,
+    Wait,
+    Continue,
+    Report(u64),
     Skip(Option<String>),
-    Failure(u64, String),
+    Fail(String),
+    Complete(Option<String>),
 }
 
 struct Stats {
-    success: u64,
+    queued: u64,
+    waiting: u64,
+    active: u64,
+    complete: u64,
     skipped: u64,
-    failure: u64,
+    failed: u64,
     dl_size: u64,
     errors: Vec<String>,
     archive: Option<File>,
-    tasks: Tasks,
 }
 
 impl Stats {
-    pub fn new(archive_path: &PathBuf) -> Self {
+    pub fn new(files: u64, archive_path: &PathBuf) -> Self {
         Self {
-            success: 0,
+            queued: files,
+            waiting: 0,
+            active: 0,
+            complete: 0,
             skipped: 0,
-            failure: 0,
+            failed: 0,
+
             dl_size: 0,
+
             errors: Vec::new(),
+
             archive: if ARGS.download_archive {
                 Some(Self::open_archive(archive_path))
             } else {
                 None
             },
-            tasks: Tasks::default(),
         }
     }
 
@@ -69,27 +75,47 @@ impl Stats {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    fn update(&mut self, download_state: DownloadState) {
+    fn update(&mut self, download_state: DownloadAction) -> bool {
         match download_state {
-            DownloadState::Failure(size, err) => {
+            DownloadAction::Start => {
+                self.queued -= 1;
+                self.active += 1;
+                false
+            }
+            DownloadAction::Wait => {
+                self.active -= 1;
+                self.waiting += 1;
+                false
+            }
+            DownloadAction::Continue => {
+                self.waiting -= 1;
+                self.active += 1;
+                false
+            }
+            DownloadAction::Report(size) => {
                 self.dl_size += size;
-                self.failure += 1;
-
+                false
+            }
+            DownloadAction::Fail(err) => {
+                self.active -= 1;
+                self.failed += 1;
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
                 self.errors.push(err);
+                true
             }
-            DownloadState::Skip(hash) => {
+            DownloadAction::Skip(hash) => {
+                self.active -= 1;
                 self.skipped += 1;
-
                 self.write_to_archive(hash);
+                true
             }
-            DownloadState::Success(size, hash) => {
-                self.dl_size += size;
-                self.success += 1;
-
+            DownloadAction::Complete(hash) => {
+                self.active -= 1;
+                self.complete += 1;
                 self.write_to_archive(hash);
+                true
             }
         }
     }
@@ -99,56 +125,15 @@ impl fmt::Display for Stats {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "downloaded approx. {} / finished: {} / skipped: {} / failed: {}",
+            "downloaded {} / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed",
             HumanBytes(self.dl_size),
-            n_fmt(self.success),
+            n_fmt(self.queued),
+            n_fmt(self.waiting),
+            n_fmt(self.active),
+            n_fmt(self.complete),
             n_fmt(self.skipped),
-            n_fmt(self.failure)
+            n_fmt(self.failed)
         )
-    }
-}
-
-pub enum TaskAction {
-    Start,
-    Wait,
-    Wake,
-    Finish,
-}
-
-#[derive(Default)]
-struct Tasks {
-    total: u64,
-    active: u64,
-    waiting: u64,
-}
-
-impl Tasks {
-    #[allow(clippy::needless_pass_by_value)]
-    fn update(&mut self, action: TaskAction) {
-        match action {
-            TaskAction::Start => {
-                self.total += 1;
-                self.active += 1;
-            }
-            TaskAction::Wait => {
-                self.active -= 1;
-                self.waiting += 1;
-            }
-            TaskAction::Wake => {
-                self.waiting -= 1;
-                self.active += 1;
-            }
-            TaskAction::Finish => {
-                self.active -= 1;
-                self.total -= 1;
-            }
-        }
-    }
-}
-
-impl fmt::Display for Tasks {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "threads: {} active / {} sleeping", self.active, self.waiting)
     }
 }
 
@@ -162,7 +147,7 @@ pub fn downloads_failed() -> bool {
 pub fn bar(
     files: u64,
     archive: PathBuf,
-    mut msg_rx: Receiver<TaskState>,
+    mut msg_rx: Receiver<DownloadAction>,
     last_target: bool
 ) -> Result<()> {
     let bar = ProgressBar::new(files);
@@ -175,26 +160,18 @@ pub fn bar(
 
     bar.enable_steady_tick(Duration::from_millis(200));
 
-    let mut stats = Stats::new(&archive);
+    let mut stats = Stats::new(files, &archive);
 
     while let Some(state) = msg_rx.blocking_recv() {
-        match state {
-            TaskState::DownloadState(dl) => {
-                stats.update(dl);
-                bar.inc(1);
-            }
-            TaskState::TaskAction(ta) => stats.tasks.update(ta),
+        if stats.update(state) {
+            bar.inc(1);
         }
 
         if !stats.errors.is_empty() {
             bar.set_message(format!("\n{}", stats.errors.join("\n")));
         }
 
-        if stats.tasks.total == 0 {
-            bar.set_prefix(stats.to_string());
-        } else {
-            bar.set_prefix(format!("{stats}{}\n", stats.tasks));
-        }
+        bar.set_prefix(stats.to_string());
     }
 
     bar.finish();
@@ -203,7 +180,7 @@ pub fn bar(
         eprintln!("\n");
     }
 
-    if stats.failure > 0 {
+    if stats.failed > 0 {
         unsafe {
             DOWNLOADS_FAILED = true;
         }
