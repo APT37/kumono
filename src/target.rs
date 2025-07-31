@@ -62,7 +62,7 @@ type LazyRegex = LazyLock<Regex>;
 
 static RE_LINKED: LazyRegex = LazyLock::new(|| {
     Regex::new(
-        r"^(https://)?(?<site>(coomer\.(su|st)|kemono\.(su|cr)))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
+        r"^(https://)?(coomer\.(su|st)|kemono\.(su|cr))/(?<service>[a-z]+)/user/(?<user>[a-z|A-Z|0-9|\-|_|\.]+)/links$"
     ).unwrap()
 });
 
@@ -90,12 +90,18 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     ).unwrap()
 });
 
-async fn linked_accounts(site: &str, service: &str, user: &str) -> Result<Vec<Info>> {
-    let url = format!("https://{site}/api/v1/{service}/user/{user}/links");
+async fn linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
+    let mut accounts = Vec::new();
 
-    let linked: Vec<Info> = CLIENT.get(url).send().await?.json().await?;
+    let url = format!("https://{}/api/v1/{service}/user/{user}/profile", service.site());
+    let account: Info = CLIENT.get(url).send().await?.json().await?;
+    accounts.push(account);
 
-    Ok(linked)
+    let linked_url = format!("https://{}/api/v1/{service}/user/{user}/links", service.site());
+    let mut linked_accounts: Vec<Info> = CLIENT.get(linked_url).send().await?.json().await?;
+    accounts.append(&mut linked_accounts);
+
+    Ok(accounts)
 }
 
 impl Target {
@@ -135,8 +141,7 @@ impl Target {
             let caps = capture(&RE_LINKED);
 
             let linked = linked_accounts(
-                &extract_unwrap(&caps, "site"),
-                &extract_unwrap(&caps, "service").parse::<Service>()?.to_string(),
+                &extract_unwrap(&caps, "service").parse::<Service>()?,
                 &extract_unwrap(&caps, "user")
             ).await?;
 
@@ -160,6 +165,8 @@ impl Target {
 
                 targets.push(target);
             }
+
+            eprintln!("{targets:#?}");
 
             return Ok(targets);
         }

@@ -79,6 +79,7 @@ impl Profile {
 
         eprintln!("{profile}");
 
+        // discard posts
         profile.posts.clear();
 
         Ok(profile)
