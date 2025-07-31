@@ -106,15 +106,24 @@ impl Profile {
             let mut offset = if let SubType::PageOffset(o) = subtype { *o } else { 0 };
 
             loop {
-                msg_tx.send(
-                    format!("Retrieving posts for {} page #{}", self.target, (offset + 50) / 50)
-                )?;
+                let mut retries = 0;
 
                 let posts: Vec<PagePost>;
 
-                let mut retries = 0;
-
                 loop {
+                    let msg = format!(
+                        "Retrieving posts for {} page #{}{}",
+                        self.target,
+                        (offset + 50) / 50,
+                        if retries > 0 {
+                            format!(" (Retry #{retries})")
+                        } else {
+                            String::new()
+                        }
+                    );
+
+                    msg_tx.send(msg)?;
+
                     match api::page(&self.target, user, offset).await {
                         Ok(p) => {
                             posts = p;
@@ -168,19 +177,24 @@ impl Profile {
             let mut offset = 0;
 
             loop {
-                msg_tx.send(
-                    format!(
-                        "Retrieving posts for discord/{server}/{} page #{}",
-                        channel.id,
-                        (offset + 150) / 150
-                    )
-                )?;
+                let mut retries = 0;
 
                 let posts: Vec<DiscordPost>;
 
-                let mut retries = 0;
-
                 loop {
+                    let msg = format!(
+                        "Retrieving posts for discord/{server}/{} page #{}{}",
+                        channel.id,
+                        (offset + 150) / 150,
+                        if retries > 0 {
+                            format!(" (Retry #{retries})")
+                        } else {
+                            String::new()
+                        }
+                    );
+
+                    msg_tx.send(msg)?;
+
                     match api::discord_page(&channel.id, offset).await {
                         Ok(p) => {
                             posts = p;

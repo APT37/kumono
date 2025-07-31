@@ -166,8 +166,6 @@ impl Target {
                 targets.push(target);
             }
 
-            eprintln!("{targets:#?}");
-
             return Ok(targets);
         }
 
