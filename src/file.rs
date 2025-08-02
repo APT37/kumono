@@ -157,29 +157,26 @@ impl PostFile {
             }
         }
 
-        Ok({
-            match self.to_hash() {
-                Some(rhash) => {
-                    let lhash = self.hash(target).await?;
-                    if rhash == lhash {
-                        self.r#move(target).await?;
-                        DownloadAction::Complete(Some(rhash))
-                    } else {
-                        self.delete(target).await?;
-                        DownloadAction::Fail(
-                            format!(
-                                "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}",
-                                self.to_name()
-                            )
+        Ok(
+            if let Some(rhash) = self.to_hash() {
+                let lhash = self.hash(target).await?;
+                if rhash == lhash {
+                    self.r#move(target).await?;
+                    DownloadAction::Complete(Some(rhash))
+                } else {
+                    self.delete(target).await?;
+                    DownloadAction::Fail(
+                        format!(
+                            "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}",
+                            self.to_name()
                         )
-                    }
+                    )
                 }
-                None => {
-                    msg_tx.send(DownloadAction::LegacyHashSkip(self.to_name())).await?;
-                    DownloadAction::Complete(None)
-                }
+            } else {
+                msg_tx.send(DownloadAction::LegacyHashSkip(self.to_name())).await?;
+                DownloadAction::Complete(None)
             }
-        })
+        )
     }
 
     async fn download_range(
