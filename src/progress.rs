@@ -10,7 +10,7 @@ pub enum DownloadAction {
     Wait,
     Continue,
     ReportSize(u64),
-    LegacyHashSkip(String),
+    ReportLegacyHashSkip(String),
     Skip(Option<String>),
     Fail(String),
     Complete(Option<String>),
@@ -97,7 +97,7 @@ impl Stats {
                 self.dl_size += size;
                 false
             }
-            DownloadAction::LegacyHashSkip(name) => {
+            DownloadAction::ReportLegacyHashSkip(name) => {
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }

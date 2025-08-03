@@ -173,7 +173,7 @@ impl PostFile {
                     )
                 }
             } else {
-                msg_tx.send(DownloadAction::LegacyHashSkip(self.to_name())).await?;
+                msg_tx.send(DownloadAction::ReportLegacyHashSkip(self.to_name())).await?;
                 DownloadAction::Complete(None)
             }
         )
