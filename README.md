@@ -138,7 +138,7 @@ When using the `--download-archive` option, `kumono` will create log files for e
 
 ## Legal Disclaimer
 
-This project does not condone or support piracy in any form. We respect the intellectual property rights of creators and encourage users to access content through legal and authorized channels. The project aims to promote creativity, innovation, and the responsible use of digital resources. Any content shared or discussed within the scope of this project is intended for educational and informational purposes only. Users are again urged to respect copyright laws and support creators by purchasing or accessing their work legally.
+This project does not condone or support piracy in any form. We respect the intellectual property rights of creators and encourage users to access content through legal and authorized channels. The project aims to promote creativity, innovation, and the responsible use of digital resources. Any content shared or discussed within the scope of this project is intended for educational and informational purposes only. Users are urged to respect copyright laws and support creators by purchasing or accessing their work legally.
 
 <!-- link definitions -->
 
