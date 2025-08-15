@@ -8,7 +8,7 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | Feature \ Tool            | [kumono][kmn]      | [KToolBox][ktb]                | [gallery-dl][gdl] | [Kemono-and-Coomer-Downloader][kacd] |
 | ------------------------- | ------------------ | ------------------------------ | ----------------- | ------------------------------------ |
 | language                  | Rust               | [Python][ktb-py]               | [Python][gdl-py]  | [Python][kacd-py]                    |
-| issues (besides Python)   | -                  | lack of features and UX        | no concurrency    | no concurrency                       |
+| issues (besides Python)   | beta software      | lack of features and UX        | no concurrency    | no concurrency                       |
 | kemono support            | yes                | yes                            | yes               | yes                                  |
 | coomer support            | yes                | [extra config required][ktb-c] | yes               | yes                                  |
 | user interface            | CLI                | CLI                            | CLI               | TUI (kind of a chore to use)         |

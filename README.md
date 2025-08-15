@@ -1,5 +1,7 @@
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
+This is beta software. Please be aware that functionality might change or break at any time before the 1.0.0 release.
+
 For a comparison with other tools, see [features](FEATURES.md).
 
 Support is provided in the [discussions][discussions] section.
@@ -13,6 +15,7 @@ Support is provided in the [discussions][discussions] section.
   - [Target Selection](#target-selection)
   - [Extension Selection](#extension-selection)
   - [Download Archive](#download-archive)
+- [Legal Disclaimer](#legal-disclaimer)
 
 ## Installation
 
@@ -132,6 +135,10 @@ kumono https://coomer.st/onlyfans/user/belledelphine --exclude jpg
 When using the `--download-archive` option, `kumono` will create log files for each target in `{output-path}/db` to save hashes of previously downloaded files.
 
 *Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.*
+
+## Legal Disclaimer
+
+This project does not condone or support piracy in any form. We respect the intellectual property rights of creators and encourage users to access content through legal and authorized channels. The project aims to promote creativity, innovation, and the responsible use of digital resources. Any content shared or discussed within the scope of this project is intended for educational and informational purposes only. Users are again urged to respect copyright laws and support creators by purchasing or accessing their work legally.
 
 <!-- link definitions -->
 
