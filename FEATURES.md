@@ -9,12 +9,12 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | ------------------------- | ------------------ | ------------------------------ | ----------------- | ------------------------------------ |
 | language                  | Rust               | [Python][ktb-py]               | [Python][gdl-py]  | [Python][kacd-py]                    |
 | issues (besides Python)   | beta software      | lack of features and UX        | no concurrency    | no concurrency                       |
+| concurrency               | yes (default 256)  | yes (default 10)               | no                | no                                   |
+| parse multiple URLs       | yes                | ?                              | yes               | yes                                  |
 | kemono support            | yes                | yes                            | yes               | yes                                  |
 | coomer support            | yes                | [extra config required][ktb-c] | yes               | yes                                  |
 | user interface            | CLI                | CLI                            | CLI               | TUI (kind of a chore to use)         |
 | direct URL parser         | yes                | yes                            | yes               | no                                   |
-| read multiple URLs        | yes                | ?                              | yes               | yes                                  |
-| concurrency               | yes (default 256)  | yes (default 10)               | no                | no                                   |
 | creator all posts         | yes                | yes                            | yes               | yes                                  |
 | creator single page       | yes                | manual                         | yes               | yes                                  |
 | creator single post       | yes                | yes                            | yes               | yes                                  |
@@ -24,14 +24,15 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | favorites (creator)       | [planned][favs]    | ?                              | ?                 | ?                                    |
 | favorites (post)          | [planned][favs]    | ?                              | ?                 | ?                                    |
 | DM/fancard/community      | [planned][dms-etc] | ?                              | ?                 | ?                                    |
-| skip existing files       | yes                | yes                            | yes               | ?                                    |
+| verify hashes             | yes                | ?                              | ?                 | ?                                    |
+| resume downloads          | yes                | ?                              | ?                 | ?                                    |
+| skip existing download    | yes                | yes                            | yes               | ?                                    |
 | download archive          | yes                | ?                              | ?                 | ?                                    |
 | file type filtering       | yes                | yes                            | yes               | ?                                    |
 | proxy support             | yes                | ?                              | yes               | ?                                    |
+| retry on timeout          | planned            | ?                              | ?                 | ?                                    |
 | retry on server error     | yes                | yes                            | ?                 | ?                                    |
 | retry on connection error | yes                | ?                              | yes               | ?                                    |
-| resume downloads          | yes                | ?                              | ?                 | ?                                    |
-| verify hashes             | yes                | ?                              | ?                 | ?                                    |
 
 <!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
 <!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
