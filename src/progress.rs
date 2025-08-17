@@ -63,15 +63,14 @@ impl Stats {
     }
 
     fn write_to_archive(&mut self, hash: Option<String>) {
-        if ARGS.download_archive {
-            if let Some(hash) = hash {
-                if let Some(ref mut archive) = self.archive {
-                    if let Err(err) = archive.write_all((hash + "\n").as_bytes()) {
-                        self.errors.push(err.to_string());
-                        exit(1);
-                    }
-                }
-            }
+        if
+            ARGS.download_archive &&
+            let Some(hash) = hash &&
+            let Some(ref mut archive) = self.archive &&
+            let Err(err) = archive.write_all((hash + "\n").as_bytes())
+        {
+            self.errors.push(err.to_string());
+            exit(1);
         }
     }
 

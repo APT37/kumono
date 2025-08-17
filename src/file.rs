@@ -28,8 +28,16 @@ pub struct PostFile {
 }
 
 impl PostFile {
+    pub fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+
     pub fn to_url(&self, target: &Target) -> String {
-        format!("https://{}/data{}", target.as_service().site(), self.path.as_ref().unwrap())
+        format!(
+            "https://{site}/data{path}",
+            site = target.as_service().site(),
+            path = self.path.as_ref().unwrap()
+        )
     }
 
     pub fn to_name(&self) -> String {

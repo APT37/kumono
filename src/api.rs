@@ -1,11 +1,38 @@
 use crate::{ file::PostFile, http::CLIENT, target::Target, cli::ARGS };
 use anyhow::{ bail, Result };
+use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ de::DeserializeOwned, Deserialize };
+use std::sync::LazyLock;
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
 const API_DELAY: Duration = Duration::from_millis(100);
+
+static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(||
+    Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
+);
+
+async fn fetch<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
+    sleep(API_DELAY).await;
+
+    let res = CLIENT.get(url)
+        .send().await
+        .map_err(|err| ApiError::Connect(err.to_string()))?;
+
+    let status = res.status();
+    let text = res.text().await.expect("get text from response body");
+
+    if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
+        return Ok(serde_json::from_str("[]").unwrap());
+    }
+
+    if status != StatusCode::OK {
+        return Err(ApiError::Status(status));
+    }
+
+    serde_json::from_str(&text).map_err(|err| ApiError::Parser(err.to_string()))
+}
 
 pub trait Post {
     fn files(&mut self) -> Vec<PostFile>;
@@ -43,19 +70,6 @@ impl ApiError {
 
         Ok(())
     }
-}
-
-async fn fetch<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
-    let res = CLIENT.get(url)
-        .send().await
-        .map_err(|err| ApiError::Connect(err.to_string()))?;
-
-    let status = res.status();
-    if status != StatusCode::OK {
-        return Err(ApiError::Status(status));
-    }
-
-    res.json().await.map_err(|err| ApiError::Parser(err.to_string()))
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -112,32 +126,17 @@ pub struct SinglePost {
     //             "captions": null,
     //             "tags": null,
     //             "next": "1075685308",
-    //             "prev": "1082132822"
+    //             "prev": "1082132822",
     //           }
     //         ]
     //       ]
-    //     }
+    //     },
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 struct SinglePostInner {
-    // id: String, // "1080444052",
-    // user: String, // "belledelphine",
-    // service: String, // "onlyfans",
-    // title: String, // "silly lil dancing videos i did ☺️",
-    // content: String, // "silly lil dancing videos i did ☺️",
-    //   embed: {}, // again, we might need to fetch this too, IF any posts happen to have it
-    //   shared_file: false,
-    //   added: "2024-05-26T03:04:55.971848",
-    //   published: "2024-05-21T17:19:18",
-    //   edited: null,
     file: Option<PostFile>,
     attachments: Vec<PostFile>,
-    //   "poll": null,
-    //   "captions": null,
-    //   "tags": null,
-    //   "next": "1075685308",
-    //   "prev": "1082132822"
 }
 
 impl Post for SinglePost {
@@ -147,49 +146,25 @@ impl Post for SinglePost {
             files.push(file.clone());
         }
         files.append(&mut self.post.attachments);
-        files.retain(|pf| pf.path.is_some());
+        files.retain(PostFile::has_path);
         files
     }
 }
 
 pub async fn page(target: &Target, user: &str, offset: usize) -> Result<Vec<PagePost>, ApiError> {
-    sleep(API_DELAY).await;
-
-    let url = format!(
-        "https://{site}/api/v1/{service}/user/{user}?o={offset}",
-        site = target.as_service().site(),
-        service = target.as_service()
-    );
-
-    let res = CLIENT.get(url)
-        .send().await
-        .map_err(|err| ApiError::Connect(err.to_string()))?;
-
-    let status = res.status();
-    if status != StatusCode::OK {
-        return Err(ApiError::Status(status));
-    }
-
-    res.json().await.map_err(|err| ApiError::Parser(err.to_string()))
+    fetch(
+        &format!(
+            "https://{site}/api/v1/{service}/user/{user}/posts?o={offset}",
+            site = target.as_service().site(),
+            service = target.as_service()
+        )
+    ).await
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PagePost {
-    // id: String, // "132018745"
-    // user: String, // "5564244"
-    // service: String, // "patreon",
-    // title: String, // "[wip,short,color,gif,png] futanari hasumi paizuri",
-    // content: String, // "<p>I will also post an update on the progress of the One Piece animation this month.</p>",
-    // "embed": {}, // find out if posts ever have this
-    // "shared_file": false,
-    // "added": "2025-06-24T03:04:27.561458",
-    // "published": "2025-06-22T08:34:11",
-    // "edited": "2025-06-22T12:20:40",
     file: Option<PostFile>,
     attachments: Vec<PostFile>,
-    // "poll": null,
-    // "captions": null,
-    // "tags": "{animation,futa,futanari,gif,hasumi,paizuri,png,wip}"
 }
 
 impl Post for PagePost {
@@ -199,64 +174,9 @@ impl Post for PagePost {
             files.push(file.clone());
         }
         files.append(&mut self.attachments);
-        files.retain(|pf| pf.path.is_some());
+        files.retain(PostFile::has_path);
         files
     }
-}
-
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
-pub struct DiscordPost {
-    // "id": "1196530932195266712",
-    // "author": {
-    //   "id": "1194345049450881087",
-    //   "flags": 0,
-    //   "avatar": null,
-    //   "banner": null,
-    //   "username": "myuto12345",
-    //   "global_name": "myuto",
-    //   "accent_color": null,
-    //   "banner_color": null,
-    //   "premium_type": 2,
-    //   "public_flags": 0,
-    //   "discriminator": "0",
-    //   "avatar_decoration_data": null
-    // },
-    // // "server": "1196504962411282491",
-    // "channel": "1196521501059469463",
-    // content: String, // "多くの投稿について未成年に見えるとして削除されてしまったので移行しました\nThe character was determined to be a minor and was removed.\n该角色被确定为未成年人，已被删除。",
-    // "added": "2024-04-03T00:16:27.719127",
-    // "published": "2024-01-15T19:06:44.705000",
-    // "edited": null,
-    // "embeds": [],
-    // "mentions": [],
-    attachments: Vec<PostFile>,
-    // "seq": 0
-}
-
-impl Post for DiscordPost {
-    fn files(&mut self) -> Vec<PostFile> {
-        let mut files = Vec::new();
-        files.append(&mut self.attachments);
-        files.retain(|pf| pf.path.is_some());
-        files
-    }
-}
-
-pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
-    sleep(API_DELAY).await;
-
-    let url = format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}");
-
-    let res = CLIENT.get(url)
-        .send().await
-        .map_err(|err| ApiError::Connect(err.to_string()))?;
-
-    let status = res.status();
-    if status != StatusCode::OK {
-        return Err(ApiError::Status(status));
-    }
-
-    res.json().await.map_err(|err| ApiError::Parser(err.to_string()))
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -267,4 +187,22 @@ pub struct DiscordChannel {
 
 pub async fn discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
     fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct DiscordPost {
+    attachments: Vec<PostFile>,
+}
+
+impl Post for DiscordPost {
+    fn files(&mut self) -> Vec<PostFile> {
+        self.attachments
+            .drain(..)
+            .filter(PostFile::has_path)
+            .collect()
+    }
+}
+
+pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
+    fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
 }

@@ -197,10 +197,10 @@ impl Profile {
 
                 loop {
                     let msg = format!(
-                        "Retrieving posts for discord/{server}/{} page #{}{}",
-                        channel.id,
-                        (offset + 150) / 150,
-                        if retries > 0 {
+                        "Retrieving posts for discord/{server}/{channel} page #{page}{retry}",
+                        channel = channel.id,
+                        page = (offset + 150) / 150,
+                        retry = if retries > 0 {
                             format!(" (Retry #{retries})")
                         } else {
                             String::new()
