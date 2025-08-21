@@ -81,8 +81,8 @@ Options:
   -d, --download-archive                         Log hashes, skip moved/deleted file download
   -m, --max-retries <MAX_RETRIES>                [default: 5]
   -r, --retry-delay <RETRY_DELAY>                [default: 1]
-      --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
-      --read-timeout <READ_TIMEOUT>              [default: 5]
+      --connect-timeout <CONNECT_TIMEOUT>        [default: 180]
+      --read-timeout <READ_TIMEOUT>              [default: ]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
   -s, --show-config                              Print configuration
