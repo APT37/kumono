@@ -25,6 +25,10 @@ pub struct PostFile {
     //
     // pub name: Option<String>,
     pub path: Option<String>,
+    #[serde(skip)]
+    pub service_override: Option<String>,
+    #[serde(skip)]
+    pub user_override: Option<String>,
 }
 
 impl PostFile {
@@ -32,10 +36,20 @@ impl PostFile {
         self.path.is_some()
     }
 
-    pub fn to_url(&self, target: &Target) -> String {
+    pub fn to_url_with_service(&self, target: &Target, service_override: Option<&str>) -> String {
+        let site = if let Some(service_str) = service_override {
+            if let Ok(service) = service_str.parse::<crate::target::Service>() {
+                service.site()
+            } else {
+                target.as_service().site()
+            }
+        } else {
+            target.as_service().site()
+        };
+
         format!(
             "https://{site}/data{path}",
-            site = target.as_service().site(),
+            site = site,
             path = self.path.as_ref().unwrap()
         )
     }
@@ -59,23 +73,123 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self, target: &Target) -> PathBuf {
+        // For favorites posts with service and user overrides, use the actual service/user path
+        // instead of the generic "favorites" path to avoid duplicate downloads
+        if let (Some(service_str), Some(user_str)) = (&self.service_override, &self.user_override) {
+            if let Ok(service) = service_str.parse::<crate::target::Service>() {
+                return PathBuf::from_iter([
+                    &crate::cli::ARGS.output_path,
+                    &service.to_string(),
+                    user_str,
+                    &self.to_name(),
+                ]);
+            }
+        }
+        
         target.to_pathbuf(Some(&self.to_name()))
     }
 
     pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
+        // For favorites posts with service and user overrides, use the actual service/user path
+        // instead of the generic "favorites" path to avoid duplicate downloads
+        if let (Some(service_str), Some(user_str)) = (&self.service_override, &self.user_override) {
+            if let Ok(service) = service_str.parse::<crate::target::Service>() {
+                return PathBuf::from_iter([
+                    &crate::cli::ARGS.output_path,
+                    &service.to_string(),
+                    user_str,
+                    &self.to_temp_name(),
+                ]);
+            }
+        }
+        
         target.to_pathbuf(Some(&self.to_temp_name()))
     }
 
     pub fn to_hash(&self) -> Option<String> {
-        Some(HASH_RE.captures(&self.to_name())?.name("hash")?.as_str().to_string())
+        let name = self.to_name();
+        HASH_RE.captures(&name)?.name("hash").map(|m| m.as_str().to_string())
+    }
+
+    pub fn to_archive_pathbuf(&self, target: &Target) -> PathBuf {
+        // For favorites posts with service and user overrides, use the actual service/user archive
+        // instead of the generic "favorites" archive to match with direct creator downloads
+        if let (Some(service_str), Some(user_str)) = (&self.service_override, &self.user_override) {
+            if let Ok(service) = service_str.parse::<crate::target::Service>() {
+                return PathBuf::from_iter([
+                    &crate::cli::ARGS.output_path,
+                    "db",
+                    &format!("{}+{}.txt", service.to_string(), user_str),
+                ]);
+            }
+        }
+        
+        target.to_archive_pathbuf()
+    }
+
+    pub fn load_archive(&self, target: &Target) -> Result<Vec<String>> {
+        let archive_path = self.to_archive_pathbuf(target);
+        
+        if !std::path::Path::new(&archive_path).exists() {
+            return Ok(Vec::new());
+        }
+        
+        let contents = std::fs::read_to_string(&archive_path)
+            .with_context(|| format!("Failed to read archive file: {}", archive_path.display()))?;
+        
+        Ok(contents.lines().map(str::to_string).collect())
+    }
+
+    pub fn is_in_archive(&self, target: &Target) -> Result<bool> {
+        let archive = self.load_archive(target)?;
+        if let Some(hash) = self.to_hash() {
+            Ok(archive.contains(&hash))
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub async fn write_to_archive(&self, target: &Target, hash: &str) -> Result<()> {
+        if !crate::cli::ARGS.download_archive {
+            return Ok(());
+        }
+        
+        use tokio::io::AsyncWriteExt;
+        let archive_path = self.to_archive_pathbuf(target);
+        
+        // Create the db directory if it doesn't exist
+        if let Some(parent) = archive_path.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        
+        let mut file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&archive_path).await
+            .with_context(|| format!("Failed to open archive file: {}", archive_path.display()))?;
+        
+        file.write_all(hash.as_bytes()).await
+            .with_context(|| format!("Failed to write to archive file: {}", archive_path.display()))?;
+        file.write_all(b"\n").await
+            .with_context(|| format!("Failed to write newline to archive file: {}", archive_path.display()))?;
+        
+        Ok(())
     }
 
     pub async fn open(&self, target: &Target) -> Result<File> {
+        let temp_path = self.to_temp_pathbuf(target);
+        
+        // Create parent directory if it doesn't exist
+        if let Some(parent) = temp_path.parent() {
+            fs::create_dir_all(parent).await
+                .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
+        }
+        
         File::options()
             .append(true)
             .create(true)
             .truncate(false)
-            .open(&self.to_temp_pathbuf(target)).await
+            .open(&temp_path).await
             .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
@@ -107,6 +221,16 @@ impl PostFile {
     pub async fn download(
         &self,
         target: &Target,
+        msg_tx: Sender<DownloadAction>
+    ) -> Result<DownloadAction> {
+        let service_override = self.service_override.as_deref();
+        self.download_with_service(target, service_override, msg_tx).await
+    }
+
+    pub async fn download_with_service(
+        &self,
+        target: &Target,
+        service_override: Option<&str>,
         mut msg_tx: Sender<DownloadAction>
     ) -> Result<DownloadAction> {
         msg_tx.send(DownloadAction::Start).await?;
@@ -115,7 +239,7 @@ impl PostFile {
             return Ok(DownloadAction::Skip(self.to_hash()));
         }
 
-        let rsize = self.remote_size(target, &mut msg_tx).await?;
+        let rsize = self.remote_size_with_service(target, service_override, &mut msg_tx).await?;
 
         let mut temp_file = self.open(target).await?;
 
@@ -141,7 +265,7 @@ impl PostFile {
                 break;
             }
 
-            if let Err(err) = self.download_range(&mut temp_file, target, csize, &mut msg_tx).await {
+            if let Err(err) = self.download_range_with_service(&mut temp_file, target, service_override, csize, &mut msg_tx).await {
                 let mut error = err.to_string();
                 if let Some(source) = err.source() {
                     error.push('\n');
@@ -170,7 +294,20 @@ impl PostFile {
                 let lhash = self.hash(target).await?;
                 if rhash == lhash {
                     self.r#move(target).await?;
-                    DownloadAction::Complete(Some(rhash))
+                    
+                    // For favorites, write to the per-file archive instead of letting progress bar handle it
+                    let hash_for_progress = match target {
+                        crate::target::Target::Favorites { .. } => {
+                            // Write to the service-specific archive file for this file
+                            if let Err(err) = self.write_to_archive(target, &rhash).await {
+                                return Err(err);
+                            }
+                            None // Don't let progress bar write to archive
+                        }
+                        _ => Some(rhash) // Let progress bar handle archive writing
+                    };
+                    
+                    DownloadAction::Complete(hash_for_progress)
                 } else {
                     self.delete(target).await?;
                     DownloadAction::Fail(
@@ -187,10 +324,11 @@ impl PostFile {
         )
     }
 
-    async fn download_range(
+    async fn download_range_with_service(
         &self,
         file: &mut File,
         target: &Target,
+        service_override: Option<&str>,
         start: u64,
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<()> {
@@ -198,7 +336,7 @@ impl PostFile {
             bail!("[{status}] download failed: {message} ({url})")
         }
 
-        let url = self.to_url(target);
+        let url = self.to_url_with_service(target, service_override);
 
         loop {
             let response = CLIENT.get(&url)
@@ -229,16 +367,17 @@ impl PostFile {
         }
     }
 
-    pub async fn remote_size(
+    pub async fn remote_size_with_service(
         &self,
         target: &Target,
+        service_override: Option<&str>,
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<u64> {
         fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
             bail!("[{status}] remote size determination failed: {message} ({url})")
         }
 
-        let url = self.to_url(target);
+        let url = self.to_url_with_service(target, service_override);
 
         loop {
             let response = CLIENT.head(&url).send().await?;

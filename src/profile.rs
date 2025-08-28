@@ -1,5 +1,5 @@
 use crate::{
-    api::{ self, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
+    api::{ self, DiscordChannel, DiscordPost, PagePost, FavoritesPost, Post, SinglePost },
     file::PostFile,
     http::CLIENT,
     pretty::{ self, n_fmt },
@@ -83,6 +83,11 @@ impl Profile {
                 profile.init_posts_standard(user, subtype).await?,
             Target::Discord { server, channel, .. } => {
                 profile.init_posts_discord(server, channel).await?;
+            }
+            Target::Favorites { fav_type, domain, .. } => {
+                if fav_type == "posts" {
+                    profile.init_posts_favorites(domain).await?;
+                }
             }
         }
 
@@ -231,6 +236,68 @@ impl Profile {
 
                 offset += 150;
             }
+        }
+
+        Ok(())
+    }
+
+    async fn init_posts_favorites(&mut self, domain: &str) -> Result<()> {
+        let (msg_tx, msg_rx) = mpsc::unbounded_channel::<String>();
+
+        thread::spawn(move || page_progress(msg_rx));
+
+        let mut offset = 0;
+        let mut seen_posts = std::collections::HashSet::new();
+
+        loop {
+            let mut retries = 0;
+
+            let posts: Vec<FavoritesPost>;
+
+            loop {
+                let msg = format!(
+                    "Retrieving favorite posts page #{}{}",
+                    (offset + 50) / 50,
+                    if retries > 0 {
+                        format!(" (Retry #{retries})")
+                    } else {
+                        String::new()
+                    }
+                );
+
+                msg_tx.send(msg)?;
+
+                match api::favorites_posts(offset, domain).await {
+                    Ok(p) => {
+                        posts = p;
+                        break;
+                    }
+                    Err(err) => {
+                        err.interpret(retries).await?;
+                        retries += 1;
+                    }
+                }
+            }
+
+            if posts.is_empty() {
+                break;
+            }
+
+            let mut new_posts_count = 0;
+            for post in posts {
+                let post_key = format!("{}:{}:{}", post.service, post.user, post.id);
+                if !seen_posts.contains(&post_key) {
+                    seen_posts.insert(post_key);
+                    self.posts.push(Box::new(post));
+                    new_posts_count += 1;
+                }
+            }
+
+            if new_posts_count == 0 {
+                break;
+            }
+
+            offset += 50;
         }
 
         Ok(())

@@ -68,6 +68,12 @@ pub struct Args {
     #[arg(short, long, help = "Print configuration")]
     pub show_config: bool,
 
+    #[arg(short = 'U', long = "username", help = "Username for authentication")]
+    pub username: Option<String>,
+
+    #[arg(short = 'P', long = "password", help = "Password for authentication")]
+    pub password: Option<String>,
+
     // #[arg(short, long, help = "Print verbose output")]
     // pub verbose: bool,
 }

@@ -5,6 +5,7 @@ use std::{ path::PathBuf, process::exit, sync::Arc, thread };
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod api;
+mod auth;
 mod cli;
 mod ext;
 mod file;
@@ -19,6 +20,16 @@ mod target;
 async fn main() -> Result<()> {
     if ARGS.show_config {
         eprintln!("{}", *ARGS);
+    }
+
+    // Check if any URL requires authentication (favorites URLs)
+    let needs_auth = ARGS.username.is_some() || ARGS.password.is_some() || 
+                    ARGS.urls.iter().any(|url| url.contains("/account/favorites"));
+    
+    if needs_auth {
+        let domains = extract_domains_from_urls(&ARGS.urls);
+        let domain_refs: Vec<&str> = domains.iter().map(|s| s.as_str()).collect();
+        auth::authenticate(&domain_refs).await?;
     }
 
     if ARGS.download_archive {
@@ -78,11 +89,23 @@ async fn main() -> Result<()> {
             if ARGS.download_archive {
                 total = files.len();
 
-                let archive = target.archive();
-
-                files.retain(|f| {
-                    if let Some(hash) = f.to_hash() { !archive.contains(&hash) } else { true }
-                });
+                // For favorites, use per-file archive checking since files may belong to different creators
+                match &target {
+                    Target::Favorites { .. } => {
+                        files.retain(|f| {
+                            match f.is_in_archive(&target) {
+                                Ok(in_archive) => !in_archive,
+                                Err(_) => true, // If archive check fails, download the file
+                            }
+                        });
+                    }
+                    _ => {
+                        let archive = target.archive();
+                        files.retain(|f| {
+                            if let Some(hash) = f.to_hash() { !archive.contains(&hash) } else { true }
+                        });
+                    }
+                }
 
                 let left = files.len();
 
@@ -100,9 +123,23 @@ async fn main() -> Result<()> {
 
             let left = files.len();
 
-            fs::create_dir_all(target.to_pathbuf(None)).await?;
+            // For favorites, directories will be created on a per-file basis since files
+            // may go to different service/user directories. For other targets, create
+            // the base directory.
+            match &target {
+                Target::Favorites { .. } => {
+                    // Directory creation handled in PostFile::open() for favorites
+                }
+                _ => {
+                    fs::create_dir_all(target.to_pathbuf(None)).await?;
+                }
+            }
 
-            let archive_path = target.to_archive_pathbuf();
+            // For favorites, don't pass an archive path since files handle their own archives
+            let archive_path = match &target {
+                Target::Favorites { .. } => None,
+                _ => Some(target.to_archive_pathbuf()),
+            };
 
             let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
 
@@ -157,6 +194,33 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn extract_domains_from_urls(urls: &[String]) -> Vec<String> {
+    use crate::auth::VALID_HOSTNAMES;
+    use url::Url;
+    
+    let mut domains = std::collections::HashSet::new();
+    
+    for url_str in urls {
+        // Try parsing as-is first, then with https:// prefix
+        let parsed_url = Url::parse(url_str)
+            .or_else(|_| Url::parse(&format!("https://{}", url_str)));
+            
+        if let Ok(url) = parsed_url {
+            if let Some(hostname) = url.host_str() {
+                if VALID_HOSTNAMES.contains(&hostname) {
+                    domains.insert(hostname.to_string());
+                } else {
+                    eprintln!("Warning: Skipping unrecognized hostname: {}", hostname);
+                }
+            }
+        } else {
+            eprintln!("Warning: Invalid URL format: {}", url_str);
+        }
+    }
+    
+    domains.into_iter().collect()
 }
 
 fn files_left_msg(filter: &str, total: usize, left: usize) {

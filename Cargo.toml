@@ -21,6 +21,8 @@ num-format = "0.4.*"
 pretty-duration = "0.1.*"
 regex = "1.11.*"
 reqwest = { version = "0.12.*", default-features = false, features = [
+    "cookies",
+    "gzip",
     "http2",
     "json",
     "rustls-tls",
@@ -33,10 +35,12 @@ thiserror = "2.0.*"
 tokio = { version = "1.47.*", default-features = false, features = [
     "macros",
     "rt-multi-thread",
+    "fs",
 ] }
 serde_json = "1.0.*"
 strum = "0.27.*"
 strum_macros = "0.27.*"
+url = "2.5.*"
 
 [profile.dev]
 opt-level = 0

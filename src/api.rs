@@ -206,3 +206,47 @@ impl Post for DiscordPost {
 pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
     fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
 }
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FavoritesPost {
+    pub id: String,
+    pub user: String,
+    pub service: String,
+    pub title: Option<String>,
+    pub published: Option<String>,
+    pub file: Option<PostFile>,
+    pub attachments: Vec<PostFile>,
+}
+
+impl Post for FavoritesPost {
+    fn files(&mut self) -> Vec<PostFile> {
+        let mut files = Vec::new();
+        if let Some(mut file) = self.file.clone() {
+            file.service_override = Some(self.service.clone());
+            file.user_override = Some(self.user.clone());
+            files.push(file);
+        }
+        for mut attachment in self.attachments.clone() {
+            attachment.service_override = Some(self.service.clone());
+            attachment.user_override = Some(self.user.clone());
+            files.push(attachment);
+        }
+        files.retain(PostFile::has_path);
+        files
+    }
+}
+
+pub async fn favorites_posts(offset: usize, domain: &str) -> Result<Vec<FavoritesPost>, ApiError> {
+    fetch(&format!("https://{}/api/v1/account/favorites?type=post&o={offset}", domain)).await
+}
+
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct FavoriteCreator {
+    pub id: String,
+    pub service: String,
+}
+
+pub async fn favorites_creators(domain: &str) -> Result<Vec<FavoriteCreator>, ApiError> {
+    fetch(&format!("https://{}/api/v1/account/favorites?type=artist", domain)).await
+}

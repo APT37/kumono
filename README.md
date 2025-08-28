@@ -81,11 +81,13 @@ Options:
   -d, --download-archive                         Log hashes, skip moved/deleted file download
   -m, --max-retries <MAX_RETRIES>                [default: 5]
   -r, --retry-delay <RETRY_DELAY>                [default: 1]
-      --connect-timeout <CONNECT_TIMEOUT>        [default: 180]
-      --read-timeout <READ_TIMEOUT>              [default: ]
+      --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
+      --read-timeout <READ_TIMEOUT>              [default: 180]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
   -s, --show-config                              Print configuration
+  -U, --username <USERNAME>                      Username for authentication
+  -P, --password <PASSWORD>                      Password for authentication
   -h, --help                                     Print help
   -V, --version                                  Print version
 ```
@@ -113,6 +115,12 @@ kumono https://kemono.st/discord/server/1196504962411282491/1196521501059469463
 
 # multiple targets
 kumono https://coomer.st/onlyfans/user/belledelphine https://kemono.cr/discord/server/1196504962411282491
+
+# all favorite artists
+kumono --username xy --password xyz --download-archive https://coomer.st/account/favorites/artists
+
+# all favorite posts
+kumono --username xy --password xyz --download-archive https://coomer.st/account/favorites/artists
 ```
 
 ### Extension Selection

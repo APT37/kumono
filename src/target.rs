@@ -19,21 +19,28 @@ pub enum Target {
         channel: Option<String>,
         archive: Vec<String>,
     },
+    Favorites {
+        fav_type: String, // "posts" or "artists"
+        domain: String,
+        archive: Vec<String>,
+    },
 }
 
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
-            Target::Creator { service, user, subtype, .. } =>
+            Target::Creator { service, user, subtype, .. } => {
                 format!("{service}/{user}{}", match subtype {
                     SubType::Post(p) => format!("/{p}"),
                     _ => String::new(),
-                }),
+                })
+            },
             Target::Discord { server, channel, .. } =>
                 format!(
                     "discord/{server}{}",
                     channel.as_ref().map_or(String::new(), |c| format!("/{c}"))
                 ),
+            Target::Favorites { fav_type, domain, .. } => format!("favorites-{}-{}", fav_type, domain),
         })
     }
 }
@@ -90,6 +97,12 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     ).unwrap()
 });
 
+static RE_FAVORITES: LazyRegex = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:https://)?(?<domain>coomer\.(?:su|st|party)|kemono\.(?:su|cr|party))/account/favorites/(?<type>artists?|posts?)$"
+    ).unwrap()
+});
+
 async fn linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
     let mut accounts = Vec::new();
 
@@ -109,6 +122,7 @@ impl Target {
         match self {
             Target::Creator { service, .. } => *service,
             Target::Discord { .. } => Service::Discord,
+            Target::Favorites { .. } => panic!("Favorites don't have a single service - use service_override on individual files"),
         }
     }
 
@@ -202,11 +216,46 @@ impl Target {
                 channel: extract(&caps, "channel"),
                 archive,
             }
+        } else if RE_FAVORITES.is_match(url) {
+            let caps = capture(&RE_FAVORITES);
+            let fav_type = extract_unwrap(&caps, "type");
+            let domain = extract_unwrap(&caps, "domain");
+            
+            if fav_type.starts_with("artist") {
+                // For favorite artists, we need to fetch the list and create individual targets
+                let favorite_artists = crate::api::favorites_creators(&domain).await?;
+                eprintln!("Fetched {} favorites.", favorite_artists.len());
+                let mut targets = Vec::new();
+                
+                for artist in favorite_artists {
+                    let mut target = Target::Creator {
+                        service: artist.service.parse()?,
+                        user: artist.id,
+                        subtype: SubType::None,
+                        archive: Vec::new(),
+                    };
+                    
+                    if ARGS.download_archive {
+                        target.read_archive()?;
+                    }
+                    
+                    targets.push(target);
+                }
+                
+                return Ok(targets);
+            } else {
+                Target::Favorites {
+                    fav_type: "posts".to_string(),
+                    domain: domain.to_string(),
+                    archive,
+                }
+            }
         } else {
             bail!("Invalid URL: {url}");
         };
 
-        if ARGS.download_archive {
+        // For favorites, don't read a central archive since files manage their own archives
+        if ARGS.download_archive && !matches!(target, Target::Favorites { .. }) {
             target.read_archive()?;
         }
 
@@ -217,6 +266,7 @@ impl Target {
         match self {
             Target::Creator { user, .. } => user.to_string(),
             Target::Discord { server, .. } => server.to_string(),
+            Target::Favorites { domain, .. } => domain.to_string(),
         }
     }
 
@@ -242,29 +292,39 @@ impl Target {
 
     fn add_hashes(&mut self, mut hashes: Vec<String>) {
         match self {
-            Target::Creator { archive, .. } | Target::Discord { archive, .. } =>
+            Target::Creator { archive, .. } | Target::Discord { archive, .. } | Target::Favorites { archive, .. } =>
                 archive.append(&mut hashes),
         }
     }
 
     pub fn archive(&self) -> &Vec<String> {
         match &self {
-            Target::Creator { archive, .. } | Target::Discord { archive, .. } => archive,
+            Target::Creator { archive, .. } | Target::Discord { archive, .. } | Target::Favorites { archive, .. } => archive,
         }
     }
 
     pub fn to_archive_pathbuf(&self) -> PathBuf {
+        let service_name = match self {
+            Target::Favorites { .. } => "favorites".to_string(),
+            _ => self.as_service().to_string(),
+        };
+        
         PathBuf::from_iter([
             &ARGS.output_path,
             "db",
-            &format!("{}+{}.txt", self.as_service(), self.user()),
+            &format!("{}+{}.txt", service_name, self.user()),
         ])
     }
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
+        let service_name = match self {
+            Target::Favorites { .. } => "favorites".to_string(),
+            _ => self.as_service().to_string(),
+        };
+        
         PathBuf::from_iter([
             &ARGS.output_path,
-            &self.as_service().to_string(),
+            &service_name,
             &self.user(),
             file.unwrap_or_default(),
         ])

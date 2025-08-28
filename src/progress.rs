@@ -29,7 +29,7 @@ struct Stats {
 }
 
 impl Stats {
-    pub fn new(files: u64, archive_path: &PathBuf) -> Self {
+    pub fn new(files: u64, archive_path: Option<&PathBuf>) -> Self {
         Self {
             queued: files,
             waiting: 0,
@@ -42,8 +42,8 @@ impl Stats {
 
             errors: Vec::new(),
 
-            archive: if ARGS.download_archive {
-                Some(Self::open_archive(archive_path))
+            archive: if ARGS.download_archive && archive_path.is_some() {
+                Some(Self::open_archive(archive_path.unwrap()))
             } else {
                 None
             },
@@ -153,7 +153,7 @@ pub fn downloads_failed() -> bool {
 #[allow(clippy::needless_pass_by_value)]
 pub fn bar(
     files: u64,
-    archive: PathBuf,
+    archive: Option<PathBuf>,
     mut msg_rx: Receiver<DownloadAction>,
     last_target: bool
 ) -> Result<()> {
@@ -167,7 +167,7 @@ pub fn bar(
 
     bar.enable_steady_tick(Duration::from_millis(200));
 
-    let mut stats = Stats::new(files, &archive);
+    let mut stats = Stats::new(files, archive.as_ref());
 
     while let Some(state) = msg_rx.blocking_recv() {
         if stats.update(state) {
