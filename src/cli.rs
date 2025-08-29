@@ -25,6 +25,21 @@ pub struct Args {
     #[arg(short, long, help = "List of available file extensions (per target)")]
     pub list_extensions: bool,
 
+    // #[arg(short = 'U', long = "user", help = "Authentication username")]
+    // pub username: Option<String>,
+
+    // #[arg(short = 'P', long = "pass", help = "Authentication password")]
+    // pub password: Option<String>,
+
+    // #[arg(short = 'C', long = "creds", help = "Credential file")]
+    // pub credentials: Option<String>,
+
+    // #[arg(short = 'J', long = "pass", help = "Authentication password")]
+    // pub cookie-jar: Option<String>,
+
+    // #[arg(short = 'B, long = "pass", help = "Load cookies from browser")]
+    // pub cookies-from-browser: Option<String>,
+
     #[arg(
         short,
         long,
