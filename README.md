@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> Since I'm currently very occupied with university, development will basically be on halt for the time being.
+>
+> I can still make time here and there to apply small patches, for example bug fixes from pull requests - but the implementation of new features is out of my hands for the time being.
+>
+> Hopefully you can forgive me for temporarily neglecting private projects for the purpose of pursuing education.
+
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
 This is beta software. Please be aware that functionality might change or break at any time before the 1.0.0 release.
