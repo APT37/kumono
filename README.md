@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> Since I'm currently very occupied with university, development will basically be on halt for the time being.
+> Since I'm currently very occupied with university, active development is on halt for the time being.
 >
 > I can still make time here and there to apply small patches, for example bug fixes from pull requests - but the implementation of new features is out of my hands for the time being.
 >
