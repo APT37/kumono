@@ -1,0 +1,30 @@
+name: Auto‑merge Dependabot
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]' &&
+        github.event.pull_request.base.ref == 'main' &&
+        github.event.pull_request.head.sha == github.event.check_suite.head_sha &&
+        github.event.check_suite.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Auto‑approve Dependabot PR
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto‑merge
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --auto --merge --admin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
