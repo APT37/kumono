@@ -2,7 +2,7 @@
 > 
 > Since I'm currently very occupied with university, active development is on halt for the time being.
 >
-> I can still make time here and there to apply small patches, for example bug fixes from pull requests - but the implementation of new features is out of my hands for the time being.
+> I can still make time here and there to apply small patches, for example bug fixes from pull requests - but the implementation of new features is out of my hands right now.
 >
 > Hopefully you can forgive me for temporarily neglecting private projects for the purpose of pursuing education.
 
@@ -116,10 +116,10 @@ kumono https://coomer.st/onlyfans/user/belledelphine?o=50
 kumono https://coomer.st/onlyfans/user/belledelphine/post/1099631527
 
 # whole server
-kumono https://kemono.st/discord/server/1196504962411282491
+kumono https://kemono.cr/discord/server/1196504962411282491
 
 # single channel
-kumono https://kemono.st/discord/server/1196504962411282491/1196521501059469463
+kumono https://kemono.cr/discord/server/1196504962411282491/1196521501059469463
 
 # multiple targets
 kumono https://coomer.st/onlyfans/user/belledelphine https://kemono.cr/discord/server/1196504962411282491
