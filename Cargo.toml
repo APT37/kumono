@@ -19,7 +19,7 @@ indicatif = "0.18.*"
 itertools = "0.14.*"
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
-regex = "1.11.*"
+regex = "1.12.*"
 reqwest = { version = "0.12.*", default-features = false, features = [
     "http2",
     "json",
