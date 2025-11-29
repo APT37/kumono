@@ -37,6 +37,8 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 <!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
 <!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
 
+*For GUI options, see [VoxDroid/KemonoDownloader][vdkd] and [Yuvi9587/Kemono-Downloader][yuvikd]. I haven't found the time to compare them to `kumono` yet.*
+
 <!-- link definitions -->
 
 [kmn]: https://github.com/APT37/kumono
@@ -53,3 +55,6 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 
 [favs]: https://github.com/APT37/kumono/issues/5
 [dms-etc]: https://github.com/APT37/kumono/issues/3
+
+[vdkd]: https://github.com/VoxDroid/KemonoDownloader
+[yuvikd]: https://github.com/Yuvi9587/Kemono-Downloader
