@@ -154,7 +154,7 @@ This project does not condone or support piracy in any form. We respect the inte
 
 [discussions]: https://github.com/APT37/kumono/discussions/categories/support
 
-[paru]: https://github.com/Morganamilo/paru
+[paru]: https://github.com/Morganamilo/paru#readme
 
 [kmn-aur]: https://aur.archlinux.org/packages/kumono
 [kmn-bin-aur]: https://aur.archlinux.org/packages/kumono-bin
