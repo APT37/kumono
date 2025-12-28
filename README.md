@@ -170,8 +170,8 @@ This project does not condone or support piracy in any form. We respect the inte
 [release-date]: https://img.shields.io/github/release-date/APT37/kumono?logo=github&label=Latest%20Release
 [latest-release]: https://github.com/APT37/kumono/releases/latest
 
-[linux-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux&color=darkgreen
-[windows-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows&color=darkblue
+[linux-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20x64&color=darkgreen
+[windows-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20x64&color=darkblue
 
 [windows-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono.exe
 [linux-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono
