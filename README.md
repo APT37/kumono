@@ -180,11 +180,11 @@ This project does not condone or support piracy in any form. We respect the inte
 [macos-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20ARM&color=beige
 
 [linux-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-x64
-[linux-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-arm
-[windows-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/umono-windows-x64.exe
-[windows-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-arm.exe
+[linux-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-arm64
+[windows-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-x64.exe
+[windows-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-arm64.exe
 [macos-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-x64
-[macos-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-arm
+[macos-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-arm64
 
 [crate-ver]: https://img.shields.io/crates/v/kumono?logo=rust&label=Crates.io&color=red
 [crate-url]: https://crates.io/crates/kumono
