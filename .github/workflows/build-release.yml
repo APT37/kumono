@@ -20,7 +20,7 @@ jobs:
           artifact_name: target/release/kumono
           asset_name: target/release/kumono-linux-x64
         - name: linux-arm
-          os: ubuntu-latest
+          os: ubuntu-24.04-arm
           artifact_name: target/release/kumono
           asset_name: target/release/kumono-linux-arm
         - name: windows-x64
