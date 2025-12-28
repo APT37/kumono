@@ -22,7 +22,7 @@ jobs:
         - name: linux-arm
           os: ubuntu-24.04-arm
           artifact_name: target/release/kumono
-          asset_name: target/release/kumono-linux-arm
+          asset_name: target/release/kumono-linux-arm64
         - name: windows-x64
           os: windows-latest
           artifact_name: target/release/kumono.exe
@@ -30,7 +30,7 @@ jobs:
         - name: windows-arm
           os: windows-11-arm
           artifact_name: target/release/kumono.exe
-          asset_name: target/release/kumono-windows-arm.exe
+          asset_name: target/release/kumono-windows-arm64.exe
         - name: macos-x64
           os: macos-15-intel
           artifact_name: target/release/kumono
@@ -38,7 +38,7 @@ jobs:
         - name: macos-arm
           os: macos-latest
           artifact_name: target/release/kumono
-          asset_name: target/release/kumono-macos-arm
+          asset_name: target/release/kumono-macos-arm64
 
     steps:
     - uses: actions/checkout@v2
