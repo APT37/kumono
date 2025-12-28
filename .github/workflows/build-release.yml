@@ -12,7 +12,7 @@ jobs:
     environment: default
     strategy:
       matrix:
-        name: [linux, linux-arm, windows, macos-intel, macos-arm]
+        name: [windows, linux, linux-arm, macos-intel, macos-arm]
 
         include:
           - name: windows
