@@ -12,24 +12,15 @@ jobs:
     environment: default
     strategy:
       matrix:
-        name: [windows, linux, linux-arm, macos-intel, macos-arm]
+        name: [windows, linux]
 
         include:
           - name: windows
             os: windows-latest
-            artifact_name: target/release/kumono-windows-x64.exe
+            artifact_name: target/release/kumono.exe
           - name: linux
             os: ubuntu-latest
-            artifact_name: target/release/kumono-linux-x64
-          - name: linux-arm
-            os: ubuntu-latest
-            artifact_name: target/release/kumono-linux-arm
-          - name: macos-intel
-            os: macos-15-intel
-            artifact_name: target/release/kumono-macos-x64
-          - name: macos-arm
-            os: macos-latest
-            artifact_name: target/release/kumono-macos-arm
+            artifact_name: target/release/kumono
 
     steps:
       - uses: actions/checkout@v2
