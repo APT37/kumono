@@ -41,7 +41,9 @@ You need an AUR helper like [paru][paru] to install one of these packages.
 
 Binaries are built for every release.
 
-[![][linux-badge]][linux-dl] [![][windows-badge]][windows-dl]
+[![][linux-x64-badge]][linux-x64-dl] [![][windows-x64-badge]][windows-x64-dl] [![][macos-x64-badge]][macos-x64-dl]
+
+[![][linux-arm-badge]][linux-arm-dl] [![][windows-arm-badge]][windows-arm-dl] [![][macos-arm-badge]][macos-arm-dl]
 
 ### Source Code
 
@@ -170,11 +172,19 @@ This project does not condone or support piracy in any form. We respect the inte
 [release-date]: https://img.shields.io/github/release-date/APT37/kumono?logo=github&label=Latest%20Release
 [latest-release]: https://github.com/APT37/kumono/releases/latest
 
-[linux-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20x64&color=darkgreen
-[windows-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20x64&color=darkblue
+[linux-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20x64&color=darkgreen
+[linux-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20ARM&color=green
+[windows-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20x64&color=darkblue
+[windows-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20ARM&color=blue
+[macos-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20x64&color=lightgrey
+[macos-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20ARM&color=beige
 
-[windows-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono.exe
-[linux-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono
+[linux-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-x64
+[linux-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-arm
+[windows-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/umono-windows-x64.exe
+[windows-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-arm.exe
+[macos-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-x64
+[macos-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-arm
 
 [crate-ver]: https://img.shields.io/crates/v/kumono?logo=rust&label=Crates.io&color=red
 [crate-url]: https://crates.io/crates/kumono
