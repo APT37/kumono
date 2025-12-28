@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{ Parser, arg };
+use clap::Parser;
 use itertools::Itertools;
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
