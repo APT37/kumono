@@ -38,6 +38,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ${{ matrix.artifact_name }}
+          fail_on_unmatched_files: true
+          overwrite_files: false
           draft: false
 
   publish:
