@@ -12,14 +12,16 @@
 
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
+[![][build-status]][build-runs] [![][release-date]][latest-release]
+
 For a comparison with other tools, see [features](FEATURES.md).
 
 Support is provided in the [discussions][discussions] section.
 
 - [Installation](#installation)
-  - [AUR Packages](#aur-packages)
-  - [Pre-built Binaries](#pre-built-binaries)
-  - [Source Code](#source-code)
+  - [Binaries](#binaries)
+  - [Packages](#packages)
+  - [Cargo](#cargo)
 - [Command Line](#command-line)
   - [Available Options](#available-options)
   - [Target Selection](#target-selection)
@@ -29,23 +31,21 @@ Support is provided in the [discussions][discussions] section.
 
 ## Installation
 
-### AUR Packages
+### Binaries
 
-You need an AUR helper like [paru][paru] to install one of these packages.
+[![][windows-x64-badge]][windows-x64-dl] [![][windows-arm-badge]][windows-arm-dl]
+
+[![][macos-x64-badge]][macos-x64-dl] [![][macos-arm-badge]][macos-arm-dl]
+
+[![][linux-x64-badge]][linux-x64-dl] [![][linux-arm-badge]][linux-arm-dl]
+
+### Packages
+
+You need an AUR helper like [**paru**][paru] to install one of these packages.
 
 [![][kmn-aur-ver]][kmn-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
-### Pre-built Binaries
-
-[![][build-status]][build-runs] [![][release-date]][latest-release]
-
-Binaries are built for every release.
-
-[![][linux-x64-badge]][linux-x64-dl] [![][windows-x64-badge]][windows-x64-dl] [![][macos-x64-badge]][macos-x64-dl]
-
-[![][linux-arm-badge]][linux-arm-dl] [![][windows-arm-badge]][windows-arm-dl] [![][macos-arm-badge]][macos-arm-dl]
-
-### Source Code
+### Cargo
 
 [![][crate-ver]][crate-url] [![][crate-deps]][crate-deps-url]
 
@@ -73,7 +73,7 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
 ### Available Options
 
-Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine`
+Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine` (the default value for `{output-path}` is `kumono`).
 
 ```
 Media ripper for coomer and kemono
@@ -156,7 +156,7 @@ This project does not condone or support piracy in any form. We respect the inte
 
 [discussions]: https://github.com/APT37/kumono/discussions/categories/support
 
-[paru]: https://github.com/Morganamilo/paru#readme
+[paru]: https://github.com/Morganamilo/paru#description
 
 [kmn-aur]: https://aur.archlinux.org/packages/kumono
 [kmn-bin-aur]: https://aur.archlinux.org/packages/kumono-bin
@@ -172,19 +172,19 @@ This project does not condone or support piracy in any form. We respect the inte
 [release-date]: https://img.shields.io/github/release-date/APT37/kumono?logo=github&label=Latest%20Release
 [latest-release]: https://github.com/APT37/kumono/releases/latest
 
-[linux-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20x64&color=darkgreen
-[linux-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20ARM&color=green
-[windows-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20x64&color=darkblue
-[windows-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20ARM&color=blue
-[macos-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20x64&color=lightgrey
-[macos-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20ARM&color=beige
+[windows-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20x64&color=cornflowerblue
+[windows-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Windows%20ARM&color=cornflowerblue
+[macos-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20x64&color=lightslategray
+[macos-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=macOS%20ARM&color=lightslategray
+[linux-x64-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20x64&color=forestgreen
+[linux-arm-badge]: https://img.shields.io/github/v/tag/APT37/kumono?logo=github&label=Linux%20ARM&color=forestgreen
 
-[linux-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-x64
-[linux-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-arm64
 [windows-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-x64.exe
 [windows-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-windows-arm64.exe
 [macos-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-x64
 [macos-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-macos-arm64
+[linux-x64-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-x64
+[linux-arm-dl]: https://github.com/APT37/kumono/releases/latest/download/kumono-linux-arm64
 
 [crate-ver]: https://img.shields.io/crates/v/kumono?logo=rust&label=Crates.io&color=red
 [crate-url]: https://crates.io/crates/kumono
