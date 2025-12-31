@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    name: Release for ${{ matrix.name }}
+    name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     environment: default
     strategy:
