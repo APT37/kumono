@@ -173,7 +173,7 @@ impl Profile {
     async fn init_posts_discord(&mut self, server: &str, channel: &Option<String>) -> Result<()> {
         let channels = if let Some(channel) = channel {
             vec![DiscordChannel {
-                id: channel.to_string(),
+                id: channel.clone(),
             }]
         } else {
             api::discord_server(server).await?

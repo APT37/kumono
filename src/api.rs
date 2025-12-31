@@ -58,14 +58,14 @@ impl ApiError {
         }
 
         match self {
-            ApiError::Connect(err) => wait_or_bail(retries, ARGS.retry_delay, err).await?,
+            ApiError::Connect(err) | ApiError::Parser(err) =>
+                wait_or_bail(retries, ARGS.retry_delay, err).await?,
             ApiError::Status(status) =>
                 match status.as_u16() {
                     403 | 429 | 502..=504 =>
                         wait_or_bail(retries, ARGS.rate_limit_backoff, &status.to_string()).await?,
                     _ => wait_or_bail(retries, ARGS.retry_delay, &status.to_string()).await?,
                 }
-            ApiError::Parser(err) => wait_or_bail(retries, ARGS.retry_delay, err).await?,
         }
 
         Ok(())

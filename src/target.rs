@@ -215,8 +215,8 @@ impl Target {
 
     fn user(&self) -> String {
         match self {
-            Target::Creator { user, .. } => user.to_string(),
-            Target::Discord { server, .. } => server.to_string(),
+            Target::Creator { user, .. } => user.clone(),
+            Target::Discord { server, .. } => server.clone(),
         }
     }
 
