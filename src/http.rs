@@ -1,25 +1,26 @@
 use crate::cli::ARGS;
-use reqwest::{ Client, ClientBuilder, Proxy, header::{ HeaderMap, HeaderValue } };
-use std::{ process, sync::LazyLock };
+use anyhow::Result;
+use reqwest::{ Client, ClientBuilder, Proxy, header::HeaderMap };
+use std::{ process::exit, sync::LazyLock };
 
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    let mut headers = HeaderMap::new();
-    headers.insert("Accept", HeaderValue::from_static("Text/CSS"));
+    fn build_client() -> Result<Client> {
+        let mut client = ClientBuilder::new()
+            .default_headers(HeaderMap::from_iter([("accept".parse()?, "text/css".parse()?)]))
+            .user_agent(format!("kumono {}", env!("CARGO_PKG_VERSION")))
+            .connect_timeout(ARGS.connect_timeout)
+            .timeout(ARGS.read_timeout)
+            .https_only(true);
 
-    let mut client = ClientBuilder::new()
-        .default_headers(headers)
-        .connect_timeout(ARGS.connect_timeout)
-        .timeout(ARGS.read_timeout)
-        .https_only(true);
+        if let Some(proxy) = &ARGS.proxy {
+            client = client.proxy(Proxy::all(proxy)?);
+        }
 
-    if let Some(proxy) = &ARGS.proxy {
-        client = client.proxy(
-            Proxy::all(proxy).unwrap_or_else(|err| {
-                eprintln!("{err}");
-                process::exit(1);
-            })
-        );
+        Ok(client.build()?)
     }
 
-    client.build().unwrap()
+    build_client().unwrap_or_else(|err| {
+        eprintln!("{err}");
+        exit(1);
+    })
 });
