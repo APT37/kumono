@@ -1,7 +1,3 @@
-> [!WARNING]
-> 
-> This is beta software. Please be aware that functionality might change or break at any time before the 1.0.0 release.
-
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
 [![][build-status]][build-runs] [![][release-date]][latest-release]
