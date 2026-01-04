@@ -1,6 +1,6 @@
 [package]
 name = "kumono"
-version = "0.56.4"
+version = "0.56.5"
 edition = "2024"
 description = "Media ripper for coomer and kemono"
 #homepage = "https://github.com/APT37/kumono"
@@ -22,6 +22,7 @@ pretty-duration = "0.1.*"
 regex = "1.12.*"
 reqwest = { version = "0.13.*", default-features = false, features = [
     "charset",
+    "gzip",
     "http2",
     "json",
     "rustls",

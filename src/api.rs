@@ -75,62 +75,6 @@ impl ApiError {
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SinglePost {
     post: SinglePostInner,
-    // "attachments": [
-    //   {
-    //     "server": "https://n4.coomer.su",
-    //     "name": "0hpxn0h31vg5siq0xtqsl_source.mp4",
-    //     "extension": ".mp4",
-    //     "name_extension": ".mp4",
-    //     "stem": "7d1c604743b8bf30c7c5a260ac487ae1dea4ef133cc767ed0c5989c981d56823",
-    //     "path": "/7d/1c/7d1c604743b8bf30c7c5a260ac487ae1dea4ef133cc767ed0c5989c981d56823.mp4"
-    //   }
-    // ],
-    // "previews": [],
-    // "videos": [
-    //   {
-    //     "index": 0,
-    //     "path": "/7d/1c/7d1c604743b8bf30c7c5a260ac487ae1dea4ef133cc767ed0c5989c981d56823.mp4",
-    //     "name": "0hpxn0h31vg5siq0xtqsl_source.mp4",
-    //     "extension": ".mp4",
-    //     "name_extension": ".mp4",
-    //     "server": "https://n4.coomer.su"
-    //   }
-    // ],
-    //     "props": {
-    //       "flagged": "reason-other",
-    //       "revisions": [
-    //         [
-    //           0,
-    //           {
-    //             "id": "1080444052",
-    //             "user": "belledelphine",
-    //             "service": "onlyfans",
-    //             "title": "silly lil dancing videos i did ☺️",
-    //             "content": "silly lil dancing videos i did ☺️",
-    //             "embed": {},
-    //             "shared_file": false,
-    //             "added": "2024-05-26T03:04:55.971848",
-    //             "published": "2024-05-21T17:19:18",
-    //             "edited": null,
-    //             "file": {
-    //               "name": "0hpxn0h31vg5siq0xtqsl_source.mp4",
-    //               "path": "/7d/1c/7d1c604743b8bf30c7c5a260ac487ae1dea4ef133cc767ed0c5989c981d56823.mp4"
-    //             },
-    //             "attachments": [
-    //               {
-    //                 "name": "0hpxn3cnhcj83v5zikmko_source.mp4",
-    //                 "path": "/d0/06/d006cabcf8c68eb15b028b11736b6f902c6205bf3034f6c3f43b906126bc8c7f.mp4"
-    //               }
-    //             ],
-    //             "poll": null,
-    //             "captions": null,
-    //             "tags": null,
-    //             "next": "1075685308",
-    //             "prev": "1082132822",
-    //           }
-    //         ]
-    //       ]
-    //     },
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
