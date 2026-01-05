@@ -19,6 +19,9 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-512)")]
     threads: usize,
 
+    // #[arg(short, long, help = "List of target URLs")]
+    // pub input_file: Option<String>,
+
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
     pub output_path: String,
 
@@ -34,7 +37,7 @@ pub struct Args {
     // #[arg(short = 'C', long = "creds", help = "Credential file")]
     // pub credentials: Option<String>,
 
-    // #[arg(short = 'J', long = "pass", help = "Authentication password")]
+    // #[arg(short = 'J', long = "pass", help = "Cookies.txt location")]
     // pub cookie-jar: Option<String>,
 
     // #[arg(short = 'B, long = "pass", help = "Load cookies from browser")]
@@ -70,7 +73,7 @@ pub struct Args {
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
-    // TODO retry on timeout, lower timeout to 60~120 seconds
+    // TODO retry a few times (or infinitely?) on timeout, lower timeout to 60~120 seconds
     #[arg(long, value_parser = duration_from_secs, default_value = "180")]
     pub read_timeout: Duration,
 
@@ -80,10 +83,10 @@ pub struct Args {
     #[arg(long, value_parser = duration_from_secs, default_value = "5")]
     pub server_error_delay: Duration,
 
-    #[arg(short, long, help = "Print configuration")]
+    #[arg(short, long, help = "Print configuration values")]
     pub show_config: bool,
 
-    // #[arg(short, long, help = "Print verbose output")]
+    // #[arg(short, long, help = "Print all error messages")]
     // pub verbose: bool,
 }
 
