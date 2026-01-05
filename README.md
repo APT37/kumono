@@ -85,7 +85,7 @@ Options:
       --read-timeout <READ_TIMEOUT>              [default: 180]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
-  -s, --show-config                              Print configuration
+  -s, --show-config                              Print configuration values
   -h, --help                                     Print help
   -V, --version                                  Print version
 ```
