@@ -1,7 +1,17 @@
-use crate::{ cli::ARGS, pretty::n_fmt };
+use crate::{ cli::ARGUMENTS, pretty::n_fmt };
 use anyhow::Result;
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
-use std::{ fmt, fs::File, io::Write, path::PathBuf, process::exit, time::Duration };
+use itertools::Itertools;
+use std::{
+    collections::HashMap,
+    fmt::{ self, Display, Formatter },
+    fs::File,
+    io::Write,
+    path::PathBuf,
+    process::exit,
+    sync::atomic::{ AtomicBool, Ordering::Relaxed },
+    time::Duration,
+};
 use tokio::sync::mpsc::Receiver;
 
 #[derive(Clone)]
@@ -11,9 +21,9 @@ pub enum DownloadAction {
     Continue,
     ReportSize(u64),
     ReportLegacyHashSkip(String),
-    Skip(Option<String>),
-    Fail(String),
-    Complete(Option<String>),
+    Skip(Option<String>, Option<String>),
+    Fail(String, Option<String>),
+    Complete(Option<String>, Option<String>),
 }
 
 struct Stats {
@@ -23,13 +33,14 @@ struct Stats {
     complete: u64,
     skipped: u64,
     failed: u64,
-    dl_size: u64,
+    dl_bytes: u64,
     errors: Vec<String>,
     archive: Option<File>,
+    files_by_type: HashMap<String, usize>,
 }
 
 impl Stats {
-    pub fn new(files: u64, archive_path: &PathBuf) -> Self {
+    pub fn new(files: u64, archive_path: &PathBuf, files_by_type: HashMap<String, usize>) -> Self {
         Self {
             queued: files,
             waiting: 0,
@@ -38,15 +49,17 @@ impl Stats {
             skipped: 0,
             failed: 0,
 
-            dl_size: 0,
+            dl_bytes: 0,
 
             errors: Vec::new(),
 
-            archive: if ARGS.download_archive {
+            archive: if ARGUMENTS.download_archive {
                 Some(Self::open_archive(archive_path))
             } else {
                 None
             },
+
+            files_by_type,
         }
     }
 
@@ -64,7 +77,7 @@ impl Stats {
 
     fn write_to_archive(&mut self, hash: Option<String>) {
         if
-            ARGS.download_archive &&
+            ARGUMENTS.download_archive &&
             let Some(hash) = hash &&
             let Some(ref mut archive) = self.archive &&
             let Err(err) = archive.write_all((hash + "\n").as_bytes())
@@ -74,7 +87,6 @@ impl Stats {
         }
     }
 
-    #[allow(clippy::needless_pass_by_value)]
     fn update(&mut self, download_state: DownloadAction) -> bool {
         match download_state {
             DownloadAction::Start => {
@@ -93,7 +105,7 @@ impl Stats {
                 false
             }
             DownloadAction::ReportSize(size) => {
-                self.dl_size += size;
+                self.dl_bytes += size;
                 false
             }
             DownloadAction::ReportLegacyHashSkip(name) => {
@@ -103,59 +115,80 @@ impl Stats {
                 self.errors.push(format!("skipped hash verification for legacy file: {name}"));
                 false
             }
-            DownloadAction::Skip(hash) => {
+            DownloadAction::Skip(hash, extension) => {
                 self.active -= 1;
                 self.skipped += 1;
+                self.detract_one_from_file_counter(extension);
                 self.write_to_archive(hash);
                 true
             }
-            DownloadAction::Fail(err) => {
+            DownloadAction::Fail(err, extension) => {
                 self.active -= 1;
                 self.failed += 1;
+                self.detract_one_from_file_counter(extension);
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
                 self.errors.push(err);
                 true
             }
-            DownloadAction::Complete(hash) => {
+            DownloadAction::Complete(hash, extension) => {
                 self.active -= 1;
                 self.complete += 1;
+                self.detract_one_from_file_counter(extension);
                 self.write_to_archive(hash);
                 true
             }
         }
     }
+
+    fn detract_one_from_file_counter(&mut self, extension: Option<String>) {
+        let key = extension.unwrap_or("unknown".to_string());
+
+        let value = self.files_by_type.get(&key).unwrap();
+
+        self.files_by_type.insert(key, value - 1);
+    }
 }
 
-impl fmt::Display for Stats {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Stats {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "downloaded {} / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed",
-            HumanBytes(self.dl_size),
+            "downloaded {} / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed{}",
+            HumanBytes(self.dl_bytes),
             n_fmt(self.queued),
             n_fmt(self.waiting),
             n_fmt(self.active),
             n_fmt(self.complete),
             n_fmt(self.skipped),
-            n_fmt(self.failed)
+            n_fmt(self.failed),
+            {
+                let mut buffer = Vec::with_capacity(self.files_by_type.len());
+
+                buffer.push(
+                    format!("\nleft: {} files", n_fmt(self.queued + self.waiting + self.active))
+                );
+
+                for (key, value) in self.files_by_type.iter().sorted() {
+                    buffer.push(format!("{key}: {}", n_fmt(*value as u64)));
+                }
+
+                buffer.join(" / ")
+            }
         )
     }
 }
 
-static mut DOWNLOADS_FAILED: bool = false;
-
-pub fn downloads_failed() -> bool {
-    unsafe { DOWNLOADS_FAILED }
-}
+pub static DOWNLOADS_FAILED: AtomicBool = AtomicBool::new(false);
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn bar(
     files: u64,
     archive: PathBuf,
     mut msg_rx: Receiver<DownloadAction>,
-    last_target: bool
+    last_target: bool,
+    files_by_type: HashMap<String, usize>
 ) -> Result<()> {
     let bar = ProgressBar::new(files);
 
@@ -167,7 +200,7 @@ pub fn bar(
 
     bar.enable_steady_tick(Duration::from_millis(200));
 
-    let mut stats = Stats::new(files, &archive);
+    let mut stats = Stats::new(files, &archive, files_by_type);
 
     while let Some(state) = msg_rx.blocking_recv() {
         if stats.update(state) {
@@ -187,10 +220,8 @@ pub fn bar(
         eprintln!("\n");
     }
 
-    if stats.failed > 0 {
-        unsafe {
-            DOWNLOADS_FAILED = true;
-        }
+    if stats.failed != 0 {
+        DOWNLOADS_FAILED.store(true, Relaxed);
     }
 
     Ok(())

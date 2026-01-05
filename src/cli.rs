@@ -5,7 +5,7 @@ use pretty_duration::pretty_duration;
 use serde::Deserialize;
 use std::{ fmt, num, sync::LazyLock, time::Duration };
 
-pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+pub static ARGUMENTS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 #[derive(Deserialize, Parser)]
 #[clap(about, version, arg_required_else_help = true)]

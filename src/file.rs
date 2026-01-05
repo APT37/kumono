@@ -1,4 +1,4 @@
-use crate::{ cli::ARGS, http::CLIENT, progress::DownloadAction, target::Target };
+use crate::{ cli::ARGUMENTS, http::CLIENT, progress::DownloadAction, target::Target };
 use anyhow::{ Context, Result, bail };
 use futures_util::StreamExt;
 use regex::Regex;
@@ -112,7 +112,7 @@ impl PostFile {
         msg_tx.send(DownloadAction::Start).await?;
 
         if self.exists(target).await? {
-            return Ok(DownloadAction::Skip(self.to_hash()));
+            return Ok(DownloadAction::Skip(self.to_hash(), self.to_extension(target)));
         }
 
         let rsize = self.remote_size(target, &mut msg_tx).await?;
@@ -132,7 +132,8 @@ impl PostFile {
                         format!(
                             "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
                             self.to_name()
-                        )
+                        ),
+                        self.to_extension(target)
                     )
                 );
             }
@@ -147,7 +148,7 @@ impl PostFile {
                     error.push('\n');
                     error.push_str(&source.to_string());
                 }
-                return Ok(DownloadAction::Fail(error));
+                return Ok(DownloadAction::Fail(error, self.to_extension(target)));
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
@@ -160,7 +161,7 @@ impl PostFile {
                         error.push('\n');
                         error.push_str(&source.to_string());
                     }
-                    return Ok(DownloadAction::Fail(error));
+                    return Ok(DownloadAction::Fail(error, self.to_extension(target)));
                 }
             }
         }
@@ -170,19 +171,20 @@ impl PostFile {
                 let lhash = self.hash(target).await?;
                 if rhash == lhash {
                     self.r#move(target).await?;
-                    DownloadAction::Complete(Some(rhash))
+                    DownloadAction::Complete(Some(rhash), self.to_extension(target))
                 } else {
                     self.delete(target).await?;
                     DownloadAction::Fail(
                         format!(
                             "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}",
                             self.to_name()
-                        )
+                        ),
+                        self.to_extension(target)
                     )
                 }
             } else {
                 msg_tx.send(DownloadAction::ReportLegacyHashSkip(self.to_name())).await?;
-                DownloadAction::Complete(None)
+                DownloadAction::Complete(None, self.to_extension(target))
             }
         )
     }
@@ -220,9 +222,9 @@ impl PostFile {
             } else if status == StatusCode::NOT_FOUND {
                 download_error(status, "no file", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                wait(ARGS.rate_limit_backoff, msg_tx).await?;
+                wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
-                wait(ARGS.server_error_delay, msg_tx).await?;
+                wait(ARGUMENTS.server_error_delay, msg_tx).await?;
             } else {
                 download_error(status, "unexpected status code", &url)?;
             }
@@ -255,9 +257,9 @@ impl PostFile {
             } else if status == StatusCode::NOT_FOUND {
                 size_error(status, "file not found", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                wait(ARGS.rate_limit_backoff, msg_tx).await?;
+                wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
-                wait(ARGS.server_error_delay, msg_tx).await?;
+                wait(ARGUMENTS.server_error_delay, msg_tx).await?;
             } else {
                 size_error(status, "unexpected status code", &url)?;
             }

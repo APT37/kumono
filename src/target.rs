@@ -1,8 +1,14 @@
-use crate::{ cli::ARGS, http::CLIENT };
+use crate::{ cli::ARGUMENTS, http::CLIENT };
 use anyhow::{ Context, Result, bail };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
-use std::{ fmt, fs::File, io::{ BufRead, BufReader, Read }, path::PathBuf, sync::LazyLock };
+use std::{
+    fmt::{ self, Display, Formatter },
+    fs::File,
+    io::{ BufRead, BufReader, Read },
+    path::PathBuf,
+    sync::LazyLock,
+};
 use strum_macros::{ Display, EnumString };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -20,8 +26,8 @@ pub enum Target {
     },
 }
 
-impl fmt::Display for Target {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Target {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
             Target::Creator { service, user, subtype, .. } =>
                 format!("{service}/{user}{}", match subtype {
@@ -44,17 +50,16 @@ pub enum SubType {
     None,
 }
 
-#[allow(unused)]
 #[derive(Debug, Clone, Deserialize)]
 struct Info {
     id: String, // "5564244",
-    name: String, // "theobrobine",
+    // name: String, // "theobrobine",
     service: String, // "patreon",
-    indexed: String, // "2020-09-30T06:13:38.348472",
-    updated: String, // "2025-05-30T14:07:16.596525",
-    public_id: Option<String>, // "theobrobine",
-    relation_id: Option<u64>, // 8,
-    has_chats: Option<bool>, // false
+    // indexed: String, // "2020-09-30T06:13:38.348472",
+    // updated: String, // "2025-05-30T14:07:16.596525",
+    // public_id: Option<String>, // "theobrobine",
+    // relation_id: Option<u64>, // 8,
+    // has_chats: Option<bool>, // false
 }
 
 type LazyRegex = LazyLock<Regex>;
@@ -114,7 +119,7 @@ impl Target {
     pub async fn parse_file() -> Result<Vec<Target>> {
         let mut targets = Vec::new();
 
-        if let Some(path) = &ARGS.input_file {
+        if let Some(path) = &ARGUMENTS.input_file {
             let file = File::open(path)?;
 
             let reader = BufReader::new(file);
@@ -135,7 +140,7 @@ impl Target {
     pub async fn parse_args() -> Vec<Target> {
         let mut targets = Vec::new();
 
-        for url in &ARGS.urls {
+        for url in &ARGUMENTS.urls {
             match Target::from_url(url.strip_suffix('/').unwrap_or(url)).await {
                 Ok(mut target) => targets.append(&mut target),
                 Err(err) => eprintln!("{err}"),
@@ -178,7 +183,7 @@ impl Target {
                     }
                 };
 
-                if ARGS.download_archive {
+                if ARGUMENTS.download_archive {
                     target.read_archive()?;
                 }
 
@@ -225,11 +230,11 @@ impl Target {
             bail!("Invalid URL: {url}");
         };
 
-        if ARGS.download_archive {
+        if ARGUMENTS.download_archive {
             target.read_archive()?;
         }
 
-        Ok(vec![target])
+        Ok(Vec::from_iter([target]))
     }
 
     fn user(&self) -> String {
@@ -275,7 +280,7 @@ impl Target {
 
     pub fn to_archive_pathbuf(&self) -> PathBuf {
         PathBuf::from_iter([
-            &ARGS.output_path,
+            &ARGUMENTS.output_path,
             "db",
             &format!("{}+{}.txt", self.as_service(), self.user()),
         ])
@@ -283,7 +288,7 @@ impl Target {
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
         PathBuf::from_iter([
-            &ARGS.output_path,
+            &ARGUMENTS.output_path,
             &self.as_service().to_string(),
             &self.user(),
             file.unwrap_or_default(),

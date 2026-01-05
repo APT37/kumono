@@ -79,8 +79,9 @@ impl Profile {
         };
 
         match target {
-            Target::Creator { user, subtype, .. } =>
-                profile.init_posts_standard(user, subtype).await?,
+            Target::Creator { user, subtype, .. } => {
+                profile.init_posts_standard(user, subtype).await?;
+            }
             Target::Discord { server, channel, .. } => {
                 profile.init_posts_discord(server, channel).await?;
             }

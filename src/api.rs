@@ -1,4 +1,4 @@
-use crate::{ file::PostFile, http::CLIENT, target::Target, cli::ARGS };
+use crate::{ file::PostFile, http::CLIENT, target::Target, cli::ARGUMENTS };
 use anyhow::{ bail, Result };
 use regex::Regex;
 use reqwest::StatusCode;
@@ -48,7 +48,7 @@ pub enum ApiError {
 impl ApiError {
     pub async fn interpret(&self, retries: usize) -> Result<()> {
         async fn wait_or_bail(retries: usize, duration: Duration, error: &str) -> Result<()> {
-            if retries < ARGS.max_retries {
+            if retries < ARGUMENTS.max_retries {
                 sleep(duration).await;
             } else {
                 bail!("{error}");
@@ -59,12 +59,16 @@ impl ApiError {
 
         match self {
             ApiError::Connect(err) | ApiError::Parser(err) =>
-                wait_or_bail(retries, ARGS.retry_delay, err).await?,
+                wait_or_bail(retries, ARGUMENTS.retry_delay, err).await?,
             ApiError::Status(status) =>
                 match status.as_u16() {
                     403 | 429 | 502..=504 =>
-                        wait_or_bail(retries, ARGS.rate_limit_backoff, &status.to_string()).await?,
-                    _ => wait_or_bail(retries, ARGS.retry_delay, &status.to_string()).await?,
+                        wait_or_bail(
+                            retries,
+                            ARGUMENTS.rate_limit_backoff,
+                            &status.to_string()
+                        ).await?,
+                    _ => wait_or_bail(retries, ARGUMENTS.retry_delay, &status.to_string()).await?,
                 }
         }
 

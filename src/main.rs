@@ -1,8 +1,14 @@
-use crate::{ cli::ARGS, profile::Profile, progress::DownloadAction, target::Target };
+use crate::{ cli::ARGUMENTS, profile::Profile, progress::DownloadAction, target::Target };
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
-use std::{ path::PathBuf, process::exit, sync::Arc, thread };
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    process::exit,
+    sync::{ Arc, atomic::Ordering::Relaxed },
+    thread,
+};
 use strum_macros::Display;
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
@@ -19,12 +25,12 @@ mod target;
 #[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
-    if ARGS.show_config {
-        eprintln!("{}", *ARGS);
+    if ARGUMENTS.show_config {
+        eprintln!("{}", *ARGUMENTS);
     }
 
-    if ARGS.download_archive {
-        fs::create_dir_all(PathBuf::from_iter([&ARGS.output_path, "db"])).await?;
+    if ARGUMENTS.download_archive {
+        fs::create_dir_all(PathBuf::from_iter([&ARGUMENTS.output_path, "db"])).await?;
     }
 
     let mut targets = Target::parse_args().await;
@@ -50,7 +56,7 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        if ARGS.list_extensions {
+        if ARGUMENTS.list_extensions {
             ext::list(files, &target);
 
             if i != total_targets - 1 {
@@ -62,14 +68,14 @@ async fn main() -> Result<()> {
 
         let mut total = files.len();
 
-        if let Some(exts) = ARGS.included() {
+        if let Some(exts) = ARGUMENTS.included() {
             files.retain(|file| {
                 file.to_extension(&target).is_some() &&
                     exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
             });
 
             files_left_msg(Filter::Inclusive, total, files.len());
-        } else if let Some(exts) = ARGS.excluded() {
+        } else if let Some(exts) = ARGUMENTS.excluded() {
             files.retain(|file| {
                 file.to_extension(&target).is_none() ||
                     !exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
@@ -85,7 +91,7 @@ async fn main() -> Result<()> {
             continue;
         }
 
-        if ARGS.download_archive {
+        if ARGUMENTS.download_archive {
             total = files.len();
 
             let archive = target.archive();
@@ -109,13 +115,23 @@ async fn main() -> Result<()> {
 
         let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
 
+        let mut files_by_type = HashMap::new();
+
+        for file in &files {
+            let extension = file.to_extension(&target).unwrap_or("unknown".to_string());
+
+            let count = files_by_type.get(&extension).copied().unwrap_or_default();
+
+            files_by_type.insert(extension, count + 1);
+        }
+
         thread::spawn(move || {
-            progress::bar(left as u64, archive_path, msg_rx, i == total_targets - 1)
+            progress::bar(left as u64, archive_path, msg_rx, i == total_targets - 1, files_by_type)
         });
 
         let mut tasks = Vec::new();
 
-        let sem = Arc::new(Semaphore::new(ARGS.threads()));
+        let sem = Arc::new(Semaphore::new(ARGUMENTS.threads()));
 
         for file in files {
             let permit = sem.clone().acquire_owned().await;
@@ -126,7 +142,6 @@ async fn main() -> Result<()> {
 
             tasks.push(
                 task::spawn(async move {
-                    #[allow(clippy::no_effect_underscore_binding)]
                     let _permit = permit;
 
                     let result = file.download(&target, msg_tx.clone()).await;
@@ -142,7 +157,7 @@ async fn main() -> Result<()> {
                                 error.push_str(&source.to_string());
                             }
                             msg_tx
-                                .send(DownloadAction::Fail(error)).await
+                                .send(DownloadAction::Fail(error, file.to_extension(&target))).await
                                 .expect("send state to progress bar");
                         }
                     }
@@ -156,7 +171,7 @@ async fn main() -> Result<()> {
         sleep(Duration::from_millis((left / 10).try_into().unwrap_or_default())).await;
     }
 
-    if progress::downloads_failed() {
+    if progress::DOWNLOADS_FAILED.load(Relaxed) {
         exit(1);
     }
 
