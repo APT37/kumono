@@ -74,6 +74,7 @@ Arguments:
 Options:
   -p, --proxy <PROXY>                            Proxy URL (scheme://host:port[/path])
   -t, --threads <THREADS>                        Simultaneous downloads (1-512) [default: 256]
+  -f, --input-file <INPUT_FILE>                  List of target URLs
   -o, --output-path <OUTPUT_PATH>                Base directory for downloads [default: kumono]
   -l, --list-extensions                          List of available file extensions (per target)
   -i, --include <INCLUDE>                        File extensions to include (comma separated)

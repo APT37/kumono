@@ -1,10 +1,9 @@
 use crate::{ cli::ARGS, http::CLIENT };
-use anyhow::{ bail, Context, Result };
-use itertools::Itertools;
+use anyhow::{ Context, Result, bail };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
+use std::{ fmt, fs::File, io::{ BufRead, BufReader, Read }, path::PathBuf, sync::LazyLock };
 use strum_macros::{ Display, EnumString };
-use std::{ fmt, fs::File, io::Read, path::PathBuf, process::exit, sync::LazyLock };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Target {
@@ -112,7 +111,28 @@ impl Target {
         }
     }
 
-    pub async fn from_args() -> Vec<Target> {
+    pub async fn parse_file() -> Result<Vec<Target>> {
+        let mut targets = Vec::new();
+
+        if let Some(path) = &ARGS.input_file {
+            let file = File::open(path)?;
+
+            let reader = BufReader::new(file);
+
+            for line in reader.lines() {
+                let line = &line?;
+
+                match Target::from_url(line.strip_suffix('/').unwrap_or(line)).await {
+                    Ok(mut target) => targets.append(&mut target),
+                    Err(err) => eprintln!("{err}"),
+                }
+            }
+        }
+
+        Ok(targets)
+    }
+
+    pub async fn parse_args() -> Vec<Target> {
         let mut targets = Vec::new();
 
         for url in &ARGS.urls {
@@ -122,16 +142,11 @@ impl Target {
             }
         }
 
-        if targets.is_empty() {
-            eprintln!("No valid target URLs were provided.");
-            exit(1);
-        }
-
-        targets.into_iter().unique().collect()
+        targets
     }
 
     async fn from_url(url: &str) -> Result<Vec<Self>> {
-        let capture = |re: &Regex| { re.captures(url).expect("get captures") };
+        let capture = |re: &Regex| re.captures(url).expect("get captures");
         let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
         let extract_unwrap = |caps: &Captures, name: &str| {
             extract(caps, name).expect("extract values from captures")
@@ -149,7 +164,11 @@ impl Target {
 
             for info in linked {
                 let mut target = if info.service == "discord" {
-                    Target::Discord { server: info.id, channel: None, archive: Vec::new() }
+                    Target::Discord {
+                        server: info.id,
+                        channel: None,
+                        archive: Vec::new(),
+                    }
                 } else {
                     Target::Creator {
                         service: info.service.parse()?,
@@ -242,8 +261,9 @@ impl Target {
 
     fn add_hashes(&mut self, mut hashes: Vec<String>) {
         match self {
-            Target::Creator { archive, .. } | Target::Discord { archive, .. } =>
-                archive.append(&mut hashes),
+            Target::Creator { archive, .. } | Target::Discord { archive, .. } => {
+                archive.append(&mut hashes);
+            }
         }
     }
 

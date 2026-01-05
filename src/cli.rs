@@ -19,8 +19,8 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-512)")]
     threads: usize,
 
-    // #[arg(short, long, help = "List of target URLs")]
-    // pub input_file: Option<String>,
+    #[arg(short = 'f', long, help = "List of target URLs")]
+    pub input_file: Option<String>,
 
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
     pub output_path: String,
@@ -42,7 +42,6 @@ pub struct Args {
 
     // #[arg(short = 'B, long = "pass", help = "Load cookies from browser")]
     // pub cookies-from-browser: Option<String>,
-
     #[arg(
         short,
         long,
@@ -85,7 +84,6 @@ pub struct Args {
 
     #[arg(short, long, help = "Print configuration values")]
     pub show_config: bool,
-
     // #[arg(short, long, help = "Print all error messages")]
     // pub verbose: bool,
 }

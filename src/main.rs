@@ -1,8 +1,9 @@
 use crate::{ cli::ARGS, profile::Profile, progress::DownloadAction, target::Target };
 use anyhow::Result;
 use futures::future::join_all;
-use strum_macros::Display;
+use itertools::Itertools;
 use std::{ path::PathBuf, process::exit, sync::Arc, thread };
+use strum_macros::Display;
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
 mod api;
@@ -15,6 +16,7 @@ mod profile;
 mod progress;
 mod target;
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
     if ARGS.show_config {
@@ -25,7 +27,16 @@ async fn main() -> Result<()> {
         fs::create_dir_all(PathBuf::from_iter([&ARGS.output_path, "db"])).await?;
     }
 
-    let targets = Target::from_args().await;
+    let mut targets = Target::parse_args().await;
+
+    targets.append(&mut Target::parse_file().await?);
+
+    targets = targets.into_iter().unique().collect();
+
+    if targets.is_empty() {
+        eprintln!("No valid target URLs were provided.");
+        exit(1);
+    }
 
     let total_targets = targets.len();
 
@@ -98,9 +109,9 @@ async fn main() -> Result<()> {
 
         let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
 
-        thread::spawn(move ||
+        thread::spawn(move || {
             progress::bar(left as u64, archive_path, msg_rx, i == total_targets - 1)
-        );
+        });
 
         let mut tasks = Vec::new();
 
