@@ -13,11 +13,11 @@ pub fn list(files: HashSet<PostFile>, target: &Target) {
         }
     }
 
-    if no_ext > 0 {
-        eprintln!("{no_ext} files do not have an extension");
+    if !extensions.is_empty() {
+        eprintln!("{exts}", exts = extensions.into_iter().collect::<Vec<_>>().join(","));
     }
 
-    if !extensions.is_empty() {
-        eprintln!("{}", extensions.into_iter().collect::<Vec<_>>().join(","));
+    if no_ext > 0 {
+        eprintln!("{no_ext} files do not have an extension");
     }
 }

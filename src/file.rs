@@ -76,31 +76,42 @@ impl PostFile {
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
+            .with_context(|| {
+                format!(
+                    "Failed to open temporary file: {temp_name}",
+                    temp_name = self.to_temp_name()
+                )
+            })
     }
 
     /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
             ::try_async_digest(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("hash tempfile: {}", self.to_temp_name()))
+            .with_context(|| {
+                format!("hash tempfile: {temp_name}", temp_name = self.to_temp_name())
+            })
     }
 
     pub async fn exists(&self, target: &Target) -> Result<bool> {
-        fs::try_exists(self.to_pathbuf(target)).await.with_context(||
-            format!("check if file exists: {}", self.to_temp_name())
-        )
+        fs::try_exists(self.to_pathbuf(target)).await.with_context(|| {
+            format!("check if file exists: {temp_name}", temp_name = self.to_temp_name())
+        })
     }
 
     pub async fn r#move(&self, target: &Target) -> Result<()> {
         fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
-            format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.to_name())
+            format!(
+                "rename tempfile to file: {temp_name} -> {name}",
+                temp_name = self.to_temp_name(),
+                name = self.to_name()
+            )
         })
     }
 
     pub async fn delete(&self, target: &Target) -> Result<()> {
         fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(||
-            format!("delete tempfile: {}", self.to_temp_name())
+            format!("delete tempfile: {name}", name = self.to_temp_name())
         )
     }
 
@@ -130,8 +141,8 @@ impl PostFile {
                 return Ok(
                     DownloadAction::Fail(
                         format!(
-                            "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
-                            self.to_name()
+                            "size mismatch (deleted): {name} [l: {csize} | r: {rsize}]",
+                            name = self.to_name()
                         ),
                         self.to_extension(target)
                     )
@@ -176,8 +187,8 @@ impl PostFile {
                     self.delete(target).await?;
                     DownloadAction::Fail(
                         format!(
-                            "hash mismatch (deleted): {}\n| remote: {rhash}\n| local:  {lhash}",
-                            self.to_name()
+                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n| local:  {lhash}",
+                            name = self.to_name()
                         ),
                         self.to_extension(target)
                     )

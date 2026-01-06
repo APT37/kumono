@@ -1,17 +1,17 @@
-use crate::{ file::PostFile, http::CLIENT, target::Target, cli::ARGUMENTS };
-use anyhow::{ bail, Result };
+use crate::{ cli::ARGUMENTS, file::PostFile, http::CLIENT, target::Target };
+use anyhow::{ Result, bail };
 use regex::Regex;
 use reqwest::StatusCode;
-use serde::{ de::DeserializeOwned, Deserialize };
+use serde::{ Deserialize, de::DeserializeOwned };
 use std::sync::LazyLock;
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
 const API_DELAY: Duration = Duration::from_millis(100);
 
-static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(||
+static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
-);
+});
 
 async fn fetch<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
     sleep(API_DELAY).await;
@@ -58,16 +58,18 @@ impl ApiError {
         }
 
         match self {
-            ApiError::Connect(err) | ApiError::Parser(err) =>
-                wait_or_bail(retries, ARGUMENTS.retry_delay, err).await?,
+            ApiError::Connect(err) | ApiError::Parser(err) => {
+                wait_or_bail(retries, ARGUMENTS.retry_delay, err).await?;
+            }
             ApiError::Status(status) =>
                 match status.as_u16() {
-                    403 | 429 | 502..=504 =>
+                    403 | 429 | 502..=504 => {
                         wait_or_bail(
                             retries,
                             ARGUMENTS.rate_limit_backoff,
                             &status.to_string()
-                        ).await?,
+                        ).await?;
+                    }
                     _ => wait_or_bail(retries, ARGUMENTS.retry_delay, &status.to_string()).await?,
                 }
         }

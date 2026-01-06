@@ -7,7 +7,7 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     fn build_client() -> Result<Client> {
         let mut client = ClientBuilder::new()
             .default_headers(HeaderMap::from_iter([("accept".parse()?, "text/css".parse()?)]))
-            .user_agent(format!("kumono {}", env!("CARGO_PKG_VERSION")))
+            .user_agent(format!("kumono {version}", version = env!("CARGO_PKG_VERSION")))
             .connect_timeout(ARGUMENTS.connect_timeout)
             .timeout(ARGUMENTS.read_timeout)
             .https_only(true);

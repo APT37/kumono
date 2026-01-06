@@ -70,7 +70,7 @@ impl Stats {
             .truncate(false)
             .open(path)
             .unwrap_or_else(|err| {
-                eprintln!("failed to open archive file {}: {err}", path.display());
+                eprintln!("failed to open archive file {path}: {err}", path = path.display());
                 exit(1);
             })
     }
@@ -145,9 +145,9 @@ impl Stats {
     fn detract_one_from_file_counter(&mut self, extension: Option<String>) {
         let key = extension.unwrap_or("unknown".to_string());
 
-        let value = self.files_by_type.get(&key).unwrap();
+        let val = self.files_by_type.get(&key).unwrap();
 
-        self.files_by_type.insert(key, value - 1);
+        self.files_by_type.insert(key, val - 1);
     }
 }
 
@@ -171,7 +171,7 @@ impl Display for Stats {
                 );
 
                 for (key, value) in self.files_by_type.iter().sorted() {
-                    buffer.push(format!("{key}: {}", n_fmt(*value as u64)));
+                    buffer.push(format!("{key}: {value}", value = n_fmt(*value as u64)));
                 }
 
                 buffer.join(" / ")
@@ -208,7 +208,7 @@ pub fn bar(
         }
 
         if !stats.errors.is_empty() {
-            bar.set_message(format!("\n{}", stats.errors.join("\n")));
+            bar.set_message(format!("\n{errors}", errors = stats.errors.join("\n")));
         }
 
         bar.set_prefix(stats.to_string());

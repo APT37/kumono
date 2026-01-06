@@ -27,10 +27,10 @@ impl fmt::Display for Profile {
         {
             write!(
                 f,
-                "#{}: {} has {}",
-                n_fmt(self.target_id as u64),
-                self.target,
-                pretty::files(self.files.len())
+                "#{number}: {target} has {posts}",
+                number = n_fmt(self.target_id as u64),
+                target = self.target,
+                posts = pretty::files(self.files.len())
             )
         } else {
             let files = if self.post_count == 0 {
@@ -39,16 +39,16 @@ impl fmt::Display for Profile {
                 match self.files.len() {
                     0 => ", but no files",
                     1 => ", containing 1 file",
-                    n => &format!(", containing {} files", n_fmt(n as u64)),
+                    n => &format!(", containing {number} files", number = n_fmt(n as u64)),
                 }
             };
 
             write!(
                 f,
-                "#{}: {} has {}{files}",
-                n_fmt(self.target_id as u64),
-                self.target,
-                pretty::posts(self.post_count)
+                "#{number}: {target} has {posts}{files}",
+                number = n_fmt(self.target_id as u64),
+                target = self.target,
+                posts = pretty::posts(self.post_count)
             )
         }
     }
@@ -104,9 +104,9 @@ impl Profile {
         if let SubType::Post(post) = subtype {
             let post: SinglePost = CLIENT.get(
                 format!(
-                    "https://{}/api/v1/{}/user/{user}/post/{post}",
-                    self.target.as_service().site(),
-                    self.target.as_service()
+                    "https://{site}/api/v1/{service}/user/{user}/post/{post}",
+                    site = self.target.as_service().site(),
+                    service = self.target.as_service()
                 )
             )
                 .send().await?
@@ -127,10 +127,10 @@ impl Profile {
 
                 loop {
                     let msg = format!(
-                        "Retrieving posts for {} page #{}{}",
-                        self.target,
-                        (offset + 50) / 50,
-                        if retries > 0 {
+                        "Retrieving posts for {target} page #{page}{try}",
+                        target = self.target,
+                        page = (offset + 50) / 50,
+                        r#try = if retries > 0 {
                             format!(" (Retry #{retries})")
                         } else {
                             String::new()

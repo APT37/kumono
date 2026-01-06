@@ -30,14 +30,18 @@ impl Display for Target {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", match self {
             Target::Creator { service, user, subtype, .. } =>
-                format!("{service}/{user}{}", match subtype {
-                    SubType::Post(p) => format!("/{p}"),
-                    _ => String::new(),
-                }),
+                format!(
+                    "{service}/{user}{post}",
+                    post = if let SubType::Post(p) = subtype {
+                        format!("/{p}")
+                    } else {
+                        String::new()
+                    }
+                ),
             Target::Discord { server, channel, .. } =>
                 format!(
-                    "discord/{server}{}",
-                    channel.as_ref().map_or(String::new(), |c| format!("/{c}"))
+                    "discord/{server}{channel}",
+                    channel = channel.as_ref().map_or(String::new(), |c| format!("/{c}"))
                 ),
         })
     }
@@ -97,11 +101,14 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
 async fn linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
     let mut accounts = Vec::new();
 
-    let url = format!("https://{}/api/v1/{service}/user/{user}/profile", service.site());
+    let url = format!("https://{site}/api/v1/{service}/user/{user}/profile", site = service.site());
     let account: Info = CLIENT.get(url).send().await?.json().await?;
     accounts.push(account);
 
-    let linked_url = format!("https://{}/api/v1/{service}/user/{user}/links", service.site());
+    let linked_url = format!(
+        "https://{site}/api/v1/{service}/user/{user}/links",
+        site = service.site()
+    );
     let mut linked_accounts: Vec<Info> = CLIENT.get(linked_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
 
@@ -282,7 +289,7 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             "db",
-            &format!("{}+{}.txt", self.as_service(), self.user()),
+            &format!("{service}+{user}.txt", service = self.as_service(), user = self.user()),
         ])
     }
 

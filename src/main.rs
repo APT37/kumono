@@ -71,16 +71,14 @@ async fn main() -> Result<()> {
         if let Some(exts) = ARGUMENTS.included() {
             files.retain(|file| {
                 file.to_extension(&target).is_some() &&
-                    exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
+                    exts.contains(&file.to_extension(&target).unwrap())
             });
-
             files_left_msg(Filter::Inclusive, total, files.len());
         } else if let Some(exts) = ARGUMENTS.excluded() {
             files.retain(|file| {
                 file.to_extension(&target).is_none() ||
-                    !exts.contains(&file.to_extension(&target).unwrap().to_lowercase())
+                    !exts.contains(&file.to_extension(&target).unwrap())
             });
-
             files_left_msg(Filter::Exclusive, total, files.len());
         }
 
@@ -148,7 +146,7 @@ async fn main() -> Result<()> {
 
                     match result {
                         Ok(action) => {
-                            msg_tx.send(action).await.expect("send state to progress bar");
+                            msg_tx.send(action).await.unwrap();
                         }
                         Err(err) => {
                             let mut error = err.to_string();
@@ -158,7 +156,7 @@ async fn main() -> Result<()> {
                             }
                             msg_tx
                                 .send(DownloadAction::Fail(error, file.to_extension(&target))).await
-                                .expect("send state to progress bar");
+                                .unwrap();
                         }
                     }
                 })
@@ -167,7 +165,7 @@ async fn main() -> Result<()> {
 
         join_all(tasks).await;
 
-        // wait so the bar can finish properly
+        // wait for the bar to (hopefully) finish properly
         sleep(Duration::from_millis((left / 10).try_into().unwrap_or_default())).await;
     }
 
@@ -180,9 +178,9 @@ async fn main() -> Result<()> {
 
 fn files_left_msg(filter: Filter, total: usize, left: usize) {
     eprintln!(
-        "{filter}: skipping {}, {} left to download/check",
-        pretty::files(total - left),
-        pretty::files(left)
+        "{filter}: skipping {skipped}, {left} left to download/check",
+        skipped = pretty::files(total - left),
+        left = pretty::files(left)
     );
 }
 

@@ -16,6 +16,6 @@ pub fn anything(count: usize, singular: &str, plural: &str) -> String {
     match count {
         0 => format!("no {plural}"),
         1 => format!("1 {singular}"),
-        n => format!("{} {plural}", n_fmt(n as u64)),
+        n => format!("{number} {plural}", number = n_fmt(n as u64)),
     }
 }

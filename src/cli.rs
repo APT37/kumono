@@ -72,7 +72,8 @@ pub struct Args {
     #[arg(long, value_parser = duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
-    // TODO retry a few times (or infinitely?) on timeout, lower timeout to 60~120 seconds
+    // TODO: retry multiple times (or perhaps infinitely?) on timeout,
+    // lower timeout (60~120s? measure average response time outlier to be sure)
     #[arg(long, value_parser = duration_from_secs, default_value = "180")]
     pub read_timeout: Duration,
 
