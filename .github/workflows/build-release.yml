@@ -59,7 +59,6 @@ jobs:
       with:
         files: ${{ matrix.asset_name }}
         fail_on_unmatched_files: true
-        overwrite_files: false
         draft: false
 
   publish:
