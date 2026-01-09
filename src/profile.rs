@@ -7,8 +7,8 @@ use crate::{
 };
 use anyhow::Result;
 use indicatif::{ ProgressBar, ProgressStyle };
-use std::{ collections::HashSet, fmt, thread };
-use tokio::{ sync::mpsc, time::{ Duration, sleep } };
+use std::{ collections::HashSet, fmt::{ self, Display, Formatter }, thread };
+use tokio::{ sync::mpsc::{ UnboundedReceiver, unbounded_channel }, time::{ Duration, sleep } };
 
 pub struct Profile {
     target_id: usize,
@@ -18,8 +18,8 @@ pub struct Profile {
     pub files: HashSet<PostFile>,
 }
 
-impl fmt::Display for Profile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Profile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if
             let
             | Target::Creator { subtype: SubType::Post(_), .. }
@@ -54,7 +54,7 @@ impl fmt::Display for Profile {
     }
 }
 
-fn page_progress(mut msg_rx: mpsc::UnboundedReceiver<String>) {
+fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
     let bar = ProgressBar::new_spinner();
 
     bar.set_style(ProgressStyle::with_template("[{elapsed_precise}] {msg}").unwrap());
@@ -114,7 +114,7 @@ impl Profile {
 
             self.posts.push(Box::new(post));
         } else {
-            let (msg_tx, msg_rx) = mpsc::unbounded_channel::<String>();
+            let (msg_tx, msg_rx) = unbounded_channel::<String>();
 
             thread::spawn(move || page_progress(msg_rx));
 
@@ -184,7 +184,7 @@ impl Profile {
             return Ok(());
         }
 
-        let (msg_tx, msg_rx) = mpsc::unbounded_channel::<String>();
+        let (msg_tx, msg_rx) = unbounded_channel::<String>();
 
         thread::spawn(move || page_progress(msg_rx));
 

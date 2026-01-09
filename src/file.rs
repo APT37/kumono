@@ -18,12 +18,22 @@ static HASH_RE: LazyLock<Regex> = LazyLock::new(||
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
-    // deserializing the name breaks our hashset's uniqueness guarantee; the same file
-    // may be known under different names, leading to a race condition where multiple
-    // concurrent tasks write to the same file.
-    // effects: corruption, size mismatch => deletion (2nd race condition), HTTP 426
+    // Deserializing the name fieldbreaks our hashset's uniqueness guarantee;
+    // the same file may be known under different names, leading to a race
+    // condition where multiple concurrent tasks write to the same file,
+    // causing corruption & size mismatches. hash/size mismatches lead to
+    // file deletion, where a second race condition can occur.
+    // This corruption also causes offsets to be incorrect,
+    // leading to HTTP 416 (Range Not Satisfiable) responses.
+    //
+    // To prevent issues stemming from redundant file names, storing
+    // files in a separate subdirectory for each post or attaching the hash
+    // to the file name can be considered.
+    // This would require the current storage behavior to be changed, though
+    // the addition of a dedicated mode for this behavior would also be possible.
     //
     // pub name: Option<String>,
+
     pub path: Option<String>,
 }
 

@@ -12,7 +12,7 @@ pub fn posts(posts: usize) -> String {
     anything(posts, "post", "posts")
 }
 
-pub fn anything(count: usize, singular: &str, plural: &str) -> String {
+fn anything(count: usize, singular: &str, plural: &str) -> String {
     match count {
         0 => format!("no {plural}"),
         1 => format!("1 {singular}"),
