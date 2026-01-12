@@ -42,7 +42,7 @@ You may use an AUR helper like [**paru**][paru] to install one of these packages
 sudo apt-get install git rustup
 
 # 2. Rust toolchain
-rustup intall stable --profile minimal
+rustup install stable --profile minimal
 
 # 3a. latest release (via crates.io)
 cargo install kumono
