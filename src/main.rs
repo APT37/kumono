@@ -133,7 +133,7 @@ async fn main() -> Result<()> {
             );
         });
 
-        let mut tasks = Vec::new();
+        let mut tasks = Vec::with_capacity(files.len());
 
         let sem = Arc::new(Semaphore::new(ARGUMENTS.threads()));
 
@@ -185,8 +185,8 @@ async fn main() -> Result<()> {
 fn files_left_msg(filter: Filter, total: usize, left: usize) {
     eprintln!(
         "{filter}: skipping {skipped}, {left} left to download/check",
-        skipped = pretty::with_noun(total - left, "file"),
-        left = pretty::with_noun(left, "file")
+        skipped = pretty::with_noun((total - left) as u64, "file"),
+        left = pretty::with_noun(left as u64, "file")
     );
 }
 

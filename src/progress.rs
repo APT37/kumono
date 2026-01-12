@@ -1,4 +1,4 @@
-use crate::{ cli::ARGUMENTS, pretty::n_fmt };
+use crate::{ cli::ARGUMENTS, pretty::{ n_fmt, with_noun } };
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use itertools::Itertools;
 use std::{
@@ -50,7 +50,7 @@ impl Stats {
 
             dl_bytes: 0,
 
-            errors: Vec::new(),
+            errors: Vec::with_capacity(3),
 
             archive: if ARGUMENTS.download_archive {
                 Some(Self::open_archive(archive_path))
@@ -166,7 +166,10 @@ impl Display for Stats {
                 let mut buffer = Vec::with_capacity(self.files_by_type.len());
 
                 buffer.push(
-                    format!("\nleft: {} files", n_fmt(self.queued + self.waiting + self.active))
+                    format!(
+                        "\n{} left",
+                        with_noun(self.queued + self.waiting + self.active, "file")
+                    )
                 );
 
                 for (key, value) in self.files_by_type.iter().sorted() {
@@ -209,7 +212,7 @@ pub fn progress_bar(
         }
 
         if !stats.errors.is_empty() {
-            bar.set_message(format!("\n{errors}", errors = stats.errors.join("\n")));
+            bar.set_message(format!("\n{}", stats.errors.join("\n")));
         }
 
         bar.set_prefix(stats.to_string());

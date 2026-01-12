@@ -98,18 +98,18 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     ).unwrap()
 });
 
-async fn linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
-    let mut accounts = Vec::new();
+async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
+    let mut accounts = Vec::with_capacity(4);
 
     let url = format!("https://{site}/api/v1/{service}/user/{user}/profile", site = service.site());
-    let account: Info = CLIENT.get(url).send().await?.json().await?;
+    let account = CLIENT.get(url).send().await?.json().await?;
     accounts.push(account);
 
-    let linked_url = format!(
+    let linked_account_url = format!(
         "https://{site}/api/v1/{service}/user/{user}/links",
         site = service.site()
     );
-    let mut linked_accounts: Vec<Info> = CLIENT.get(linked_url).send().await?.json().await?;
+    let mut linked_accounts = CLIENT.get(linked_account_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
 
     Ok(accounts)
@@ -139,7 +139,7 @@ impl Target {
     }
 
     pub async fn parse_args() -> Vec<Target> {
-        let mut targets = Vec::new();
+        let mut targets = Vec::with_capacity(ARGUMENTS.urls.len());
 
         for url in &ARGUMENTS.urls {
             match Target::try_from_url(url).await {
@@ -163,7 +163,7 @@ impl Target {
         if RE_LINKED.is_match(url) {
             let caps = capture(&RE_LINKED);
 
-            let linked = linked_accounts(
+            let linked = try_fetch_linked_accounts(
                 &extract_unwrap(&caps, "service").parse::<Service>()?,
                 &extract_unwrap(&caps, "user")
             ).await?;

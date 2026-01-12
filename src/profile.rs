@@ -30,7 +30,7 @@ impl Display for Profile {
                 "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::with_noun(self.files.len(), "file")
+                posts = pretty::with_noun(self.files.len() as u64, "file")
             )
         } else {
             let files = if self.post_count == 0 {
@@ -48,7 +48,7 @@ impl Display for Profile {
                 "#{number}: {target} has {posts}{files}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::with_noun(self.post_count, "post")
+                posts = pretty::with_noun(self.post_count as u64, "post")
             )
         }
     }
@@ -74,7 +74,7 @@ impl Profile {
             target_id,
             target: target.clone(),
             post_count: 0,
-            posts: Vec::new(),
+            posts: Vec::with_capacity(250),
             files: HashSet::new(),
         };
 
