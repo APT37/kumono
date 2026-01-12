@@ -53,7 +53,7 @@ cargo install --git https://github.com/APT37/kumono
 
 Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
-*Windows users may use the WSL.*
+*Windows users may use the WSL, possibly via __[MobaXterm][mobax]__.* 
 
 ## Command Line
 
@@ -180,3 +180,5 @@ This project does not condone or support piracy in any form. We respect the inte
 
 [crate-deps]: https://img.shields.io/deps-rs/kumono/latest?logo=rust&label=Dependencies
 [crate-deps-url]: https://crates.io/crates/kumono/dependencies
+
+[mobax]: https://mobaxterm.mobatek.net/
