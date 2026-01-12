@@ -30,7 +30,7 @@ impl Display for Profile {
                 "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::files(self.files.len())
+                posts = pretty::with_noun(self.files.len(), "file")
             )
         } else {
             let files = if self.post_count == 0 {
@@ -48,7 +48,7 @@ impl Display for Profile {
                 "#{number}: {target} has {posts}{files}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::posts(self.post_count)
+                posts = pretty::with_noun(self.post_count, "post")
             )
         }
     }
@@ -69,7 +69,7 @@ fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
 }
 
 impl Profile {
-    pub async fn new(target: &Target, target_id: usize) -> Result<Self> {
+    pub async fn try_new(target: &Target, target_id: usize) -> Result<Self> {
         let mut profile = Self {
             target_id,
             target: target.clone(),
@@ -94,7 +94,7 @@ impl Profile {
 
         eprintln!("{profile}");
 
-        // discard posts
+        // discard all posts
         profile.posts.clear();
 
         Ok(profile)
@@ -139,13 +139,13 @@ impl Profile {
 
                     msg_tx.send(msg)?;
 
-                    match api::page(&self.target, user, offset).await {
+                    match api::try_fetch_page(&self.target, user, offset).await {
                         Ok(p) => {
                             posts = p;
                             break;
                         }
                         Err(err) => {
-                            err.interpret(retries).await?;
+                            err.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }
@@ -216,7 +216,7 @@ impl Profile {
                             break;
                         }
                         Err(err) => {
-                            err.interpret(retries).await?;
+                            err.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }

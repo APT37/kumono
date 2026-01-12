@@ -123,18 +123,12 @@ impl Target {
         }
     }
 
-    pub async fn parse_file() -> Result<Vec<Target>> {
+    pub async fn try_parse_file() -> Result<Vec<Target>> {
         let mut targets = Vec::new();
 
         if let Some(path) = &ARGUMENTS.input_file {
-            let file = File::open(path)?;
-
-            let reader = BufReader::new(file);
-
-            for line in reader.lines() {
-                let line = &line?;
-
-                match Target::from_url(line.strip_suffix('/').unwrap_or(line)).await {
+            for line in BufReader::new(File::open(path)?).lines() {
+                match Target::try_from_url(&line?).await {
                     Ok(mut target) => targets.append(&mut target),
                     Err(err) => eprintln!("{err}"),
                 }
@@ -148,7 +142,7 @@ impl Target {
         let mut targets = Vec::new();
 
         for url in &ARGUMENTS.urls {
-            match Target::from_url(url.strip_suffix('/').unwrap_or(url)).await {
+            match Target::try_from_url(url).await {
                 Ok(mut target) => targets.append(&mut target),
                 Err(err) => eprintln!("{err}"),
             }
@@ -157,7 +151,9 @@ impl Target {
         targets
     }
 
-    async fn from_url(url: &str) -> Result<Vec<Self>> {
+    async fn try_from_url(url: &str) -> Result<Vec<Self>> {
+        let url = url.strip_suffix('/').unwrap_or(url);
+
         let capture = |re: &Regex| re.captures(url).expect("get captures");
         let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
         let extract_unwrap = |caps: &Captures, name: &str| {
@@ -191,7 +187,7 @@ impl Target {
                 };
 
                 if ARGUMENTS.download_archive {
-                    target.read_archive()?;
+                    target.try_read_archive()?;
                 }
 
                 targets.push(target);
@@ -238,7 +234,7 @@ impl Target {
         };
 
         if ARGUMENTS.download_archive {
-            target.read_archive()?;
+            target.try_read_archive()?;
         }
 
         Ok(Vec::from_iter([target]))
@@ -251,7 +247,7 @@ impl Target {
         }
     }
 
-    pub fn read_archive(&mut self) -> Result<()> {
+    pub fn try_read_archive(&mut self) -> Result<()> {
         let mut archive = File::options()
             .read(true)
             .append(true)

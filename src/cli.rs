@@ -1,9 +1,8 @@
-use anyhow::Result;
 use clap::Parser;
 use itertools::Itertools;
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{ fmt, num, sync::LazyLock, time::Duration };
+use std::{ fmt::{ Display, Formatter, Result }, num, sync::LazyLock, time::Duration };
 
 pub static ARGUMENTS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -66,21 +65,21 @@ pub struct Args {
     #[arg(short, long, default_value_t = 5)]
     pub max_retries: usize,
 
-    #[arg(short, long, value_parser = duration_from_secs, default_value = "1")]
+    #[arg(short, long, value_parser = try_duration_from_secs, default_value = "1")]
     pub retry_delay: Duration,
 
-    #[arg(long, value_parser = duration_from_secs, default_value = "1")]
+    #[arg(long, value_parser = try_duration_from_secs, default_value = "1")]
     pub connect_timeout: Duration,
 
     // TODO: retry multiple times (or perhaps infinitely?) on timeout,
     // lower timeout (60~120s? measure average response time outlier to be sure)
-    #[arg(long, value_parser = duration_from_secs, default_value = "180")]
+    #[arg(long, value_parser = try_duration_from_secs, default_value = "180")]
     pub read_timeout: Duration,
 
-    #[arg(long, value_parser = duration_from_secs, default_value = "15")]
+    #[arg(long, value_parser = try_duration_from_secs, default_value = "15")]
     pub rate_limit_backoff: Duration,
 
-    #[arg(long, value_parser = duration_from_secs, default_value = "5")]
+    #[arg(long, value_parser = try_duration_from_secs, default_value = "5")]
     pub server_error_delay: Duration,
 
     #[arg(short, long, help = "Print configuration values")]
@@ -89,7 +88,7 @@ pub struct Args {
     // pub verbose: bool,
 }
 
-fn duration_from_secs(arg: &str) -> Result<Duration, num::ParseIntError> {
+fn try_duration_from_secs(arg: &str) -> anyhow::Result<Duration, num::ParseIntError> {
     Ok(Duration::from_secs(arg.parse::<u64>()?.clamp(1, u64::MAX)))
 }
 
@@ -121,8 +120,8 @@ impl Args {
     }
 }
 
-impl fmt::Display for Args {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Args {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         fn pd(d: &Duration) -> String {
             pretty_duration(d, None)
         }

@@ -39,7 +39,7 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 
 ## GUI Options
 
-*I haven't found the time to fully compare these projects to `kumono` yet. The availability of a GUI might me a significant advantage for many users, though.*
+*I haven't found the time to compare these projects to `kumono` yet.*
 
 | Tool | Notes |
 | ---- | ----- |

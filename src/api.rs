@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, file::PostFile, http::CLIENT, target::Target };
-use anyhow::{ Result, bail };
+use anyhow::{ Result, anyhow };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
@@ -13,7 +13,7 @@ static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
 });
 
-async fn fetch<T: DeserializeOwned>(url: &str) -> Result<T, ApiError> {
+async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
     sleep(API_DELAY).await;
 
     let res = CLIENT.get(url)
@@ -46,31 +46,26 @@ pub enum ApiError {
 }
 
 impl ApiError {
-    pub async fn interpret(&self, retries: usize) -> Result<()> {
-        async fn wait_or_bail(retries: usize, duration: Duration, error: &str) -> Result<()> {
-            if retries < ARGUMENTS.max_retries {
+    pub async fn try_interpret(&self, retries: usize) -> Result<()> {
+        async fn try_wait(retries: usize, duration: Duration, error: &str) -> Result<()> {
+            if retries <= ARGUMENTS.max_retries {
                 sleep(duration).await;
+                Ok(())
             } else {
-                bail!("{error}");
+                Err(anyhow!("{error}"))
             }
-
-            Ok(())
         }
 
         match self {
             ApiError::Connect(err) | ApiError::Parser(err) => {
-                wait_or_bail(retries, ARGUMENTS.retry_delay, err).await?;
+                try_wait(retries, ARGUMENTS.retry_delay, err).await?;
             }
             ApiError::Status(status) =>
                 match status.as_u16() {
                     403 | 429 | 502..=504 => {
-                        wait_or_bail(
-                            retries,
-                            ARGUMENTS.rate_limit_backoff,
-                            &status.to_string()
-                        ).await?;
+                        try_wait(retries, ARGUMENTS.rate_limit_backoff, &status.to_string()).await?;
                     }
-                    _ => wait_or_bail(retries, ARGUMENTS.retry_delay, &status.to_string()).await?,
+                    _ => try_wait(retries, ARGUMENTS.retry_delay, &status.to_string()).await?,
                 }
         }
 
@@ -91,18 +86,26 @@ struct SinglePostInner {
 
 impl Post for SinglePost {
     fn files(&mut self) -> Vec<PostFile> {
-        let mut files = Vec::new();
-        if let Some(file) = self.post.file.as_ref() {
-            files.push(file.clone());
-        }
+        self.post.attachments.retain(PostFile::has_path);
+
+        let mut files = Vec::with_capacity(self.post.attachments.len() + 1);
+
         files.append(&mut self.post.attachments);
-        files.retain(PostFile::has_path);
+
+        if let Some(file) = self.post.file.take() && file.has_path() {
+            files.push(file);
+        }
+
         files
     }
 }
 
-pub async fn page(target: &Target, user: &str, offset: usize) -> Result<Vec<PagePost>, ApiError> {
-    fetch(
+pub async fn try_fetch_page(
+    target: &Target,
+    user: &str,
+    offset: usize
+) -> Result<Vec<PagePost>, ApiError> {
+    try_fetch(
         &format!(
             "https://{site}/api/v1/{service}/user/{user}/posts?o={offset}",
             site = target.as_service().site(),
@@ -119,12 +122,16 @@ pub struct PagePost {
 
 impl Post for PagePost {
     fn files(&mut self) -> Vec<PostFile> {
-        let mut files = Vec::new();
-        if let Some(file) = self.file.as_ref() {
-            files.push(file.clone());
-        }
+        self.attachments.retain(PostFile::has_path);
+
+        let mut files = Vec::with_capacity(self.attachments.len() + 1);
+
         files.append(&mut self.attachments);
-        files.retain(PostFile::has_path);
+
+        if let Some(file) = self.file.take() && file.has_path() {
+            files.push(file);
+        }
+
         files
     }
 }
@@ -136,7 +143,7 @@ pub struct DiscordChannel {
 }
 
 pub async fn discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
-    fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
+    try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -154,5 +161,5 @@ impl Post for DiscordPost {
 }
 
 pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
-    fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
+    try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
 }

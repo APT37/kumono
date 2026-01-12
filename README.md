@@ -8,8 +8,8 @@ Support is provided in the [discussions][discussions] section.
 
 - [Installation](#installation)
   - [Binaries](#binaries)
-  - [Packages](#packages)
-  - [Cargo](#cargo)
+  - [Packages (Arch)](#packages-arch)
+  - [Cargo (Debian)](#cargo-debian)
 - [Command Line](#command-line)
   - [Available Options](#available-options)
   - [Target Selection](#target-selection)
@@ -27,13 +27,13 @@ Support is provided in the [discussions][discussions] section.
 
 [![][linux-x64-badge]][linux-x64-dl] [![][linux-arm-badge]][linux-arm-dl]
 
-### Packages
+### Packages (Arch)
 
-You need an AUR helper like [**paru**][paru] to install one of these packages.
+You may use an AUR helper like [**paru**][paru] to install one of these packages.
 
 [![][kmn-aur-ver]][kmn-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
-### Cargo
+### Cargo (Debian)
 
 [![][crate-ver]][crate-url] [![][crate-deps]][crate-deps-url]
 
@@ -42,7 +42,7 @@ You need an AUR helper like [**paru**][paru] to install one of these packages.
 sudo apt-get install git rustup
 
 # 2. Rust toolchain
-rustup default stable
+rustup intall stable --profile minimal
 
 # 3a. latest release (via crates.io)
 cargo install kumono
@@ -53,7 +53,7 @@ cargo install --git https://github.com/APT37/kumono
 
 Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
-*Windows users may use the WSL, possibly via __[MobaXterm][mobax]__.* 
+*Windows users may use the WSL, possibly via **[MobaXterm][mobax]**.* 
 
 ## Command Line
 

@@ -1,10 +1,9 @@
 use crate::{ cli::ARGUMENTS, pretty::n_fmt };
-use anyhow::Result;
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    fmt::{ self, Display, Formatter },
+    fmt::{ Display, Formatter, Result },
     fs::File,
     io::Write,
     path::PathBuf,
@@ -152,7 +151,7 @@ impl Stats {
 }
 
 impl Display for Stats {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(
             f,
             "downloaded {} / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed{}",
@@ -183,19 +182,21 @@ impl Display for Stats {
 pub static DOWNLOADS_FAILED: AtomicBool = AtomicBool::new(false);
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn bar(
+pub fn progress_bar(
     files: u64,
     archive: PathBuf,
     mut msg_rx: Receiver<DownloadAction>,
     last_target: bool,
     files_by_type: HashMap<String, usize>
-) -> Result<()> {
+) {
     let bar = ProgressBar::new(files);
 
     bar.set_style(
         ProgressStyle::with_template(
             "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {human_pos:>7}/{human_len:7} ({percent}%) {msg}"
-        )?.progress_chars("##-")
+        )
+            .unwrap()
+            .progress_chars("##-")
     );
 
     bar.enable_steady_tick(Duration::from_millis(200));
@@ -223,6 +224,4 @@ pub fn bar(
     if stats.failed != 0 {
         DOWNLOADS_FAILED.store(true, Relaxed);
     }
-
-    Ok(())
 }

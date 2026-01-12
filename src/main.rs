@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
 
     let mut targets = Target::parse_args().await;
 
-    targets.append(&mut Target::parse_file().await?);
+    targets.append(&mut Target::try_parse_file().await?);
 
     targets = targets.into_iter().unique().collect();
 
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
     let total_targets = targets.len();
 
     for (i, target) in targets.into_iter().enumerate() {
-        let mut files = Profile::new(&target, i + 1).await?.files;
+        let mut files = Profile::try_new(&target, i + 1).await?.files;
 
         if files.is_empty() {
             if i != total_targets - 1 {
@@ -124,7 +124,13 @@ async fn main() -> Result<()> {
         }
 
         thread::spawn(move || {
-            progress::bar(left as u64, archive_path, msg_rx, i == total_targets - 1, files_by_type)
+            progress::progress_bar(
+                left as u64,
+                archive_path,
+                msg_rx,
+                i == total_targets - 1,
+                files_by_type
+            );
         });
 
         let mut tasks = Vec::new();
@@ -142,7 +148,7 @@ async fn main() -> Result<()> {
                 task::spawn(async move {
                     let _permit = permit;
 
-                    let result = file.download(&target, msg_tx.clone()).await;
+                    let result = file.try_download(&target, msg_tx.clone()).await;
 
                     match result {
                         Ok(action) => {
@@ -179,8 +185,8 @@ async fn main() -> Result<()> {
 fn files_left_msg(filter: Filter, total: usize, left: usize) {
     eprintln!(
         "{filter}: skipping {skipped}, {left} left to download/check",
-        skipped = pretty::files(total - left),
-        left = pretty::files(left)
+        skipped = pretty::with_noun(total - left, "file"),
+        left = pretty::with_noun(left, "file")
     );
 }
 
