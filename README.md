@@ -31,7 +31,7 @@ Support is provided in the [discussions][discussions] section.
 
 You may use an AUR helper like [**paru**][paru] to install one of these packages.
 
-[![][kmn-aur-ver]][kmn-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
+[![][kmn-src-aur-ver]][kmn-src-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
 ### Cargo (Debian)
 
@@ -147,11 +147,11 @@ This project does not condone or support piracy in any form. We respect the inte
 
 [paru]: https://github.com/Morganamilo/paru#description
 
-[kmn-aur]: https://aur.archlinux.org/packages/kumono
+[kmn-src-aur]: https://aur.archlinux.org/packages/kumono
 [kmn-bin-aur]: https://aur.archlinux.org/packages/kumono-bin
 [kmn-git-aur]: https://aur.archlinux.org/packages/kumono-git
 
-[kmn-aur-ver]: https://img.shields.io/aur/version/kumono?logo=archlinux&label=kumono
+[kmn-src-aur-ver]: https://img.shields.io/aur/version/kumono?logo=archlinux&label=kumono
 [kmn-bin-aur-ver]: https://img.shields.io/aur/version/kumono-bin?logo=archlinux&label=kumono-bin
 [kmn-git-aur-ver]: https://img.shields.io/aur/version/kumono-git?logo=archlinux&label=kumono-git
 
