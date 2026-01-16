@@ -15,7 +15,7 @@ pub fn list(files: HashSet<PostFile>, target: &Target) {
     }
 
     if !extensions.is_empty() {
-        eprintln!("{}", extensions.into_iter().sorted().join(","));
+        println!("{}", extensions.into_iter().sorted().join(","));
     }
 
     if no_extension != 0 {
