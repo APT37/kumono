@@ -14,7 +14,7 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
         let mut client = ClientBuilder::new()
             .default_headers(
                 HeaderMap::from_iter([
-                    (HeaderName::from_static("accept"), HeaderValue::from_static("font")),
+                    (HeaderName::from_static("accept"), HeaderValue::from_static("text/css")),
                 ])
             )
             .user_agent(format!("kumono {}", env!("CARGO_PKG_VERSION")))
