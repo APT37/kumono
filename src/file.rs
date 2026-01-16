@@ -85,26 +85,19 @@ impl PostFile {
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf(target)).await
-            .with_context(|| {
-                format!(
-                    "Failed to open temporary file: {temp_name}",
-                    temp_name = self.to_temp_name()
-                )
-            })
+            .with_context(|| { format!("Failed to open temporary file: {}", self.to_temp_name()) })
     }
 
     /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
             ::try_async_digest(&self.to_temp_pathbuf(target)).await
-            .with_context(|| {
-                format!("hash tempfile: {temp_name}", temp_name = self.to_temp_name())
-            })
+            .with_context(|| { format!("hash tempfile: {}", self.to_temp_name()) })
     }
 
     pub async fn try_exists(&self, target: &Target) -> Result<bool> {
         fs::try_exists(self.to_pathbuf(target)).await.with_context(|| {
-            format!("check if file exists: {temp_name}", temp_name = self.to_temp_name())
+            format!("check if file exists: {}", self.to_temp_name())
         })
     }
 
@@ -120,7 +113,7 @@ impl PostFile {
 
     pub async fn try_delete(&self, target: &Target) -> Result<()> {
         fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(||
-            format!("delete tempfile: {name}", name = self.to_temp_name())
+            format!("delete tempfile: {}", self.to_temp_name())
         )
     }
 
@@ -135,7 +128,7 @@ impl PostFile {
             return Ok(DownloadAction::Skip(self.to_hash(), self.to_extension(target)));
         }
 
-        let rsize = self.try_determine_remote_size(target, &mut msg_tx).await?;
+        let (rsize, rpath) = self.try_fetch_remote_size_and_path(target, &mut msg_tx).await?;
 
         let mut temp_file = self.try_open(target).await?;
 
@@ -164,8 +157,8 @@ impl PostFile {
 
             if
                 let Err(err) = self.try_download_range(
+                    &rpath,
                     &mut temp_file,
-                    target,
                     csize,
                     &mut msg_tx
                 ).await
@@ -216,10 +209,46 @@ impl PostFile {
         )
     }
 
+    pub async fn try_fetch_remote_size_and_path(
+        &self,
+        target: &Target,
+        msg_tx: &mut Sender<DownloadAction>
+    ) -> Result<(u64, String)> {
+        fn produce_size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
+            Err(anyhow!("[{status}] remote size determination failed: {message} ({url})"))
+        }
+
+        let url = self.to_url(target);
+
+        loop {
+            let response = CLIENT.head(&url).send().await?;
+
+            let status = response.status();
+
+            if status == StatusCode::OK {
+                let size = response
+                    .content_length()
+                    .map_or_else(
+                        || produce_size_error(status, "Content-Length header is not present", &url),
+                        Ok
+                    )?;
+                return Ok((size, response.url().to_string()));
+            } else if status == StatusCode::NOT_FOUND {
+                produce_size_error(status, "file not found", &url)?;
+            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
+                try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
+            } else if status.is_server_error() {
+                try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
+            } else {
+                produce_size_error(status, "unexpected status code", &url)?;
+            }
+        }
+    }
+
     async fn try_download_range(
         &self,
+        url: &str,
         file: &mut File,
-        target: &Target,
         start: u64,
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<()> {
@@ -227,12 +256,8 @@ impl PostFile {
             Err(anyhow!("[{status}] download failed: {message} ({url})"))
         }
 
-        let url = self.to_url(target);
-
         loop {
-            let response = CLIENT.get(&url)
-                .header("Range", format!("bytes={start}-"))
-                .send().await?;
+            let response = CLIENT.get(url).header("Range", format!("bytes={start}-")).send().await?;
 
             let status = response.status();
 
@@ -246,48 +271,13 @@ impl PostFile {
                 file.flush().await?;
                 break Ok(());
             } else if status == StatusCode::NOT_FOUND {
-                produce_download_error(status, "no file", &url)?;
+                produce_download_error(status, "no file", url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
                 try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
                 try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
             } else {
-                produce_download_error(status, "unexpected status code", &url)?;
-            }
-        }
-    }
-
-    pub async fn try_determine_remote_size(
-        &self,
-        target: &Target,
-        msg_tx: &mut Sender<DownloadAction>
-    ) -> Result<u64> {
-        fn produce_size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
-            Err(anyhow!("[{status}] remote size determination failed: {message} ({url})"))
-        }
-
-        let url = self.to_url(target);
-
-        loop {
-            let response = CLIENT.head(&url).send().await?;
-
-            let status = response.status();
-
-            if status == StatusCode::OK {
-                return response
-                    .content_length()
-                    .map_or_else(
-                        || produce_size_error(status, "Content-Length header is not present", &url),
-                        Ok
-                    );
-            } else if status == StatusCode::NOT_FOUND {
-                produce_size_error(status, "file not found", &url)?;
-            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
-            } else if status.is_server_error() {
-                try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
-            } else {
-                produce_size_error(status, "unexpected status code", &url)?;
+                produce_download_error(status, "unexpected status code", url)?;
             }
         }
     }
