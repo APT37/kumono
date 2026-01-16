@@ -34,7 +34,7 @@ struct Stats {
     failed: u64,
     dl_bytes: u64,
     errors: Vec<String>,
-    archive: Option<File>,
+    archive_file: Option<File>,
     files_by_type: HashMap<String, usize>,
 }
 
@@ -52,7 +52,7 @@ impl Stats {
 
             errors: Vec::with_capacity(3),
 
-            archive: if ARGUMENTS.download_archive {
+            archive_file: if ARGUMENTS.download_archive {
                 Some(Self::open_archive(archive_path))
             } else {
                 None
@@ -78,7 +78,7 @@ impl Stats {
         if
             ARGUMENTS.download_archive &&
             let Some(hash) = hash &&
-            let Some(ref mut archive) = self.archive &&
+            let Some(ref mut archive) = self.archive_file &&
             let Err(err) = archive.write_all((hash + "\n").as_bytes())
         {
             self.errors.push(err.to_string());

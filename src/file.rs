@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT, progress::DownloadAction, target::Target };
-use anyhow::{ Context, Result, anyhow, bail };
+use anyhow::{ Context, Result, anyhow };
 use futures_util::StreamExt;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -203,7 +203,7 @@ impl PostFile {
                     self.try_delete(target).await?;
                     DownloadAction::Fail(
                         format!(
-                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n| local:  {lhash}",
+                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n| local: {lhash}",
                             name = self.to_name()
                         ),
                         self.to_extension(target)
@@ -263,7 +263,7 @@ impl PostFile {
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<u64> {
         fn produce_size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
-            bail!("[{status}] remote size determination failed: {message} ({url})")
+            Err(anyhow!("[{status}] remote size determination failed: {message} ({url})"))
         }
 
         let url = self.to_url(target);

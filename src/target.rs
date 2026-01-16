@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT };
-use anyhow::{ Context, Result, bail };
+use anyhow::{ Context, Result, anyhow };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
 use std::{
@@ -105,11 +105,11 @@ async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<
     let account = CLIENT.get(url).send().await?.json().await?;
     accounts.push(account);
 
-    let linked_account_url = format!(
+    let linked_accounts_url = format!(
         "https://{site}/api/v1/{service}/user/{user}/links",
         site = service.site()
     );
-    let mut linked_accounts = CLIENT.get(linked_account_url).send().await?.json().await?;
+    let mut linked_accounts = CLIENT.get(linked_accounts_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
 
     Ok(accounts)
@@ -117,8 +117,8 @@ async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<
 
 impl Target {
     pub fn as_service(&self) -> Service {
-        match self {
-            Target::Creator { service, .. } => *service,
+        match *self {
+            Target::Creator { service, .. } => service,
             Target::Discord { .. } => Service::Discord,
         }
     }
@@ -164,7 +164,7 @@ impl Target {
             let caps = capture(&RE_LINKED);
 
             let linked = try_fetch_linked_accounts(
-                &extract_unwrap(&caps, "service").parse::<Service>()?,
+                &extract_unwrap(&caps, "service").parse()?,
                 &extract_unwrap(&caps, "user")
             ).await?;
 
@@ -230,7 +230,7 @@ impl Target {
                 archive,
             }
         } else {
-            bail!("Invalid URL: {url}");
+            return Err(anyhow!("Invalid URL: {url}"));
         };
 
         if ARGUMENTS.download_archive {
@@ -240,10 +240,10 @@ impl Target {
         Ok(Vec::from_iter([target]))
     }
 
-    fn user(&self) -> String {
+    fn user(&self) -> &str {
         match self {
-            Target::Creator { user, .. } => user.clone(),
-            Target::Discord { server, .. } => server.clone(),
+            Target::Creator { user, .. } => user,
+            Target::Discord { server, .. } => server,
         }
     }
 
@@ -256,13 +256,11 @@ impl Target {
             .open(self.to_archive_pathbuf())
             .with_context(|| format!("Failed to open archive file for {self}"))?;
 
-        let mut buf = String::new();
+        let mut buffer = String::new();
 
-        archive.read_to_string(&mut buf)?;
+        archive.read_to_string(&mut buffer)?;
 
-        let hashes = buf.lines().map(ToString::to_string).collect();
-
-        self.add_hashes(hashes);
+        self.add_hashes(buffer.lines().map(ToString::to_string).collect());
 
         Ok(())
     }
@@ -276,7 +274,7 @@ impl Target {
     }
 
     pub fn archive(&self) -> &Vec<String> {
-        match &self {
+        match self {
             Target::Creator { archive, .. } | Target::Discord { archive, .. } => archive,
         }
     }
@@ -293,7 +291,7 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             &self.as_service().to_string(),
-            &self.user(),
+            self.user(),
             file.unwrap_or_default(),
         ])
     }
