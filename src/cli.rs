@@ -18,8 +18,8 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-512)")]
     threads: usize,
 
-    #[arg(short = 'f', long, help = "List of target URLs")]
-    pub input_file: Option<String>,
+    #[arg(short = 'f', long = "input-file", help = "List of target URLs")]
+    pub input_files: Option<Vec<String>>,
 
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
     pub output_path: String,

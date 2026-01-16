@@ -126,11 +126,13 @@ impl Target {
     pub async fn try_parse_file() -> Result<Vec<Target>> {
         let mut targets = Vec::new();
 
-        if let Some(path) = &ARGUMENTS.input_file {
-            for line in BufReader::new(File::open(path)?).lines() {
-                match Target::try_from_url(&line?).await {
-                    Ok(mut target) => targets.append(&mut target),
-                    Err(err) => eprintln!("{err}"),
+        if let Some(files) = &ARGUMENTS.input_files {
+            for path in files {
+                for line in BufReader::new(File::open(path)?).lines() {
+                    match Target::try_from_url(&line?).await {
+                        Ok(mut target) => targets.append(&mut target),
+                        Err(err) => eprintln!("{err}"),
+                    }
                 }
             }
         }
