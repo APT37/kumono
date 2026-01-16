@@ -3,12 +3,12 @@ use itertools::Itertools;
 use std::collections::HashSet;
 
 pub fn list(files: HashSet<PostFile>, target: &Target) {
-    let mut extensions = Vec::with_capacity(8);
+    let mut extensions = HashSet::new();
     let mut no_extension: u32 = 0;
 
     for file in files {
-        if let Some(extension) = file.to_extension(target) && !extensions.contains(&extension) {
-            extensions.push(extension);
+        if let Some(extension) = file.to_extension(target) {
+            extensions.insert(extension);
         } else {
             no_extension += 1;
         }
