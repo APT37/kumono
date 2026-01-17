@@ -18,7 +18,7 @@ pub struct Args {
     #[arg(short, long, default_value_t = 256, help = "Simultaneous downloads (1-512)")]
     threads: usize,
 
-    #[arg(short = 'f', long = "input-file", help = "List of target URLs")]
+    #[arg(short = 'f', long = "input-file", help = "File with URLs, can be used multiple times")]
     pub input_files: Option<Vec<String>>,
 
     #[arg(short, long, default_value = "kumono", help = "Base directory for downloads")]
@@ -41,6 +41,7 @@ pub struct Args {
 
     // #[arg(short = 'B, long = "pass", help = "Load cookies from browser")]
     // pub cookies-from-browser: Option<String>,
+
     #[arg(
         short,
         long,

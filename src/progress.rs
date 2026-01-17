@@ -70,7 +70,7 @@ impl Stats {
             .open(path)
             .unwrap_or_else(|err| {
                 eprintln!("failed to open archive file {path}: {err}", path = path.display());
-                exit(1);
+                exit(5);
             })
     }
 
@@ -81,8 +81,8 @@ impl Stats {
             let Some(ref mut archive) = self.archive_file &&
             let Err(err) = archive.write_all((hash + "\n").as_bytes())
         {
-            self.errors.push(err.to_string());
-            exit(1);
+            eprintln!("{err}");
+            exit(6);
         }
     }
 

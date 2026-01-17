@@ -32,6 +32,6 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
 
     build_client().unwrap_or_else(|err| {
         eprintln!("{err}");
-        exit(1);
+        exit(2);
     })
 });

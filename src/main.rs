@@ -40,8 +40,8 @@ async fn main() -> Result<()> {
     targets = targets.into_iter().unique().collect();
 
     if targets.is_empty() {
-        eprintln!("No valid target URLs were provided.");
-        exit(1);
+        eprintln!("No valid target URLs.");
+        exit(3);
     }
 
     let total_targets = targets.len();
@@ -176,7 +176,7 @@ async fn main() -> Result<()> {
     }
 
     if progress::DOWNLOADS_FAILED.load(Relaxed) {
-        exit(1);
+        exit(4);
     }
 
     Ok(())
