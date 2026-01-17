@@ -4,7 +4,14 @@ use futures_util::StreamExt;
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::Deserialize;
-use std::{ error::Error, io::SeekFrom, path::PathBuf, sync::LazyLock, time::Duration };
+use std::{
+    error::Error,
+    io::SeekFrom,
+    path::PathBuf,
+    process::exit,
+    sync::LazyLock,
+    time::Duration,
+};
 use tokio::{
     fs::{ self, File },
     io::{ AsyncSeekExt, AsyncWriteExt },
@@ -85,20 +92,20 @@ impl PostFile {
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf(target)).await
-            .with_context(|| { format!("Failed to open temporary file: {}", self.to_temp_name()) })
+            .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
     }
 
     /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
             ::try_async_digest(&self.to_temp_pathbuf(target)).await
-            .with_context(|| { format!("hash tempfile: {}", self.to_temp_name()) })
+            .with_context(|| format!("hash tempfile: {}", self.to_temp_name()))
     }
 
     pub async fn try_exists(&self, target: &Target) -> Result<bool> {
-        fs::try_exists(self.to_pathbuf(target)).await.with_context(|| {
+        fs::try_exists(self.to_pathbuf(target)).await.with_context(||
             format!("check if file exists: {}", self.to_temp_name())
-        })
+        )
     }
 
     pub async fn try_move(&self, target: &Target) -> Result<()> {
@@ -265,7 +272,12 @@ impl PostFile {
                 let mut stream = response.bytes_stream();
 
                 while let Some(Ok(bytes)) = stream.next().await {
-                    file.write_all(&bytes).await?;
+                    if let Err(err) = file.write_all(&bytes).await {
+                        msg_tx.send(
+                            DownloadAction::Fail(format!("write error: {err}"), None)
+                        ).await?;
+                        exit(1);
+                    }
                     msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
                 }
                 file.flush().await?;
