@@ -142,7 +142,7 @@ pub struct DiscordChannel {
     // name: String, // "news"
 }
 
-pub async fn discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
+pub async fn try_discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
     try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
 }
 
@@ -160,6 +160,6 @@ impl Post for DiscordPost {
     }
 }
 
-pub async fn discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
+pub async fn try_discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
     try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
 }

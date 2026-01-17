@@ -177,7 +177,7 @@ impl Profile {
                 id: channel.clone(),
             }]
         } else {
-            api::discord_server(server).await?
+            api::try_discord_server(server).await?
         };
 
         if channels.is_empty() {
@@ -210,7 +210,7 @@ impl Profile {
 
                     msg_tx.send(msg)?;
 
-                    match api::discord_page(&channel.id, offset).await {
+                    match api::try_discord_page(&channel.id, offset).await {
                         Ok(p) => {
                             posts = p;
                             break;
