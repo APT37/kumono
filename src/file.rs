@@ -139,9 +139,7 @@ impl PostFile {
 
         let mut temp_file = self.try_open(target).await?;
 
-        let isize = temp_file.seek(SeekFrom::End(0)).await?;
-
-        let mut csize = isize;
+        let mut csize = temp_file.seek(SeekFrom::End(0)).await?;
 
         loop {
             if csize > rsize {
@@ -171,9 +169,9 @@ impl PostFile {
                 ).await
             {
                 let mut error = err.to_string();
-                if let Some(source) = err.source() {
+                if let Some(src) = err.source() {
                     error.push('\n');
-                    error.push_str(&source.to_string());
+                    error.push_str(&src.to_string());
                 }
                 return Ok(DownloadAction::Fail(error, self.to_extension(target)));
             }
@@ -184,9 +182,9 @@ impl PostFile {
                 }
                 Err(err) => {
                     let mut error = err.to_string();
-                    if let Some(source) = err.source() {
+                    if let Some(src) = err.source() {
                         error.push('\n');
-                        error.push_str(&source.to_string());
+                        error.push_str(&src.to_string());
                     }
                     return Ok(DownloadAction::Fail(error, self.to_extension(target)));
                 }

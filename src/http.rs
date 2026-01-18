@@ -10,7 +10,7 @@ use reqwest::{
 use std::{ process::exit, sync::LazyLock };
 
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
-    fn build_client() -> Result<Client> {
+    let build = || -> Result<Client> {
         let mut client = ClientBuilder::new()
             .default_headers(
                 HeaderMap::from_iter([
@@ -28,9 +28,9 @@ pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
         }
 
         Ok(client.build()?)
-    }
+    };
 
-    build_client().unwrap_or_else(|err| {
+    build().unwrap_or_else(|err| {
         eprintln!("{err}");
         exit(2);
     })

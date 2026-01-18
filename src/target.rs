@@ -100,15 +100,13 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
 
 async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
     let mut accounts = Vec::with_capacity(4);
+    let site = service.site();
 
-    let url = format!("https://{site}/api/v1/{service}/user/{user}/profile", site = service.site());
+    let url = format!("https://{site}/api/v1/{service}/user/{user}/profile");
     let account = CLIENT.get(url).send().await?.json().await?;
     accounts.push(account);
 
-    let linked_accounts_url = format!(
-        "https://{site}/api/v1/{service}/user/{user}/links",
-        site = service.site()
-    );
+    let linked_accounts_url = format!("https://{site}/api/v1/{service}/user/{user}/links");
     let mut linked_accounts = CLIENT.get(linked_accounts_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
 
@@ -242,7 +240,7 @@ impl Target {
         Ok(Vec::from_iter([target]))
     }
 
-    fn user(&self) -> &str {
+    fn user_or_server(&self) -> &str {
         match self {
             Target::Creator { user, .. } => user,
             Target::Discord { server, .. } => server,
@@ -285,7 +283,7 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             "db",
-            &format!("{service}+{user}.txt", service = self.as_service(), user = self.user()),
+            &format!("{service}+{user}.txt", service = self.as_service(), user = self.user_or_server()),
         ])
     }
 
@@ -293,7 +291,7 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             &self.as_service().to_string(),
-            self.user(),
+            self.user_or_server(),
             file.unwrap_or_default(),
         ])
     }

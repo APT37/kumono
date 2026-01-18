@@ -142,11 +142,9 @@ impl Stats {
     }
 
     fn detract_one_from_file_counter(&mut self, extension: Option<String>) {
-        let key = extension.unwrap_or("unknown".to_string());
-
-        let val = self.files_by_type.get(&key).unwrap();
-
-        self.files_by_type.insert(key, val - 1);
+        *self.files_by_type
+            .entry(extension.unwrap_or_else(|| "unknown".to_string()))
+            .or_default() -= 1;
     }
 }
 

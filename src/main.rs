@@ -2,13 +2,7 @@ use crate::{ cli::ARGUMENTS, profile::Profile, progress::DownloadAction, target:
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    process::exit,
-    sync::{ Arc, atomic::Ordering::Relaxed },
-    thread,
-};
+use std::{ path::PathBuf, process::exit, sync::{ Arc, atomic::Ordering::Relaxed }, thread };
 use strum_macros::Display;
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
@@ -57,12 +51,11 @@ async fn main() -> Result<()> {
         }
 
         if ARGUMENTS.list_extensions {
-            ext::list(files, &target);
+            eprintln!("{}", ext::ExtensionList::new(&files, &target));
 
             if i != total_targets - 1 {
                 eprintln!();
             }
-
             continue;
         }
 
@@ -70,14 +63,12 @@ async fn main() -> Result<()> {
 
         if let Some(exts) = ARGUMENTS.included() {
             files.retain(|file| {
-                file.to_extension(&target).is_some() &&
-                    exts.contains(&file.to_extension(&target).unwrap())
+                file.to_extension(&target).is_some_and(|ext| exts.contains(&ext))
             });
             files_left_msg(Filter::Inclusive, total, files.len());
         } else if let Some(exts) = ARGUMENTS.excluded() {
             files.retain(|file| {
-                file.to_extension(&target).is_none() ||
-                    !exts.contains(&file.to_extension(&target).unwrap())
+                file.to_extension(&target).is_none_or(|ext| !exts.contains(&ext))
             });
             files_left_msg(Filter::Exclusive, total, files.len());
         }
@@ -94,9 +85,7 @@ async fn main() -> Result<()> {
 
             let archive = target.archive();
 
-            files.retain(|f| {
-                if let Some(hash) = f.to_hash() { !archive.contains(&hash) } else { true }
-            });
+            files.retain(|file| file.to_hash().is_none_or(|hash| !archive.contains(&hash)));
 
             let left = files.len();
 
@@ -113,15 +102,7 @@ async fn main() -> Result<()> {
 
         let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
 
-        let mut files_by_type = HashMap::new();
-
-        for file in &files {
-            let extension = file.to_extension(&target).unwrap_or("unknown".to_string());
-
-            let count = files_by_type.get(&extension).copied().unwrap_or_default();
-
-            files_by_type.insert(extension, count + 1);
-        }
+        let files_by_type = ext::count(&files, &target);
 
         thread::spawn(move || {
             progress::progress_bar(
@@ -139,27 +120,23 @@ async fn main() -> Result<()> {
 
         for file in files {
             let permit = sem.clone().acquire_owned().await;
-
             let msg_tx = msg_tx.clone();
-
             let target = target.clone();
 
             tasks.push(
                 task::spawn(async move {
                     let _permit = permit;
 
-                    let result = file.try_download(&target, msg_tx.clone()).await;
-
-                    match result {
-                        Ok(action) => {
-                            msg_tx.send(action).await.unwrap();
-                        }
+                    match file.try_download(&target, msg_tx.clone()).await {
+                        Ok(action) => msg_tx.send(action).await.unwrap(),
                         Err(err) => {
                             let mut error = err.to_string();
+
                             if let Some(source) = err.source() {
                                 error.push('\n');
                                 error.push_str(&source.to_string());
                             }
+
                             msg_tx
                                 .send(DownloadAction::Fail(error, file.to_extension(&target))).await
                                 .unwrap();
