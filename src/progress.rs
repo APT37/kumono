@@ -23,6 +23,7 @@ pub enum DownloadAction {
     Skip(Option<String>, Option<String>),
     Fail(String, Option<String>),
     Complete(Option<String>, Option<String>),
+    Panic(String),
 }
 
 struct Stats {
@@ -34,6 +35,7 @@ struct Stats {
     failed: u64,
     dl_bytes: u64,
     errors: Vec<String>,
+    panic: bool,
     archive_file: Option<File>,
     files_by_type: HashMap<String, usize>,
 }
@@ -51,6 +53,8 @@ impl Stats {
             dl_bytes: 0,
 
             errors: Vec::with_capacity(3),
+
+            panic: false,
 
             archive_file: if ARGUMENTS.download_archive {
                 Some(Self::open_archive(archive_path))
@@ -107,11 +111,11 @@ impl Stats {
                 self.dl_bytes += size;
                 false
             }
-            DownloadAction::ReportLegacyHashSkip(name) => {
+            DownloadAction::ReportLegacyHashSkip(file_name) => {
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
-                self.errors.push(format!("skipped hash verification for legacy file: {name}"));
+                self.errors.push(format!("skipped hash verification for legacy file: {file_name}"));
                 false
             }
             DownloadAction::Skip(hash, extension) => {
@@ -121,14 +125,14 @@ impl Stats {
                 self.write_to_archive(hash);
                 true
             }
-            DownloadAction::Fail(err, extension) => {
+            DownloadAction::Fail(error, extension) => {
                 self.active -= 1;
                 self.failed += 1;
                 self.detract_one_from_file_counter(extension);
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
-                self.errors.push(err);
+                self.errors.push(error);
                 true
             }
             DownloadAction::Complete(hash, extension) => {
@@ -137,6 +141,14 @@ impl Stats {
                 self.detract_one_from_file_counter(extension);
                 self.write_to_archive(hash);
                 true
+            }
+            DownloadAction::Panic(error) => {
+                if self.errors.len() == 3 {
+                    self.errors.remove(0);
+                }
+                self.errors.push(error);
+                self.panic = true;
+                false
             }
         }
     }
@@ -214,6 +226,11 @@ pub fn progress_bar(
         }
 
         bar.set_prefix(stats.to_string());
+
+        if stats.panic {
+            bar.finish();
+            exit(7);
+        }
     }
 
     bar.finish();

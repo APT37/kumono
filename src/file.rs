@@ -272,7 +272,7 @@ impl PostFile {
                 while let Some(Ok(bytes)) = stream.next().await {
                     if let Err(err) = file.write_all(&bytes).await {
                         msg_tx.send(
-                            DownloadAction::Fail(format!("write error: {err}"), None)
+                            DownloadAction::Panic(format!("write error: {}\n{err}", self.to_name()))
                         ).await?;
                         exit(1);
                     }
