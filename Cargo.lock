@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "kumono"
-version = "0.64.0"
+version = "0.64.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1049,9 +1049,9 @@ checksum = "d8868e7264af614b3634ff0abbe37b178e61000611b8a75221aea40221924aba"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.105"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "535d180e0ecab6268a3e718bb9fd44db66bbbc256257165fc699dadf70d16fe7"
+checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
 ]

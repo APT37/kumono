@@ -94,6 +94,13 @@ async fn main() -> Result<()> {
             }
         }
 
+        if files.is_empty() {
+            if i != total_targets - 1 {
+                eprintln!();
+            }
+            continue;
+        }
+
         let left = files.len();
 
         fs::create_dir_all(target.to_pathbuf(None)).await?;
