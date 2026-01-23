@@ -1,9 +1,9 @@
-use crate::{ cli::ARGUMENTS, file::PostFile, http::CLIENT, target::Target };
+use crate::{ cli::ARGUMENTS, file::{ PostFile, PostFileRaw }, http::CLIENT, target::Target };
 use anyhow::{ Result, anyhow };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
-use std::sync::LazyLock;
+use std::{ mem, sync::LazyLock };
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
@@ -78,22 +78,28 @@ pub struct SinglePost {
     post: SinglePostInner,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
 struct SinglePostInner {
-    file: Option<PostFile>,
-    attachments: Vec<PostFile>,
+    file: Option<PostFileRaw>,
+    attachments: Vec<PostFileRaw>,
 }
 
 impl Post for SinglePost {
     fn files(&mut self) -> Vec<PostFile> {
-        self.post.attachments.retain(PostFile::has_path);
+        let post = mem::take(&mut self.post);
 
-        let mut files = Vec::with_capacity(self.post.attachments.len() + 1);
+        let mut files = Vec::with_capacity(post.attachments.len() + 1);
 
-        files.append(&mut self.post.attachments);
+        files.append(
+            &mut post.attachments
+                .into_iter()
+                .filter_map(|raw| raw.path)
+                .map(PostFile::new)
+                .collect()
+        );
 
-        if let Some(file) = self.post.file.take() && file.has_path() {
-            files.push(file);
+        if let Some(file) = post.file && let Some(path) = file.path {
+            files.push(PostFile::new(path));
         }
 
         files
@@ -114,22 +120,42 @@ pub async fn try_fetch_page(
     ).await
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct PagePost {
-    file: Option<PostFile>,
-    attachments: Vec<PostFile>,
+    file: Option<PostFileRaw>,
+    attachments: Vec<PostFileRaw>,
 }
 
 impl Post for PagePost {
+    // fn files(&mut self) -> Vec<PostFile> {
+    //     self.attachments;
+
+    //     let mut files = Vec::with_capacity(self.attachments.len() + 1);
+
+    //     files.append(&mut self.attachments);
+
+    //     if let Some(file) = self.file.take() && file.has_path() {
+    //         files.push(file);
+    //     }
+
+    //     files
+    // }
+
     fn files(&mut self) -> Vec<PostFile> {
-        self.attachments.retain(PostFile::has_path);
+        let attachments = mem::take(&mut self.attachments);
 
-        let mut files = Vec::with_capacity(self.attachments.len() + 1);
+        let mut files = Vec::with_capacity(attachments.len() + 1);
 
-        files.append(&mut self.attachments);
+        files.append(
+            &mut attachments
+                .into_iter()
+                .filter_map(|raw| raw.path)
+                .map(PostFile::new)
+                .collect()
+        );
 
-        if let Some(file) = self.file.take() && file.has_path() {
-            files.push(file);
+        if let Some(file) = self.file.take() && let Some(path) = file.path {
+            files.push(PostFile::new(path));
         }
 
         files
@@ -146,16 +172,17 @@ pub async fn try_discord_server(server: &str) -> Result<Vec<DiscordChannel>, Api
     try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct DiscordPost {
-    attachments: Vec<PostFile>,
+    attachments: Vec<PostFileRaw>,
 }
 
 impl Post for DiscordPost {
     fn files(&mut self) -> Vec<PostFile> {
         self.attachments
             .drain(..)
-            .filter(PostFile::has_path)
+            .filter_map(|file| file.path)
+            .map(PostFile::new)
             .collect()
     }
 }

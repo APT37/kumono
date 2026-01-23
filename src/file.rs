@@ -6,6 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use std::{
     error::Error,
+    fmt::{ self, Display, Formatter },
     io::SeekFrom,
     path::PathBuf,
     process::exit,
@@ -24,7 +25,7 @@ static HASH_RE: LazyLock<Regex> = LazyLock::new(||
 );
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PostFile {
+pub struct PostFileRaw {
     // Deserializing the name fieldbreaks our hashset's uniqueness guarantee;
     // the same file may be known under different names, leading to a race
     // condition where multiple concurrent tasks write to the same file,
@@ -43,29 +44,36 @@ pub struct PostFile {
     pub path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct PostFile {
+    pub name: String,
+    path: String,
+}
+
+impl Display for PostFile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
 impl PostFile {
-    pub fn has_path(&self) -> bool {
-        self.path.is_some()
+    pub fn new(path: String) -> Self {
+        Self {
+            name: PathBuf::from(&path)
+                .file_name()
+                .expect("get file name from CDN path")
+                .to_string_lossy()
+                .to_string(),
+            path,
+        }
     }
 
     pub fn to_url(&self, target: &Target) -> String {
-        format!(
-            "https://{site}/data{path}",
-            site = target.as_service().site(),
-            path = self.path.as_ref().unwrap()
-        )
-    }
-
-    pub fn to_name(&self) -> String {
-        PathBuf::from(self.path.as_ref().expect("get path from PostFile"))
-            .file_name()
-            .expect("get file name from CDN path")
-            .to_string_lossy()
-            .to_string()
+        format!("https://{site}/data{path}", site = target.as_service().site(), path = self.path)
     }
 
     pub fn to_temp_name(&self) -> String {
-        self.to_name() + ".temp"
+        format!("{}.temp", self.name)
     }
 
     pub fn to_extension(&self, target: &Target) -> Option<String> {
@@ -75,7 +83,7 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self, target: &Target) -> PathBuf {
-        target.to_pathbuf(Some(&self.to_name()))
+        target.to_pathbuf(Some(&self.name))
     }
 
     pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
@@ -83,7 +91,7 @@ impl PostFile {
     }
 
     pub fn to_hash(&self) -> Option<String> {
-        Some(HASH_RE.captures(&self.to_name())?.name("hash")?.as_str().to_string())
+        Some(HASH_RE.captures(&self.name)?.name("hash")?.as_str().to_string())
     }
 
     pub async fn try_open(&self, target: &Target) -> Result<File> {
@@ -113,7 +121,7 @@ impl PostFile {
             format!(
                 "rename tempfile to file: {temp_name} -> {name}",
                 temp_name = self.to_temp_name(),
-                name = self.to_name()
+                name = self.name
             )
         })
     }
@@ -149,7 +157,7 @@ impl PostFile {
                     DownloadAction::Fail(
                         format!(
                             "size mismatch (deleted): {name} [l: {csize} | r: {rsize}]",
-                            name = self.to_name()
+                            name = self.name
                         ),
                         self.to_extension(target)
                     )
@@ -201,14 +209,14 @@ impl PostFile {
                     self.try_delete(target).await?;
                     DownloadAction::Fail(
                         format!(
-                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n| local: {lhash}",
-                            name = self.to_name()
+                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n|  local: {lhash}",
+                            name = self.name
                         ),
                         self.to_extension(target)
                     )
                 }
             } else {
-                msg_tx.send(DownloadAction::ReportLegacyHashSkip(self.to_name())).await?;
+                msg_tx.send(DownloadAction::ReportLegacyHashSkip(self.name.clone())).await?;
                 DownloadAction::Complete(None, self.to_extension(target))
             }
         )
@@ -272,7 +280,7 @@ impl PostFile {
                 while let Some(Ok(bytes)) = stream.next().await {
                     if let Err(err) = file.write_all(&bytes).await {
                         msg_tx.send(
-                            DownloadAction::Panic(format!("write error: {}\n{err}", self.to_name()))
+                            DownloadAction::Panic(format!("write error: {}\n{err}", self.name))
                         ).await?;
                         exit(1);
                     }

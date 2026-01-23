@@ -3,6 +3,7 @@ use anyhow::{ Context, Result, anyhow };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
 use std::{
+    collections::HashSet,
     fmt::{ self, Display, Formatter },
     fs::File,
     io::{ BufRead, BufReader, Read },
@@ -11,18 +12,18 @@ use std::{
 };
 use strum_macros::{ Display, EnumString };
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {
     Creator {
         service: Service,
         user: String,
         subtype: SubType,
-        archive: Vec<String>,
+        archive: HashSet<String>,
     },
     Discord {
         server: String,
         channel: Option<String>,
-        archive: Vec<String>,
+        archive: HashSet<String>,
     },
 }
 
@@ -175,14 +176,14 @@ impl Target {
                     Target::Discord {
                         server: info.id,
                         channel: None,
-                        archive: Vec::new(),
+                        archive: HashSet::new(),
                     }
                 } else {
                     Target::Creator {
                         service: info.service.parse()?,
                         user: info.id,
                         subtype: SubType::None,
-                        archive: Vec::new(),
+                        archive: HashSet::new(),
                     }
                 };
 
@@ -196,7 +197,7 @@ impl Target {
             return Ok(targets);
         }
 
-        let archive = Vec::new();
+        let archive = HashSet::new();
 
         let mut target = if RE_CREATOR.is_match(url) {
             let caps = capture(&RE_CREATOR);
@@ -265,15 +266,15 @@ impl Target {
         Ok(())
     }
 
-    fn add_hashes(&mut self, mut hashes: Vec<String>) {
+    fn add_hashes(&mut self, hashes: HashSet<String>) {
         match self {
             Target::Creator { archive, .. } | Target::Discord { archive, .. } => {
-                archive.append(&mut hashes);
+                archive.extend(hashes);
             }
         }
     }
 
-    pub fn archive(&self) -> &Vec<String> {
+    pub fn archive(&self) -> &HashSet<String> {
         match self {
             Target::Creator { archive, .. } | Target::Discord { archive, .. } => archive,
         }
@@ -283,7 +284,11 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             "db",
-            &format!("{service}+{user}.txt", service = self.as_service(), user = self.user_or_server()),
+            &format!(
+                "{service}+{user}.txt",
+                service = self.as_service(),
+                user = self.user_or_server()
+            ),
         ])
     }
 

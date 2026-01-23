@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
 
     targets.append(&mut Target::try_parse_file().await?);
 
-    targets = targets.into_iter().unique().collect();
+    targets = targets.into_iter().unique_by(Target::to_string).collect();
 
     if targets.is_empty() {
         eprintln!("No valid target URLs.");
