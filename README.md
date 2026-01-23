@@ -61,7 +61,7 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
 ### Available Options
 
-Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine` (the default value for `{output-path}` is `kumono`).
+Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine` (the default value for `{output-path}` is `kumono`). *Downloads are automatically resumed.*
 
 ```
 Media ripper for coomer and kemono
@@ -114,6 +114,9 @@ kumono https://kemono.cr/discord/server/1196504962411282491/1196521501059469463
 
 # multiple targets
 kumono https://coomer.st/onlyfans/user/belledelphine https://kemono.cr/discord/server/1196504962411282491
+
+# from file(s)
+kumono -f targets1.txt -f targets2.txt -f targets3.txt
 ```
 
 ### Extension Selection
