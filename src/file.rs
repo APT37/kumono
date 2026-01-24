@@ -278,13 +278,13 @@ impl PostFile {
                 let mut stream = response.bytes_stream();
 
                 while let Some(Ok(bytes)) = stream.next().await {
+                    msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
                     if let Err(err) = file.write_all(&bytes).await {
                         msg_tx.send(
                             DownloadAction::Panic(format!("write error: {}\n{err}", self.name))
                         ).await?;
                         exit(1);
                     }
-                    msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
                 }
                 file.flush().await?;
                 break Ok(());
