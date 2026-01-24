@@ -80,9 +80,9 @@ Options:
   -i, --include <INCLUDE>                        File extensions to include (comma separated)
   -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
   -d, --download-archive                         Log hashes, skip moved/deleted file download
-  -m, --max-retries <MAX_RETRIES>                [default: 5]
+  -m, --max-retries <MAX_RETRIES>                [default: 4]
   -r, --retry-delay <RETRY_DELAY>                [default: 1]
-      --connect-timeout <CONNECT_TIMEOUT>        [default: 1]
+      --connect-timeout <CONNECT_TIMEOUT>        [default: 5]
       --read-timeout <READ_TIMEOUT>              [default: 180]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
