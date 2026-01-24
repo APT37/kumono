@@ -41,7 +41,6 @@ pub struct Args {
 
     // #[arg(short = 'B, long = "pass", help = "Load cookies from browser")]
     // pub cookies-from-browser: Option<String>,
-
     #[arg(
         short,
         long,
@@ -63,13 +62,13 @@ pub struct Args {
     #[arg(short, long, help = "Log hashes, skip moved/deleted file download")]
     pub download_archive: bool,
 
-    #[arg(short, long, default_value_t = 5)]
+    #[arg(short, long, default_value_t = 4)]
     pub max_retries: usize,
 
     #[arg(short, long, value_parser = try_duration_from_secs, default_value = "1")]
     pub retry_delay: Duration,
 
-    #[arg(long, value_parser = try_duration_from_secs, default_value = "1")]
+    #[arg(long, value_parser = try_duration_from_secs, default_value = "5")]
     pub connect_timeout: Duration,
 
     // TODO: retry multiple times (or perhaps infinitely?) on timeout,

@@ -127,20 +127,6 @@ pub struct PagePost {
 }
 
 impl Post for PagePost {
-    // fn files(&mut self) -> Vec<PostFile> {
-    //     self.attachments;
-
-    //     let mut files = Vec::with_capacity(self.attachments.len() + 1);
-
-    //     files.append(&mut self.attachments);
-
-    //     if let Some(file) = self.file.take() && file.has_path() {
-    //         files.push(file);
-    //     }
-
-    //     files
-    // }
-
     fn files(&mut self) -> Vec<PostFile> {
         let attachments = mem::take(&mut self.attachments);
 
