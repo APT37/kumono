@@ -182,7 +182,10 @@ impl Display for Stats {
                     )
                 );
 
-                for (key, value) in self.files_by_type.iter().sorted() {
+                for (key, value) in self.files_by_type
+                    .iter()
+                    .filter(|(_, v)| **v != 0)
+                    .sorted() {
                     buffer.push(format!("{key}: {value}", value = n_fmt(*value as u64)));
                 }
 
