@@ -46,7 +46,7 @@ pub struct PostFileRaw {
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
-    pub name: String,
+    name: String,
     path: String,
 }
 
@@ -118,11 +118,7 @@ impl PostFile {
 
     pub async fn try_move(&self, target: &Target) -> Result<()> {
         fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
-            format!(
-                "rename tempfile to file: {temp_name} -> {name}",
-                temp_name = self.to_temp_name(),
-                name = self.name
-            )
+            format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.name)
         })
     }
 
