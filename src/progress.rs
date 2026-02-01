@@ -157,6 +157,7 @@ impl Stats {
         *self.files_by_type
             .entry(extension.unwrap_or_else(|| "unknown".to_string()))
             .or_default() -= 1;
+        self.files_by_type.retain(|_, v| *v > 0);
     }
 }
 
@@ -173,6 +174,8 @@ impl Display for Stats {
             n_fmt(self.skipped),
             n_fmt(self.failed),
             if self.files_by_type.is_empty() {
+                String::new()
+            } else {
                 let mut buffer = Vec::with_capacity(self.files_by_type.len());
 
                 buffer.push(
@@ -182,16 +185,11 @@ impl Display for Stats {
                     )
                 );
 
-                for (key, value) in self.files_by_type
-                    .iter()
-                    .filter(|(_, v)| **v != 0)
-                    .sorted() {
+                for (key, value) in self.files_by_type.iter().sorted() {
                     buffer.push(format!("{key}: {value}", value = n_fmt(*value as u64)));
                 }
 
                 buffer.join(" / ")
-            } else {
-                String::new()
             }
         )
     }
