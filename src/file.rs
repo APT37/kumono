@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use std::{
     error::Error,
-    fmt::{ self, Display, Formatter },
+    fmt::{ self, Display, Formatter, Write },
     io::SeekFrom,
     path::PathBuf,
     process::exit,
@@ -24,9 +24,9 @@ static HASH_RE: LazyLock<Regex> = LazyLock::new(||
     Regex::new(r"^(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
 );
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Deserialize, PartialEq, Eq, Hash)]
 pub struct PostFileRaw {
-    // Deserializing the name fieldbreaks our hashset's uniqueness guarantee;
+    // Deserializing the name field breaks our hashset's uniqueness guarantee;
     // the same file may be known under different names, leading to a race
     // condition where multiple concurrent tasks write to the same file,
     // causing corruption & size mismatches. hash/size mismatches lead to
@@ -44,10 +44,11 @@ pub struct PostFileRaw {
     pub path: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Hash)]
 pub struct PostFile {
-    name: String,
     path: String,
+    name: String,
+    temp_name: String,
 }
 
 impl Display for PostFile {
@@ -58,22 +59,29 @@ impl Display for PostFile {
 
 impl PostFile {
     pub fn new(path: String) -> Self {
+        let name = PathBuf::from(&path)
+            .file_name()
+            .expect("get file name from CDN path")
+            .to_string_lossy()
+            .to_string();
+
+        let mut temp_name = String::with_capacity(name.len() + 5);
+        write!(temp_name, "{name}.temp").unwrap();
+
         Self {
-            name: PathBuf::from(&path)
-                .file_name()
-                .expect("get file name from CDN path")
-                .to_string_lossy()
-                .to_string(),
             path,
+            name,
+            temp_name,
         }
     }
 
-    pub fn to_temp_name(&self) -> String {
-        self.name.clone() + ".temp"
-    }
-
     pub fn to_url(&self, target: &Target) -> String {
-        format!("https://{}/data{}", target.as_service().site(), self.path)
+        let host = target.as_service().host();
+
+        let mut url = String::with_capacity(8 + host.len() + 5 + self.path.len());
+        write!(url, "https://{host}/data{}", self.path).unwrap();
+
+        url
     }
 
     pub fn to_extension(&self, target: &Target) -> Option<String> {
@@ -87,7 +95,7 @@ impl PostFile {
     }
 
     pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
-        target.to_pathbuf(Some(&self.to_temp_name()))
+        target.to_pathbuf(Some(&self.temp_name))
     }
 
     pub fn to_hash(&self) -> Option<String> {
@@ -100,31 +108,31 @@ impl PostFile {
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("Failed to open temporary file: {}", self.to_temp_name()))
+            .with_context(|| format!("Failed to open temporary file: {}", self.temp_name))
     }
 
     /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256
             ::try_async_digest(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("hash tempfile: {}", self.to_temp_name()))
+            .with_context(|| format!("hash tempfile: {}", self.temp_name))
     }
 
     pub async fn try_exists(&self, target: &Target) -> Result<bool> {
         fs::try_exists(self.to_pathbuf(target)).await.with_context(||
-            format!("check if file exists: {}", self.to_temp_name())
+            format!("check if file exists: {}", self.temp_name)
         )
     }
 
     pub async fn try_move(&self, target: &Target) -> Result<()> {
         fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
-            format!("rename tempfile to file: {} -> {}", self.to_temp_name(), self.name)
+            format!("rename tempfile to file: {} -> {}", self.temp_name, self.name)
         })
     }
 
     pub async fn try_delete(&self, target: &Target) -> Result<()> {
         fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(||
-            format!("delete tempfile: {}", self.to_temp_name())
+            format!("delete tempfile: {}", self.temp_name)
         )
     }
 
@@ -153,10 +161,20 @@ impl PostFile {
 
                 return Ok(
                     DownloadAction::Fail(
-                        format!(
-                            "size mismatch (deleted): {name} [l: {csize} | r: {rsize}]",
-                            name = self.name
-                        ),
+                        {
+                            let (csize, rsize) = (csize.to_string(), rsize.to_string());
+
+                            let mut msg = String::with_capacity(
+                                25 + self.name.len() + 5 + csize.len() + 6 + rsize.len() + 1
+                            );
+                            write!(
+                                msg,
+                                "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
+                                self.name
+                            )?;
+
+                            msg
+                        },
                         self.to_extension(target)
                     )
                 );
@@ -200,10 +218,18 @@ impl PostFile {
                 } else {
                     self.try_delete(target).await?;
                     DownloadAction::Fail(
-                        format!(
-                            "hash mismatch (deleted): {name}\n| remote: {rhash}\n|  local: {lhash}",
-                            name = self.name
-                        ),
+                        {
+                            let mut msg = String::with_capacity(
+                                25 + self.name.len() + 11 + rhash.len() + 10 + lhash.len()
+                            );
+                            write!(
+                                msg,
+                                "hash mismatch (deleted): {name}\n| remote: {rhash}\n|  local: {lhash}",
+                                name = self.name
+                            )?;
+
+                            msg
+                        },
                         self.to_extension(target)
                     )
                 }
@@ -264,7 +290,13 @@ impl PostFile {
         }
 
         loop {
-            let response = CLIENT.get(url).header("Range", format!("bytes={start}-")).send().await?;
+            let response = CLIENT.get(url)
+                .header("Range", {
+                    let mut range = String::with_capacity(32);
+                    write!(range, "bytes={start}-")?;
+                    range
+                })
+                .send().await?;
             let status = response.status();
 
             match status {
@@ -274,9 +306,14 @@ impl PostFile {
                     while let Some(Ok(bytes)) = stream.next().await {
                         msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
                         if let Err(err) = file.write_all(&bytes).await {
-                            msg_tx.send(
-                                DownloadAction::Panic(format!("write error: {}\n{err}", self.name))
-                            ).await?;
+                            msg_tx.send({
+                                let error = err.to_string();
+                                let mut buf = String::with_capacity(
+                                    13 + self.name.len() + 1 + error.len()
+                                );
+                                write!(buf, "write error: {}\n{error}", self.name)?;
+                                DownloadAction::Panic(buf)
+                            }).await?;
                             exit(1);
                         }
                     }

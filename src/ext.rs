@@ -2,7 +2,7 @@ use crate::{ file::PostFile, target::Target };
 use itertools::Itertools;
 use std::{ collections::{ HashMap, HashSet }, fmt::{ Display, Formatter, Result } };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct ExtensionList {
     extensions: HashSet<String>,
     without_extension: usize,
@@ -41,7 +41,7 @@ impl Display for ExtensionList {
             if !self.extensions.is_empty() {
                 writeln!(f)?;
             }
-
+            
             write!(f, "{} files do not have an extension", self.without_extension)?;
         }
 

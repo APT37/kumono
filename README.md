@@ -8,8 +8,8 @@ Support is provided in the [discussions][discussions] section.
 
 - [Installation](#installation)
   - [Binaries](#binaries)
-  - [Packages (Arch)](#packages-arch)
-  - [Cargo (Debian)](#cargo-debian)
+  - [Packages](#packages)
+  - [Cargo](#cargo)
 - [Command Line](#command-line)
   - [Available Options](#available-options)
   - [Target Selection](#target-selection)
@@ -27,13 +27,13 @@ Support is provided in the [discussions][discussions] section.
 
 [![][linux-x64-badge]][linux-x64-dl] [![][linux-arm-badge]][linux-arm-dl]
 
-### Packages (Arch)
+### Packages
 
 You may use an AUR helper like [**paru**][paru] to install one of these packages.
 
 [![][kmn-src-aur-ver]][kmn-src-aur] [![][kmn-bin-aur-ver]][kmn-bin-aur] [![][kmn-git-aur-ver]][kmn-git-aur]
 
-### Cargo (Debian)
+### Cargo
 
 [![][crate-ver]][crate-url] [![][crate-deps]][crate-deps-url]
 

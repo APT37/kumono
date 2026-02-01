@@ -4,7 +4,7 @@ use regex::{ Captures, Regex };
 use serde::Deserialize;
 use std::{
     collections::HashSet,
-    fmt::{ self, Display, Formatter },
+    fmt::{ self, Display, Formatter, Write },
     fs::File,
     io::{ BufRead, BufReader, Read },
     path::PathBuf,
@@ -12,7 +12,6 @@ use std::{
 };
 use strum_macros::{ Display, EnumString };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Target {
     Creator {
         service: Service,
@@ -29,33 +28,35 @@ pub enum Target {
 
 impl Display for Target {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", match self {
-            Target::Creator { service, user, subtype, .. } =>
-                format!(
-                    "{service}/{user}{post}",
-                    post = if let SubType::Post(p) = subtype {
-                        format!("/{p}")
-                    } else {
-                        String::new()
-                    }
-                ),
-            Target::Discord { server, channel, .. } =>
-                format!(
-                    "discord/{server}{channel}",
-                    channel = channel.as_ref().map_or(String::new(), |c| format!("/{c}"))
-                ),
-        })
+        match self {
+            Target::Creator { service, user, subtype, .. } => {
+                write!(f, "{service}/{user}")?;
+
+                if let SubType::Post(p) = subtype {
+                    write!(f, "/{p}")?;
+                }
+            }
+            Target::Discord { server, channel, .. } => {
+                write!(f, "discord/{server}")?;
+
+                if let Some(chan) = channel {
+                    write!(f, "/{chan}")?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(PartialEq, Eq, Hash)]
 pub enum SubType {
     PageOffset(usize),
     Post(String),
     None,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Deserialize)]
 struct Info {
     id: String, // "5564244",
     // name: String, // "theobrobine",
@@ -100,14 +101,21 @@ static RE_DISCORD: LazyRegex = LazyLock::new(|| {
 });
 
 async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
-    let mut accounts = Vec::with_capacity(4);
-    let site = service.site();
+    let host = service.host();
+    let service = service.as_static_str();
 
-    let url = format!("https://{site}/api/v1/{service}/user/{user}/profile");
+    let mut url = String::with_capacity(8 + host.len() + 8 + service.len() + 6 + user.len() + 8);
+    write!(url, "https://{host}/api/v1/{service}/user/{user}/profile")?;
+
     let account = CLIENT.get(url).send().await?.json().await?;
+    let mut accounts = Vec::with_capacity(4);
     accounts.push(account);
 
-    let linked_accounts_url = format!("https://{site}/api/v1/{service}/user/{user}/links");
+    let mut linked_accounts_url = String::with_capacity(
+        8 + host.len() + 8 + service.len() + 6 + user.len() + 6
+    );
+    write!(linked_accounts_url, "https://{host}/api/v1/{service}/user/{user}/links")?;
+
     let mut linked_accounts = CLIENT.get(linked_accounts_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
 
@@ -284,25 +292,29 @@ impl Target {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
             "db",
-            &format!(
-                "{service}+{user}.txt",
-                service = self.as_service(),
-                user = self.user_or_server()
-            ),
+            &({
+                let service = self.as_service().as_static_str();
+                let user = self.user_or_server();
+
+                let mut file_name = String::with_capacity(service.len() + 1 + user.len() + 4);
+                write!(file_name, "{service}+{user}.txt").unwrap();
+
+                file_name
+            }),
         ])
     }
 
     pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
         PathBuf::from_iter([
             &ARGUMENTS.output_path,
-            &self.as_service().to_string(),
+            self.as_service().as_static_str(),
             self.user_or_server(),
             file.unwrap_or_default(),
         ])
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumString, Display)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, EnumString, Display)]
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
 pub enum Service {
     Afdian,
@@ -320,7 +332,26 @@ pub enum Service {
 }
 
 impl Service {
-    pub fn site(self) -> &'static str {
+    pub fn as_static_str(self) -> &'static str {
+        #[allow(clippy::enum_glob_use)]
+        use Service::*;
+        match self {
+            Afdian => "afdian",
+            Boosty => "boosty",
+            CandFans => "candfans",
+            Discord => "discord",
+            DlSite => "dlsite",
+            Fanbox => "fanbox",
+            Fansly => "fansly",
+            Fantia => "fantia",
+            Gumroad => "gumroad",
+            OnlyFans => "onlyfans",
+            Patreon => "patreon",
+            SubscribeStar => "subscribestar",
+        }
+    }
+
+    pub fn host(self) -> &'static str {
         #[allow(clippy::enum_glob_use)]
         use Service::*;
         match self {

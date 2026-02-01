@@ -7,12 +7,12 @@ use crate::{
 };
 use anyhow::Result;
 use indicatif::{ ProgressBar, ProgressStyle };
-use std::{ collections::HashSet, fmt::{ self, Display, Formatter }, thread };
+use std::{ collections::HashSet, fmt::{ self, Display, Formatter, Write }, sync::Arc, thread };
 use tokio::{ sync::mpsc::{ UnboundedReceiver, unbounded_channel }, time::{ Duration, sleep } };
 
 pub struct Profile {
     target_id: usize,
-    pub target: Target,
+    target: Arc<Target>,
     post_count: usize,
     posts: Vec<Box<dyn Post>>,
     pub files: HashSet<PostFile>,
@@ -23,34 +23,34 @@ impl Display for Profile {
         if
             let
             | Target::Creator { subtype: SubType::Post(_), .. }
-            | Target::Discord { channel: None, .. } = &self.target
+            | Target::Discord { channel: None, .. } = *self.target
         {
             write!(
                 f,
                 "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::with_noun(self.files.len() as u64, "file")
-            )
+                posts = pretty::with_word(self.files.len() as u64, "file")
+            )?;
         } else {
-            let files = if self.post_count == 0 {
-                ""
-            } else {
-                match self.files.len() {
-                    0 => ", but no files",
-                    1 => ", containing 1 file",
-                    n => &format!(", containing {number} files", number = n_fmt(n as u64)),
-                }
-            };
-
             write!(
                 f,
-                "#{number}: {target} has {posts}{files}",
+                "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
-                posts = pretty::with_noun(self.post_count as u64, "post")
-            )
+                posts = pretty::with_word(self.post_count as u64, "post")
+            )?;
+
+            if self.post_count > 0 {
+                match self.files.len() {
+                    0 => write!(f, ", but no files")?,
+                    1 => write!(f, ", containing 1 file")?,
+                    n => write!(f, ", containing {} files", n_fmt(n as u64))?,
+                }
+            }
         }
+
+        Ok(())
     }
 }
 
@@ -69,7 +69,7 @@ fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
 }
 
 impl Profile {
-    pub async fn try_new(target: &Target, target_id: usize) -> Result<Self> {
+    pub async fn try_new(target: Arc<Target>, target_id: usize) -> Result<Self> {
         let mut profile = Self {
             target_id,
             target: target.clone(),
@@ -78,7 +78,7 @@ impl Profile {
             files: HashSet::new(),
         };
 
-        match target {
+        match &*target {
             Target::Creator { user, subtype, .. } => {
                 profile.init_posts_standard(user, subtype).await?;
             }
@@ -102,13 +102,19 @@ impl Profile {
 
     async fn init_posts_standard(&mut self, user: &str, subtype: &SubType) -> Result<()> {
         if let SubType::Post(post) = subtype {
-            let post: SinglePost = CLIENT.get(
-                format!(
-                    "https://{site}/api/v1/{service}/user/{user}/post/{post}",
-                    site = self.target.as_service().site(),
-                    service = self.target.as_service()
-                )
-            )
+            let post: SinglePost = CLIENT.get({
+                let (host, service) = (
+                    self.target.as_service().host(),
+                    self.target.as_service().as_static_str(),
+                );
+
+                let mut url = String::with_capacity(
+                    8 + host.len() + 8 + service.len() + 6 + user.len() + 6 + post.len()
+                );
+                write!(url, "https://{host}/api/v1/{service}/user/{user}/post/{post}")?;
+
+                url
+            })
                 .send().await?
                 .json().await?;
 
@@ -126,16 +132,18 @@ impl Profile {
                 let posts: Vec<PagePost>;
 
                 loop {
-                    let msg = format!(
-                        "Retrieving posts for {target} page #{page}{try}",
-                        target = self.target,
-                        page = (offset + 50) / 50,
-                        r#try = if retries > 0 {
-                            format!(" (Retry #{retries})")
-                        } else {
-                            String::new()
-                        }
+                    let target = self.target.to_string();
+                    let page = ((offset + 50) / 50).to_string();
+
+                    let mut msg = String::with_capacity(
+                        21 + target.len() + 7 + page.len() + 9 + 1 + 1
                     );
+
+                    write!(msg, "Retrieving posts for {target} page #{page}")?;
+
+                    if retries > 0 {
+                        write!(msg, " (Retry #{retries})")?;
+                    }
 
                     msg_tx.send(msg)?;
 
@@ -196,19 +204,24 @@ impl Profile {
 
                 let posts: Vec<DiscordPost>;
 
-                loop {
-                    let msg = format!(
-                        "Retrieving posts for discord/{server}/{channel} page #{page}{retry}",
-                        channel = channel.id,
-                        page = (offset + 150) / 150,
-                        retry = if retries > 0 {
-                            format!(" (Retry #{retries})")
-                        } else {
-                            String::new()
-                        }
-                    );
+                let page = ((offset + 150) / 150).to_string();
 
-                    msg_tx.send(msg)?;
+                let mut msg = String::with_capacity(
+                    29 + server.len() + 1 + channel.id.len() + 7 + page.len() + 9 + 1 + 1
+                );
+
+                loop {
+                    write!(
+                        msg,
+                        "Retrieving posts for discord/{server}/{} page #{page}",
+                        channel.id
+                    )?;
+
+                    if retries > 0 {
+                        write!(msg, " (Retry #{retries})")?;
+                    }
+
+                    msg_tx.send(msg.clone())?;
 
                     match api::try_discord_page(&channel.id, offset).await {
                         Ok(p) => {

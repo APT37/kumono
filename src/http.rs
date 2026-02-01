@@ -9,19 +9,22 @@ use reqwest::{
 };
 use std::{ process::exit, sync::LazyLock };
 
+static VERSION: &str = concat!("kumono ", env!("CARGO_PKG_VERSION"));
+
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     let build_client = || -> Result<Client> {
+        let headers = HeaderMap::from_iter([
+            (HeaderName::from_static("accept"), HeaderValue::from_static("text/css")),
+        ]);
+
         let mut client = ClientBuilder::new()
-            .default_headers(
-                HeaderMap::from_iter([
-                    (HeaderName::from_static("accept"), HeaderValue::from_static("text/css")),
-                ])
-            )
-            .user_agent(format!("kumono {}", env!("CARGO_PKG_VERSION")))
+            .default_headers(headers)
+            .user_agent(VERSION)
             .connect_timeout(ARGUMENTS.connect_timeout)
             .timeout(ARGUMENTS.read_timeout)
             .redirect(Policy::limited(1))
-            .https_only(true);
+            .https_only(true)
+            .http2_prior_knowledge();
 
         if let Some(proxy) = &ARGUMENTS.proxy {
             client = client.proxy(Proxy::all(proxy)?);

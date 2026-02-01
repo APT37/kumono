@@ -41,7 +41,9 @@ async fn main() -> Result<()> {
     let total_targets = targets.len();
 
     for (i, target) in targets.into_iter().enumerate() {
-        let mut files = Profile::try_new(&target, i + 1).await?.files;
+        let target = Arc::new(target);
+
+        let mut files = Profile::try_new(target.clone(), i + 1).await?.files;
 
         if files.is_empty() {
             if i != total_targets - 1 {
@@ -169,12 +171,12 @@ async fn main() -> Result<()> {
 fn files_left_msg(filter: Filter, total: usize, left: usize) {
     eprintln!(
         "{filter}: skipping {skipped}, {left} left to download/check",
-        skipped = pretty::with_noun((total - left) as u64, "file"),
-        left = pretty::with_noun(left as u64, "file")
+        skipped = pretty::with_word((total - left) as u64, "file"),
+        left = pretty::with_word(left as u64, "file")
     );
 }
 
-#[derive(Debug, Clone, Copy, Display)]
+#[derive(Clone, Copy, Display)]
 enum Filter {
     Inclusive,
     Exclusive,

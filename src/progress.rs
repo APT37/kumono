@@ -1,11 +1,11 @@
-use crate::{ cli::ARGUMENTS, pretty::{ n_fmt, with_noun } };
+use crate::{ cli::ARGUMENTS, pretty::{ n_fmt, with_word } };
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    fmt::{ Display, Formatter, Result },
+    fmt::{ Display, Formatter, Result, Write },
     fs::File,
-    io::Write,
+    io::Write as ioWrite,
     path::PathBuf,
     process::exit,
     sync::atomic::{ AtomicBool, Ordering::Relaxed },
@@ -13,7 +13,6 @@ use std::{
 };
 use tokio::sync::mpsc::Receiver;
 
-#[derive(Clone)]
 pub enum DownloadAction {
     Start,
     Wait,
@@ -115,7 +114,9 @@ impl Stats {
                 if self.errors.len() == 3 {
                     self.errors.remove(0);
                 }
-                self.errors.push(format!("skipped hash verification for legacy file: {file_name}"));
+                let mut buf = String::with_capacity(43 + file_name.len());
+                write!(buf, "skipped hash verification for legacy file: {file_name}").unwrap();
+                self.errors.push(buf);
                 false
             }
             DownloadAction::Skip(hash, extension) => {
@@ -176,20 +177,19 @@ impl Display for Stats {
             if self.files_by_type.is_empty() {
                 String::new()
             } else {
-                let mut buffer = Vec::with_capacity(self.files_by_type.len());
+                let mut buffer = String::with_capacity(self.files_by_type.len() * 16);
 
-                buffer.push(
-                    format!(
-                        "\n{} left",
-                        with_noun(self.queued + self.waiting + self.active, "file")
-                    )
-                );
+                write!(
+                    buffer,
+                    "\n{} left",
+                    with_word(self.queued + self.waiting + self.active, "file")
+                )?;
 
                 for (key, value) in self.files_by_type.iter().sorted() {
-                    buffer.push(format!("{key}: {value}", value = n_fmt(*value as u64)));
+                    write!(buffer, " / {key}: {}", n_fmt(*value as u64))?;
                 }
 
-                buffer.join(" / ")
+                buffer
             }
         )
     }
@@ -209,7 +209,7 @@ pub fn progress_bar(
 
     bar.set_style(
         ProgressStyle::with_template(
-            "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {human_pos:>7}/{human_len:7} ({percent}%) {msg}"
+            "{prefix}[{elapsed_precise}] {bar:40.cyan/blue} {human_pos:>8}/{human_len:8} ({percent}%) {msg}"
         )
             .unwrap()
             .progress_chars("##-")
@@ -219,13 +219,16 @@ pub fn progress_bar(
 
     let mut stats = Stats::new(files, &archive, files_by_type);
 
+    let mut msg = String::new();
+
     while let Some(state) = msg_rx.blocking_recv() {
         if stats.update(state) {
             bar.inc(1);
         }
 
         if !stats.errors.is_empty() {
-            bar.set_message(format!("\n{}", stats.errors.join("\n")));
+            write!(msg, "\n{}", stats.errors.join("\n")).unwrap();
+            bar.set_message(msg.clone());
         }
 
         bar.set_prefix(stats.to_string());
@@ -239,7 +242,7 @@ pub fn progress_bar(
     bar.finish();
 
     if !last_target {
-        eprintln!("\n");
+        eprint!("\n\n");
     }
 
     if stats.failed != 0 {

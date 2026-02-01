@@ -122,9 +122,7 @@ impl Args {
 
 impl Display for Args {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        fn pd(d: &Duration) -> String {
-            pretty_duration(d, None)
-        }
+        let pd = |d: &Duration| pretty_duration(d, None);
 
         write!(
             f,

@@ -3,7 +3,7 @@ use anyhow::{ Result, format_err };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
-use std::{ mem, sync::LazyLock };
+use std::{ fmt::Write, mem, sync::LazyLock };
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
@@ -25,9 +25,7 @@ async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
 
     if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
         return Ok(serde_json::from_str("[]").unwrap());
-    }
-
-    if status != StatusCode::OK {
+    } else if status != StatusCode::OK {
         return Err(ApiError::Status(status));
     }
 
@@ -38,7 +36,7 @@ pub trait Post {
     fn files(&mut self) -> Vec<PostFile>;
 }
 
-#[derive(Debug, Clone, Error, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Error)]
 pub enum ApiError {
     #[error("connection error")] Connect(String),
     #[error("non-success status code")] Status(StatusCode),
@@ -73,12 +71,12 @@ impl ApiError {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Deserialize)]
 pub struct SinglePost {
     post: SinglePostInner,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Deserialize, Default)]
 struct SinglePostInner {
     file: Option<PostFileRaw>,
     attachments: Vec<PostFileRaw>,
@@ -86,19 +84,17 @@ struct SinglePostInner {
 
 impl Post for SinglePost {
     fn files(&mut self) -> Vec<PostFile> {
-        let post = mem::take(&mut self.post);
+        self.post.attachments.retain(|file| file.path.is_some());
 
-        let mut files = Vec::with_capacity(post.attachments.len() + 1);
+        let attachments = mem::take(&mut self.post.attachments);
 
-        files.append(
-            &mut post.attachments
-                .into_iter()
-                .filter_map(|raw| raw.path)
-                .map(PostFile::new)
-                .collect()
-        );
+        let mut files = Vec::with_capacity(attachments.len() + 1);
 
-        if let Some(file) = post.file && let Some(path) = file.path {
+        for raw in attachments {
+            files.push(PostFile::new(raw.path.unwrap()));
+        }
+
+        if let Some(raw) = self.post.file.take() && let Some(path) = raw.path {
             files.push(PostFile::new(path));
         }
 
@@ -111,16 +107,24 @@ pub async fn try_fetch_page(
     user: &str,
     offset: usize
 ) -> Result<Vec<PagePost>, ApiError> {
-    try_fetch(
-        &format!(
-            "https://{site}/api/v1/{service}/user/{user}/posts?o={offset}",
-            site = target.as_service().site(),
-            service = target.as_service()
-        )
-    ).await
+    let (host, service, offset) = (
+        target.as_service().host(),
+        target.as_service().as_static_str(),
+        offset.to_string(),
+    );
+
+    let mut url = String::with_capacity(
+        8 + host.len() + 8 + service.len() + 6 + user.len() + 9 + offset.len()
+    );
+
+    write!(url, "https://{host}/api/v1/{service}/user/{user}/posts?o={offset}").unwrap();
+
+    drop(offset);
+
+    try_fetch(&url).await
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Deserialize)]
 pub struct PagePost {
     file: Option<PostFileRaw>,
     attachments: Vec<PostFileRaw>,
@@ -128,19 +132,19 @@ pub struct PagePost {
 
 impl Post for PagePost {
     fn files(&mut self) -> Vec<PostFile> {
+        self.attachments.retain(|file| file.path.is_some());
+
         let attachments = mem::take(&mut self.attachments);
 
         let mut files = Vec::with_capacity(attachments.len() + 1);
 
-        files.append(
-            &mut attachments
-                .into_iter()
-                .filter_map(|raw| raw.path)
-                .map(PostFile::new)
-                .collect()
-        );
+        for raw in attachments {
+            if let Some(path) = raw.path {
+                files.push(PostFile::new(path));
+            }
+        }
 
-        if let Some(file) = self.file.take() && let Some(path) = file.path {
+        if let Some(raw) = self.file.take() && let Some(path) = raw.path {
             files.push(PostFile::new(path));
         }
 
@@ -148,31 +152,49 @@ impl Post for PagePost {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Deserialize)]
 pub struct DiscordChannel {
     pub id: String, // "455285536341491716",
     // name: String, // "news"
 }
 
 pub async fn try_discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
-    try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/lookup/{server}")).await
+    let mut url = String::with_capacity(48 + server.len());
+
+    write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}").unwrap();
+
+    try_fetch(&url).await
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Default)]
+#[derive(Deserialize)]
 pub struct DiscordPost {
     attachments: Vec<PostFileRaw>,
 }
 
 impl Post for DiscordPost {
     fn files(&mut self) -> Vec<PostFile> {
-        self.attachments
-            .drain(..)
-            .filter_map(|file| file.path)
-            .map(PostFile::new)
-            .collect()
+        self.attachments.retain(|file| file.path.is_some());
+
+        let attachments = mem::take(&mut self.attachments);
+
+        let mut files = Vec::with_capacity(attachments.len());
+
+        for raw in attachments {
+            files.push(PostFile::new(raw.path.unwrap()));
+        }
+
+        files
     }
 }
 
 pub async fn try_discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
-    try_fetch(&format!("https://kemono.cr/api/v1/discord/channel/{channel}?o={offset}")).await
+    let offset = offset.to_string();
+
+    let mut url = String::with_capacity(41 + channel.len() + 3 + offset.len());
+
+    write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{channel}?o={offset}").unwrap();
+
+    drop(offset);
+
+    try_fetch(&url).await
 }
