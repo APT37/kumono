@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT };
-use anyhow::{ Context, Result, anyhow };
+use anyhow::{ Context, Result, format_err };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
 use std::{
@@ -231,7 +231,7 @@ impl Target {
                 archive,
             }
         } else {
-            return Err(anyhow!("Invalid URL: {url}"));
+            return Err(format_err!("Invalid URL: {url}"));
         };
 
         if ARGUMENTS.download_archive {

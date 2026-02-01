@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, file::{ PostFile, PostFileRaw }, http::CLIENT, target::Target };
-use anyhow::{ Result, anyhow };
+use anyhow::{ Result, format_err };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
@@ -52,7 +52,7 @@ impl ApiError {
                 sleep(duration).await;
                 Ok(())
             } else {
-                Err(anyhow!("{error}"))
+                Err(format_err!("{error}"))
             }
         }
 

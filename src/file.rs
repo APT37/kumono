@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT, progress::DownloadAction, target::Target };
-use anyhow::{ Context, Result, anyhow };
+use anyhow::{ Context, Result, format_err };
 use futures_util::StreamExt;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -44,7 +44,7 @@ pub struct PostFileRaw {
     pub path: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PostFile {
     name: String,
     path: String,
@@ -68,12 +68,12 @@ impl PostFile {
         }
     }
 
-    pub fn to_url(&self, target: &Target) -> String {
-        format!("https://{site}/data{path}", site = target.as_service().site(), path = self.path)
+    pub fn to_temp_name(&self) -> String {
+        self.name.clone() + ".temp"
     }
 
-    pub fn to_temp_name(&self) -> String {
-        format!("{}.temp", self.name)
+    pub fn to_url(&self, target: &Target) -> String {
+        format!("https://{}/data{}", target.as_service().site(), self.path)
     }
 
     pub fn to_extension(&self, target: &Target) -> Option<String> {
@@ -146,7 +146,9 @@ impl PostFile {
         let mut csize = temp_file.seek(SeekFrom::End(0)).await?;
 
         loop {
-            if csize > rsize {
+            if csize == rsize {
+                break;
+            } else if csize > rsize {
                 self.try_delete(target).await?;
 
                 return Ok(
@@ -158,13 +160,7 @@ impl PostFile {
                         self.to_extension(target)
                     )
                 );
-            }
-
-            if csize == rsize {
-                break;
-            }
-
-            if
+            } else if
                 let Err(err) = self.try_download_range(
                     &rpath,
                     &mut temp_file,
@@ -223,8 +219,8 @@ impl PostFile {
         target: &Target,
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<(u64, String)> {
-        fn produce_size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
-            Err(anyhow!("[{status}] remote size determination failed: {message} ({url})"))
+        fn size_error(status: StatusCode, message: &str, url: &str) -> Result<u64> {
+            Err(format_err!("[{status}] remote size determination failed: {message} ({url})"))
         }
 
         let url = self.to_url(target);
@@ -238,18 +234,18 @@ impl PostFile {
                 let size = response
                     .content_length()
                     .map_or_else(
-                        || produce_size_error(status, "Content-Length header is not present", &url),
+                        || size_error(status, "Content-Length header is not present", &url),
                         Ok
                     )?;
                 return Ok((size, response.url().to_string()));
-            } else if status == StatusCode::NOT_FOUND {
-                produce_size_error(status, "file not found", &url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
                 try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
                 try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
+            } else if status == StatusCode::NOT_FOUND {
+                size_error(status, "file not found", &url)?;
             } else {
-                produce_size_error(status, "unexpected status code", &url)?;
+                size_error(status, "unexpected status code", &url)?;
             }
         }
     }
@@ -261,8 +257,8 @@ impl PostFile {
         start: u64,
         msg_tx: &mut Sender<DownloadAction>
     ) -> Result<()> {
-        fn produce_download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
-            Err(anyhow!("[{status}] download failed: {message} ({url})"))
+        fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
+            Err(format_err!("[{status}] download failed: {message} ({url})"))
         }
 
         loop {
@@ -284,14 +280,14 @@ impl PostFile {
                 }
                 file.flush().await?;
                 break Ok(());
-            } else if status == StatusCode::NOT_FOUND {
-                produce_download_error(status, "no file", url)?;
             } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
                 try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
             } else if status.is_server_error() {
                 try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
+            } else if status == StatusCode::NOT_FOUND {
+                download_error(status, "no file", url)?;
             } else {
-                produce_download_error(status, "unexpected status code", url)?;
+                download_error(status, "unexpected status code", url)?;
             }
         }
     }
