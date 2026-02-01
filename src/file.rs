@@ -227,25 +227,27 @@ impl PostFile {
 
         loop {
             let response = CLIENT.head(&url).send().await?;
-
             let status = response.status();
 
-            if status == StatusCode::OK {
-                let size = response
-                    .content_length()
-                    .map_or_else(
-                        || size_error(status, "Content-Length header is not present", &url),
-                        Ok
-                    )?;
-                return Ok((size, response.url().to_string()));
-            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
-            } else if status.is_server_error() {
-                try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
-            } else if status == StatusCode::NOT_FOUND {
-                size_error(status, "file not found", &url)?;
-            } else {
-                size_error(status, "unexpected status code", &url)?;
+            match status {
+                StatusCode::OK => {
+                    let size = response
+                        .content_length()
+                        .map_or_else(
+                            || size_error(status, "Content-Length header is not present", &url),
+                            Ok
+                        )?;
+                    return Ok((size, response.url().to_string()));
+                }
+                StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
+                    try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
+                }
+                s if status.is_server_error() => {
+                    try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
+                }
+                _ => {
+                    size_error(status, "unexpected status code", &url)?;
+                }
             }
         }
     }
@@ -263,31 +265,33 @@ impl PostFile {
 
         loop {
             let response = CLIENT.get(url).header("Range", format!("bytes={start}-")).send().await?;
-
             let status = response.status();
 
-            if status == StatusCode::PARTIAL_CONTENT {
-                let mut stream = response.bytes_stream();
+            match status {
+                StatusCode::PARTIAL_CONTENT => {
+                    let mut stream = response.bytes_stream();
 
-                while let Some(Ok(bytes)) = stream.next().await {
-                    msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
-                    if let Err(err) = file.write_all(&bytes).await {
-                        msg_tx.send(
-                            DownloadAction::Panic(format!("write error: {}\n{err}", self.name))
-                        ).await?;
-                        exit(1);
+                    while let Some(Ok(bytes)) = stream.next().await {
+                        msg_tx.send(DownloadAction::ReportSize(bytes.len() as u64)).await?;
+                        if let Err(err) = file.write_all(&bytes).await {
+                            msg_tx.send(
+                                DownloadAction::Panic(format!("write error: {}\n{err}", self.name))
+                            ).await?;
+                            exit(1);
+                        }
                     }
+                    file.flush().await?;
+                    break Ok(());
                 }
-                file.flush().await?;
-                break Ok(());
-            } else if status == StatusCode::FORBIDDEN || status == StatusCode::TOO_MANY_REQUESTS {
-                try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
-            } else if status.is_server_error() {
-                try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
-            } else if status == StatusCode::NOT_FOUND {
-                download_error(status, "no file", url)?;
-            } else {
-                download_error(status, "unexpected status code", url)?;
+                StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
+                    try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
+                }
+                s if status.is_server_error() => {
+                    try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
+                }
+                _ => {
+                    download_error(status, "unexpected status code", url)?;
+                }
             }
         }
     }
