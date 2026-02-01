@@ -172,7 +172,7 @@ impl Display for Stats {
             n_fmt(self.complete),
             n_fmt(self.skipped),
             n_fmt(self.failed),
-            {
+            if self.files_by_type.is_empty() {
                 let mut buffer = Vec::with_capacity(self.files_by_type.len());
 
                 buffer.push(
@@ -190,6 +190,8 @@ impl Display for Stats {
                 }
 
                 buffer.join(" / ")
+            } else {
+                String::new()
             }
         )
     }
