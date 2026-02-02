@@ -6,6 +6,7 @@ use std::{
     fmt::{ Display, Formatter, Result, Write },
     fs::File,
     io::Write as ioWrite,
+    mem::swap,
     path::PathBuf,
     process::exit,
     sync::atomic::{ AtomicBool, Ordering::Relaxed },
@@ -33,7 +34,7 @@ struct Stats {
     skipped: u64,
     failed: u64,
     dl_bytes: u64,
-    errors: Vec<String>,
+    error: String,
     panic: bool,
     archive_file: Option<File>,
     files_by_type: HashMap<String, usize>,
@@ -51,7 +52,7 @@ impl Stats {
 
             dl_bytes: 0,
 
-            errors: Vec::with_capacity(3),
+            error: String::new(),
 
             panic: false,
 
@@ -111,12 +112,11 @@ impl Stats {
                 false
             }
             DownloadAction::ReportLegacyHashSkip(file_name) => {
-                if self.errors.len() == 3 {
-                    self.errors.remove(0);
-                }
-                let mut buf = String::with_capacity(43 + file_name.len());
-                write!(buf, "skipped hash verification for legacy file: {file_name}").unwrap();
-                self.errors.push(buf);
+                self.error.clear();
+                write!(
+                    self.error,
+                    "skipped hash verification for legacy file: {file_name}"
+                ).unwrap();
                 false
             }
             DownloadAction::Skip(hash, extension) => {
@@ -126,14 +126,11 @@ impl Stats {
                 self.write_to_archive(hash);
                 true
             }
-            DownloadAction::Fail(error, extension) => {
+            DownloadAction::Fail(mut error, extension) => {
                 self.active -= 1;
                 self.failed += 1;
                 self.detract_one_from_file_counter(extension);
-                if self.errors.len() == 3 {
-                    self.errors.remove(0);
-                }
-                self.errors.push(error);
+                swap(&mut self.error, &mut error);
                 true
             }
             DownloadAction::Complete(hash, extension) => {
@@ -143,11 +140,8 @@ impl Stats {
                 self.write_to_archive(hash);
                 true
             }
-            DownloadAction::Panic(error) => {
-                if self.errors.len() == 3 {
-                    self.errors.remove(0);
-                }
-                self.errors.push(error);
+            DownloadAction::Panic(mut error) => {
+                swap(&mut self.error, &mut error);
                 self.panic = true;
                 false
             }
@@ -226,8 +220,8 @@ pub fn progress_bar(
             bar.inc(1);
         }
 
-        if !stats.errors.is_empty() {
-            write!(msg, "\n{}", stats.errors.join("\n")).unwrap();
+        if !stats.error.is_empty() {
+            write!(msg, "\n{}", stats.error).unwrap();
             bar.set_message(msg.clone());
         }
 
