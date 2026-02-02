@@ -108,32 +108,44 @@ impl PostFile {
             .create(true)
             .truncate(false)
             .open(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("Failed to open temporary file: {}", self.temp_name))
+            .with_context(|| {
+                let mut buf = String::with_capacity(31 + self.temp_name.len());
+                write!(buf, "Failed to open temporary file: {}", self.temp_name).unwrap();
+                buf
+            })
     }
 
     /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
-        sha256
-            ::try_async_digest(&self.to_temp_pathbuf(target)).await
-            .with_context(|| format!("hash tempfile: {}", self.temp_name))
+        sha256::try_async_digest(&self.to_temp_pathbuf(target)).await.with_context(|| {
+            let mut buf = String::with_capacity(15 + self.temp_name.len());
+            write!(buf, "hash tempfile: {}", self.temp_name).unwrap();
+            buf
+        })
     }
 
     pub async fn try_exists(&self, target: &Target) -> Result<bool> {
-        fs::try_exists(self.to_pathbuf(target)).await.with_context(||
-            format!("check if file exists: {}", self.temp_name)
-        )
+        fs::try_exists(self.to_pathbuf(target)).await.with_context(|| {
+            let mut buf = String::with_capacity(22 + self.temp_name.len());
+            write!(buf, "check if file exists: {}", self.temp_name).unwrap();
+            buf
+        })
     }
 
     pub async fn try_move(&self, target: &Target) -> Result<()> {
         fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
-            format!("rename tempfile to file: {} -> {}", self.temp_name, self.name)
+            let mut buf = String::with_capacity(29 + self.temp_name.len() + self.name.len());
+            write!(buf, "rename tempfile to file: {} -> {}", self.temp_name, self.name).unwrap();
+            buf
         })
     }
 
     pub async fn try_delete(&self, target: &Target) -> Result<()> {
-        fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(||
-            format!("delete tempfile: {}", self.temp_name)
-        )
+        fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(|| {
+            let mut buf = String::with_capacity(17 + self.temp_name.len());
+            write!(buf, "delete tempfile: {}", self.temp_name).unwrap();
+            buf
+        })
     }
 
     pub async fn try_download(
@@ -268,7 +280,7 @@ impl PostFile {
                 StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
                     try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
                 }
-                s if status.is_server_error() => {
+                _ if status.is_server_error() => {
                     try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
                 }
                 _ => {
@@ -323,7 +335,7 @@ impl PostFile {
                 StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
                     try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
                 }
-                s if status.is_server_error() => {
+                _ if status.is_server_error() => {
                     try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
                 }
                 _ => {

@@ -263,13 +263,18 @@ impl Target {
             .create(true)
             .truncate(false)
             .open(self.to_archive_pathbuf())
-            .with_context(|| format!("Failed to open archive file for {self}"))?;
+            .with_context(|| {
+                let file = self.to_string();
+                let mut buf = String::with_capacity(32 + file.len());
+                write!(buf, "Failed to open archive file for {file}").unwrap();
+                buf
+            })?;
 
-        let mut buffer = String::new();
+        let mut arc_buf = String::new();
 
-        archive.read_to_string(&mut buffer)?;
+        archive.read_to_string(&mut arc_buf)?;
 
-        self.add_hashes(buffer.lines().map(ToString::to_string).collect());
+        self.add_hashes(arc_buf.lines().map(ToString::to_string).collect());
 
         Ok(())
     }
