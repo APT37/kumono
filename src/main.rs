@@ -128,7 +128,7 @@ async fn main() -> Result<()> {
         let sem = Arc::new(Semaphore::new(ARGUMENTS.threads()));
 
         for file in files {
-            let permit = sem.clone().acquire_owned().await;
+            let permit = sem.clone().acquire_owned().await?;
             let msg_tx = msg_tx.clone();
             let target = target.clone();
 

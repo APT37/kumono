@@ -221,6 +221,7 @@ pub fn progress_bar(
         }
 
         if !stats.error.is_empty() {
+            msg.clear();
             write!(msg, "\n{}", stats.error).unwrap();
             bar.set_message(msg.clone());
         }
