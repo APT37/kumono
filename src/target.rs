@@ -22,6 +22,7 @@ pub enum Target {
     Discord {
         server: String,
         channel: Option<String>,
+        offset: Option<usize>,
         archive: HashSet<String>,
     },
 }
@@ -97,6 +98,12 @@ static RE_POST: LazyRegex = LazyLock::new(|| {
 static RE_DISCORD: LazyRegex = LazyLock::new(|| {
     Regex::new(
         r"^(?:https://)?kemono\.(?:su|cr|party)/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?$"
+    ).unwrap()
+});
+
+static RE_DISCORD_PAGE: LazyRegex = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:https://)?kemono\.(?:su|cr|party)/discord/server/(?<server>[0-9]{17,19})(/(?<channel>[0-9]{17,19}))?(\?o=(?<offset>\d+))?$"
     ).unwrap()
 });
 
@@ -184,6 +191,7 @@ impl Target {
                     Target::Discord {
                         server: info.id,
                         channel: None,
+                        offset: None,
                         archive: HashSet::new(),
                     }
                 } else {
@@ -236,6 +244,22 @@ impl Target {
             Target::Discord {
                 server: extract_unwrap(&caps, "server"),
                 channel: extract(&caps, "channel"),
+                offset: None,
+                archive,
+            }
+        } else if RE_DISCORD_PAGE.is_match(url) {
+            let caps = capture(&RE_DISCORD_PAGE);
+            Target::Discord {
+                server: extract_unwrap(&caps, "server"),
+                channel: extract(&caps, "channel"),
+                offset: {
+                    let offset = extract_unwrap(&caps, "offset").parse()?;
+                    if offset == 0 || offset % 150 == 0 {
+                        Some(offset)
+                    } else {
+                        return Err(format_err!("Invalid URL: {url}"));
+                    }
+                },
                 archive,
             }
         } else {

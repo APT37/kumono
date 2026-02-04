@@ -82,8 +82,8 @@ impl Profile {
             Target::Creator { user, subtype, .. } => {
                 profile.init_posts_standard(user, subtype).await?;
             }
-            Target::Discord { server, channel, .. } => {
-                profile.init_posts_discord(server, channel).await?;
+            Target::Discord { server, channel, offset, .. } => {
+                profile.init_posts_discord(server, channel, offset).await?;
             }
         }
 
@@ -103,10 +103,8 @@ impl Profile {
     async fn init_posts_standard(&mut self, user: &str, subtype: &SubType) -> Result<()> {
         if let SubType::Post(post) = subtype {
             let post: SinglePost = CLIENT.get({
-                let (host, service) = (
-                    self.target.as_service().host(),
-                    self.target.as_service().as_static_str(),
-                );
+                let host = self.target.as_service().host();
+                let service = self.target.as_service().as_static_str();
 
                 let mut url = String::with_capacity(
                     8 + host.len() + 8 + service.len() + 6 + user.len() + 6 + post.len()
@@ -125,29 +123,42 @@ impl Profile {
             thread::spawn(move || page_progress(msg_rx));
 
             let mut offset = if let SubType::PageOffset(o) = subtype { *o } else { 0 };
+            let mut page = String::with_capacity(4);
+
+            let host = self.target.as_service().host();
+            let service = self.target.as_service().as_static_str();
+
+            let msg_len = 21 + service.len() + 1 + user.len() + 7;
+            let mut msg = String::with_capacity(msg_len);
+            let _ = write!(msg, "Retrieving posts for {service}/{user} page #");
+
+            let url_len = 8 + host.len() + 8 + service.len() + 6 + user.len() + 9;
+            let mut url = String::with_capacity(url_len);
+            let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/posts?o=");
 
             loop {
                 let mut retries = 0;
 
                 let posts: Vec<PagePost>;
 
+                page.clear();
+                let _ = write!(page, "{}", (offset + 50) / 50);
+
+                msg.truncate(msg_len);
+                let _ = write!(msg, "{page}");
+
+                url.truncate(url_len);
+                let _ = write!(url, "{offset}");
+
                 loop {
-                    let target = self.target.to_string();
-                    let page = ((offset + 50) / 50).to_string();
-
-                    let mut msg = String::with_capacity(
-                        21 + target.len() + 7 + page.len() + 9 + 1 + 1
-                    );
-
-                    write!(msg, "Retrieving posts for {target} page #{page}")?;
-
                     if retries > 0 {
-                        write!(msg, " (Retry #{retries})")?;
+                        msg.truncate(msg_len + page.len());
+                        let _ = write!(msg, " (Retry #{retries})");
                     }
 
-                    msg_tx.send(msg)?;
+                    msg_tx.send(msg.clone())?;
 
-                    match api::try_fetch_page(&self.target, user, offset).await {
+                    match api::try_fetch(&url).await {
                         Ok(p) => {
                             posts = p;
                             break;
@@ -179,13 +190,20 @@ impl Profile {
     }
 
     #[allow(clippy::ref_option)]
-    async fn init_posts_discord(&mut self, server: &str, channel: &Option<String>) -> Result<()> {
+    async fn init_posts_discord(
+        &mut self,
+        server: &str,
+        channel: &Option<String>,
+        offset: &Option<usize>
+    ) -> Result<()> {
         let channels = if let Some(channel) = channel {
             vec![DiscordChannel {
                 id: channel.clone(),
             }]
         } else {
-            api::try_discord_server(server).await?
+            let mut url = String::with_capacity(48 + server.len());
+            let _ = write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}");
+            api::try_fetch(&url).await?
         };
 
         if channels.is_empty() {
@@ -196,40 +214,63 @@ impl Profile {
 
         thread::spawn(move || page_progress(msg_rx));
 
+        let mut single_page = false;
+
         for channel in channels {
-            let mut offset = 0;
+            let mut offset = match *offset {
+                Some(offset) => {
+                    single_page = true;
+                    offset
+                }
+                None => 0,
+            };
+            let mut page = String::with_capacity(4);
+
+            let msg_len = 29 + server.len() + 1 + channel.id.len() + 7;
+            let mut msg = String::with_capacity(msg_len);
+            let _ = write!(
+                msg,
+                "Retrieving posts for discord/{server}/{channel} page #",
+                channel = channel.id
+            );
+
+            let url_len = 41 + channel.id.len() + 3;
+            let mut url = String::with_capacity(url_len);
+            let _ = write!(
+                url,
+                "https://kemono.cr/api/v1/discord/channel/{channel}?o=",
+                channel = channel.id
+            );
 
             loop {
                 let mut retries = 0;
 
                 let posts: Vec<DiscordPost>;
 
-                let page = ((offset + 150) / 150).to_string();
+                page.clear();
+                let _ = write!(page, "{}", (offset + 150) / 150);
 
-                let mut msg = String::with_capacity(
-                    29 + server.len() + 1 + channel.id.len() + 7 + page.len() + 9 + 1 + 1
-                );
+                msg.truncate(msg_len);
+                let _ = write!(msg, "{page}");
+
+                url.truncate(url_len);
+                let _ = write!(url, "{offset}");
 
                 loop {
-                    write!(
-                        msg,
-                        "Retrieving posts for discord/{server}/{} page #{page}",
-                        channel.id
-                    )?;
-
                     if retries > 0 {
-                        write!(msg, " (Retry #{retries})")?;
+                        msg.truncate(msg_len + page.len());
+                        let _ = write!(msg, " (Retry #{retries})");
                     }
 
                     msg_tx.send(msg.clone())?;
 
-                    match api::try_discord_page(&channel.id, offset).await {
+                    match api::try_fetch(&url).await {
                         Ok(p) => {
                             posts = p;
                             break;
                         }
-                        Err(err) => {
-                            err.try_interpret(retries).await?;
+                        Err(error) => {
+                            error.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }
@@ -243,6 +284,10 @@ impl Profile {
                     self.posts.push(Box::new(post));
                 }
 
+                if single_page {
+                    break;
+                }
+
                 offset += 150;
             }
         }
@@ -254,7 +299,7 @@ impl Profile {
         self.post_count = self.posts.len();
 
         self.posts.drain(..).for_each(|mut post| {
-            post.files()
+            post.files(&self.target)
                 .into_iter()
                 .for_each(|file| {
                     self.files.insert(file);

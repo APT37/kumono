@@ -3,7 +3,7 @@ use anyhow::{ Result, format_err };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
-use std::{ fmt::Write, mem, sync::LazyLock };
+use std::{ mem, sync::LazyLock };
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
@@ -13,7 +13,7 @@ static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
 });
 
-async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
+pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
     sleep(API_DELAY).await;
 
     let res = CLIENT.get(url)
@@ -33,7 +33,7 @@ async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
 }
 
 pub trait Post {
-    fn files(&mut self) -> Vec<PostFile>;
+    fn files(&mut self, target: &Target) -> Vec<PostFile>;
 }
 
 #[derive(Debug, Error)]
@@ -61,9 +61,9 @@ impl ApiError {
             ApiError::Status(status) =>
                 match status.as_u16() {
                     403 | 429 | 502..=504 => {
-                        try_wait(retries, ARGUMENTS.rate_limit_backoff, &status.to_string()).await?;
+                        try_wait(retries, ARGUMENTS.rate_limit_backoff, status.as_str()).await?;
                     }
-                    _ => try_wait(retries, ARGUMENTS.retry_delay, &status.to_string()).await?,
+                    _ => try_wait(retries, ARGUMENTS.retry_delay, status.as_str()).await?,
                 }
         }
 
@@ -83,7 +83,7 @@ struct SinglePostInner {
 }
 
 impl Post for SinglePost {
-    fn files(&mut self) -> Vec<PostFile> {
+    fn files(&mut self, target: &Target) -> Vec<PostFile> {
         self.post.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.post.attachments);
@@ -91,37 +91,15 @@ impl Post for SinglePost {
         let mut files = Vec::with_capacity(attachments.len() + 1);
 
         for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap()));
+            files.push(PostFile::new(raw.path.unwrap(), target));
         }
 
         if let Some(raw) = self.post.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path));
+            files.push(PostFile::new(path, target));
         }
 
         files
     }
-}
-
-pub async fn try_fetch_page(
-    target: &Target,
-    user: &str,
-    offset: usize
-) -> Result<Vec<PagePost>, ApiError> {
-    let (host, service, offset) = (
-        target.as_service().host(),
-        target.as_service().as_static_str(),
-        offset.to_string(),
-    );
-
-    let mut url = String::with_capacity(
-        8 + host.len() + 8 + service.len() + 6 + user.len() + 9 + offset.len()
-    );
-
-    write!(url, "https://{host}/api/v1/{service}/user/{user}/posts?o={offset}").unwrap();
-
-    drop(offset);
-
-    try_fetch(&url).await
 }
 
 #[derive(Deserialize)]
@@ -131,7 +109,7 @@ pub struct PagePost {
 }
 
 impl Post for PagePost {
-    fn files(&mut self) -> Vec<PostFile> {
+    fn files(&mut self, target: &Target) -> Vec<PostFile> {
         self.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.attachments);
@@ -140,12 +118,12 @@ impl Post for PagePost {
 
         for raw in attachments {
             if let Some(path) = raw.path {
-                files.push(PostFile::new(path));
+                files.push(PostFile::new(path, target));
             }
         }
 
         if let Some(raw) = self.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path));
+            files.push(PostFile::new(path, target));
         }
 
         files
@@ -158,21 +136,13 @@ pub struct DiscordChannel {
     // name: String, // "news"
 }
 
-pub async fn try_discord_server(server: &str) -> Result<Vec<DiscordChannel>, ApiError> {
-    let mut url = String::with_capacity(48 + server.len());
-
-    write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}").unwrap();
-
-    try_fetch(&url).await
-}
-
 #[derive(Deserialize)]
 pub struct DiscordPost {
     attachments: Vec<PostFileRaw>,
 }
 
 impl Post for DiscordPost {
-    fn files(&mut self) -> Vec<PostFile> {
+    fn files(&mut self, target: &Target) -> Vec<PostFile> {
         self.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.attachments);
@@ -180,21 +150,9 @@ impl Post for DiscordPost {
         let mut files = Vec::with_capacity(attachments.len());
 
         for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap()));
+            files.push(PostFile::new(raw.path.unwrap(), target));
         }
 
         files
     }
-}
-
-pub async fn try_discord_page(channel: &str, offset: usize) -> Result<Vec<DiscordPost>, ApiError> {
-    let offset = offset.to_string();
-
-    let mut url = String::with_capacity(41 + channel.len() + 3 + offset.len());
-
-    write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{channel}?o={offset}").unwrap();
-
-    drop(offset);
-
-    try_fetch(&url).await
 }

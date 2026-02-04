@@ -10,7 +10,7 @@ use std::{
     io::SeekFrom,
     path::PathBuf,
     process::exit,
-    sync::LazyLock,
+    sync::{ Arc, LazyLock },
     time::Duration,
 };
 use tokio::{
@@ -47,8 +47,10 @@ pub struct PostFileRaw {
 #[derive(PartialEq, Eq, Hash)]
 pub struct PostFile {
     path: String,
-    name: String,
+    name: Arc<String>,
     temp_name: String,
+    pub hash: Arc<Option<String>>,
+    pub extension: Arc<Option<String>>,
 }
 
 impl Display for PostFile {
@@ -58,20 +60,34 @@ impl Display for PostFile {
 }
 
 impl PostFile {
-    pub fn new(path: String) -> Self {
+    pub fn new(path: String, target: &Target) -> Self {
         let name = PathBuf::from(&path)
             .file_name()
             .expect("get file name from CDN path")
             .to_string_lossy()
             .to_string();
+        let name = Arc::new(name);
 
         let mut temp_name = String::with_capacity(name.len() + 5);
-        write!(temp_name, "{name}.temp").unwrap();
+        let _ = write!(temp_name, "{name}.temp");
+
+        let get_hash = |name| Some(HASH_RE.captures(name)?.name("hash")?.as_str().to_string());
+        let hash = Arc::new(get_hash(&name));
+
+        let get_extension = |target: &Target| {
+            target
+                .to_pathbuf(Some(&name))
+                .extension()
+                .map(|ext| ext.to_string_lossy().to_ascii_lowercase())
+        };
+        let extension = Arc::new(get_extension(target));
 
         Self {
             path,
             name,
             temp_name,
+            hash,
+            extension,
         }
     }
 
@@ -84,22 +100,12 @@ impl PostFile {
         url
     }
 
-    pub fn to_extension(&self, target: &Target) -> Option<String> {
-        self.to_pathbuf(target)
-            .extension()
-            .map(|ext| ext.to_string_lossy().to_ascii_lowercase())
-    }
-
     pub fn to_pathbuf(&self, target: &Target) -> PathBuf {
         target.to_pathbuf(Some(&self.name))
     }
 
     pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
         target.to_pathbuf(Some(&self.temp_name))
-    }
-
-    pub fn to_hash(&self) -> Option<String> {
-        Some(HASH_RE.captures(&self.name)?.name("hash")?.as_str().to_string())
     }
 
     pub async fn try_open(&self, target: &Target) -> Result<File> {
@@ -156,7 +162,7 @@ impl PostFile {
         msg_tx.send(DownloadAction::Start).await?;
 
         if self.try_exists(target).await? {
-            return Ok(DownloadAction::Skip(self.to_hash(), self.to_extension(target)));
+            return Ok(DownloadAction::Skip(self.hash.clone(), self.extension.clone()));
         }
 
         let (rsize, rpath) = self.try_fetch_remote_size_and_path(target, &mut msg_tx).await?;
@@ -187,7 +193,7 @@ impl PostFile {
 
                             msg
                         },
-                        self.to_extension(target)
+                        self.extension.clone()
                     )
                 );
             } else if
@@ -203,7 +209,7 @@ impl PostFile {
                     error.push('\n');
                     error.push_str(&src.to_string());
                 }
-                return Ok(DownloadAction::Fail(error, self.to_extension(target)));
+                return Ok(DownloadAction::Fail(error, self.extension.clone()));
             }
 
             match temp_file.seek(SeekFrom::End(0)).await {
@@ -216,17 +222,17 @@ impl PostFile {
                         error.push('\n');
                         error.push_str(&src.to_string());
                     }
-                    return Ok(DownloadAction::Fail(error, self.to_extension(target)));
+                    return Ok(DownloadAction::Fail(error, self.extension.clone()));
                 }
             }
         }
 
         Ok(
-            if let Some(rhash) = self.to_hash() {
+            if let Some(rhash) = self.hash.as_ref().as_deref() {
                 let lhash = self.hash(target).await?;
                 if rhash == lhash {
                     self.try_move(target).await?;
-                    DownloadAction::Complete(Some(rhash), self.to_extension(target))
+                    DownloadAction::Complete(self.hash.clone(), self.extension.clone())
                 } else {
                     self.try_delete(target).await?;
                     DownloadAction::Fail(
@@ -242,12 +248,12 @@ impl PostFile {
 
                             msg
                         },
-                        self.to_extension(target)
+                        self.extension.clone()
                     )
                 }
             } else {
                 msg_tx.send(DownloadAction::ReportLegacyHashSkip(self.name.clone())).await?;
-                DownloadAction::Complete(None, self.to_extension(target))
+                DownloadAction::Complete(self.hash.clone(), self.extension.clone())
             }
         )
     }

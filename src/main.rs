@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
         }
 
         if ARGUMENTS.list_extensions {
-            eprintln!("{}", ext::ExtensionList::new(&files, &target));
+            eprintln!("{}", ext::ExtensionList::new(&files));
 
             if i != total_targets - 1 {
                 eprintln!();
@@ -65,12 +65,12 @@ async fn main() -> Result<()> {
 
         if let Some(exts) = ARGUMENTS.included() {
             files.retain(|file| {
-                file.to_extension(&target).is_some_and(|ext| exts.contains(&ext))
+                file.extension.as_ref().as_ref().is_some_and(|ext| exts.contains(ext))
             });
             files_left_msg(Filter::Inclusive, total, files.len());
         } else if let Some(exts) = ARGUMENTS.excluded() {
             files.retain(|file| {
-                file.to_extension(&target).is_none_or(|ext| !exts.contains(&ext))
+                file.extension.as_ref().as_ref().is_none_or(|ext| !exts.contains(ext))
             });
             files_left_msg(Filter::Exclusive, total, files.len());
         }
@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
 
             let archive = target.archive();
 
-            files.retain(|file| file.to_hash().is_none_or(|hash| !archive.contains(&hash)));
+            files.retain(|file| file.hash.as_ref().as_deref().is_none_or(|hash| !archive.contains(hash)));
 
             let left = files.len();
 
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
 
         let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
 
-        let files_by_type = ext::count(&files, &target);
+        let files_by_type = ext::count(&files);
 
         thread::spawn(move || {
             progress::progress_bar(
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
                             }
 
                             msg_tx
-                                .send(DownloadAction::Fail(error, file.to_extension(&target))).await
+                                .send(DownloadAction::Fail(error, file.extension)).await
                                 .unwrap();
                         }
                     }

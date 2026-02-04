@@ -5,11 +5,10 @@ use std::{
     collections::HashMap,
     fmt::{ Display, Formatter, Result, Write },
     fs::File,
-    io::Write as ioWrite,
-    mem::swap,
+    io::{ IoSlice, Write as ioWrite },
     path::PathBuf,
     process::exit,
-    sync::atomic::{ AtomicBool, Ordering::Relaxed },
+    sync::{ Arc, atomic::{ AtomicBool, Ordering::Relaxed } },
     time::Duration,
 };
 use tokio::sync::mpsc::Receiver;
@@ -19,10 +18,10 @@ pub enum DownloadAction {
     Wait,
     Continue,
     ReportSize(u64),
-    ReportLegacyHashSkip(String),
-    Skip(Option<String>, Option<String>),
-    Fail(String, Option<String>),
-    Complete(Option<String>, Option<String>),
+    ReportLegacyHashSkip(Arc<String>),
+    Skip(Arc<Option<String>>, Arc<Option<String>>),
+    Fail(String, Arc<Option<String>>),
+    Complete(Arc<Option<String>>, Arc<Option<String>>),
     Panic(String),
 }
 
@@ -33,10 +32,15 @@ struct Stats {
     complete: u64,
     skipped: u64,
     failed: u64,
+
     dl_bytes: u64,
-    error: String,
+
     panic: bool,
+
+    error: String,
+
     archive_file: Option<File>,
+
     files_by_type: HashMap<String, usize>,
 }
 
@@ -52,9 +56,9 @@ impl Stats {
 
             dl_bytes: 0,
 
-            error: String::new(),
-
             panic: false,
+
+            error: String::new(),
 
             archive_file: if ARGUMENTS.download_archive {
                 Some(Self::open_archive(archive_path))
@@ -78,15 +82,17 @@ impl Stats {
             })
     }
 
-    fn write_to_archive(&mut self, hash: Option<String>) {
+    fn write_to_archive(&mut self, hash: &Arc<Option<String>>) {
         if
             ARGUMENTS.download_archive &&
-            let Some(hash) = hash &&
-            let Some(ref mut archive) = self.archive_file &&
-            let Err(err) = archive.write_all((hash + "\n").as_bytes())
+            let Some(hash) = hash.as_ref().as_deref() &&
+            let Some(ref mut archive) = self.archive_file
         {
-            eprintln!("{err}");
-            exit(6);
+            let slices = [IoSlice::new(hash.as_bytes()), IoSlice::new(b"\n")];
+            if let Err(err) = archive.write_vectored(&slices) {
+                eprintln!("{err}");
+                exit(6);
+            }
         }
     }
 
@@ -112,46 +118,44 @@ impl Stats {
                 false
             }
             DownloadAction::ReportLegacyHashSkip(file_name) => {
-                self.error.clear();
-                write!(
-                    self.error,
-                    "skipped hash verification for legacy file: {file_name}"
-                ).unwrap();
+                let mut error = String::with_capacity(43 + file_name.len());
+                let _ = write!(error, "skipped hash verification for legacy file: {file_name}");
+                self.error = error;
                 false
             }
             DownloadAction::Skip(hash, extension) => {
                 self.active -= 1;
                 self.skipped += 1;
-                self.detract_one_from_file_counter(extension);
-                self.write_to_archive(hash);
+                self.detract_one_from_file_counter(&extension);
+                self.write_to_archive(&hash);
                 true
             }
-            DownloadAction::Fail(mut error, extension) => {
+            DownloadAction::Fail(error, extension) => {
                 self.active -= 1;
                 self.failed += 1;
-                self.detract_one_from_file_counter(extension);
-                swap(&mut self.error, &mut error);
+                self.detract_one_from_file_counter(&extension);
+                self.error = error;
                 true
             }
             DownloadAction::Complete(hash, extension) => {
                 self.active -= 1;
                 self.complete += 1;
-                self.detract_one_from_file_counter(extension);
-                self.write_to_archive(hash);
+                self.detract_one_from_file_counter(&extension);
+                self.write_to_archive(&hash);
                 true
             }
-            DownloadAction::Panic(mut error) => {
-                swap(&mut self.error, &mut error);
+            DownloadAction::Panic(error) => {
+                self.error = error;
                 self.panic = true;
                 false
             }
         }
     }
 
-    fn detract_one_from_file_counter(&mut self, extension: Option<String>) {
-        *self.files_by_type
-            .entry(extension.unwrap_or_else(|| "unknown".to_string()))
-            .or_default() -= 1;
+    fn detract_one_from_file_counter(&mut self, extension: &Arc<Option<String>>) {
+        let extension = extension.as_ref().as_deref().unwrap_or("none");
+
+        *self.files_by_type.entry(extension.to_string()).or_default() -= 1;
         self.files_by_type.retain(|_, v| *v > 0);
     }
 }
