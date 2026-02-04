@@ -177,14 +177,14 @@ impl Display for Stats {
             } else {
                 let mut buffer = String::with_capacity(self.files_by_type.len() * 16);
 
-                write!(
+                let _ = write!(
                     buffer,
                     "\n{} left",
                     with_word(self.queued + self.waiting + self.active, "file")
-                )?;
+                );
 
                 for (key, value) in self.files_by_type.iter().sorted() {
-                    write!(buffer, " / {key}: {}", n_fmt(*value as u64))?;
+                    let _ = write!(buffer, " / {key}: {}", n_fmt(*value as u64));
                 }
 
                 buffer
@@ -226,7 +226,7 @@ pub fn progress_bar(
 
         if !stats.error.is_empty() {
             msg.clear();
-            write!(msg, "\n{}", stats.error).unwrap();
+            let _ = write!(msg, "\n{}", stats.error);
             bar.set_message(msg.clone());
         }
 

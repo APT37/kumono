@@ -95,7 +95,7 @@ impl PostFile {
         let host = target.as_service().host();
 
         let mut url = String::with_capacity(8 + host.len() + 5 + self.path.len());
-        write!(url, "https://{host}/data{}", self.path).unwrap();
+        let _ = write!(url, "https://{host}/data{}", self.path);
 
         url
     }
@@ -116,7 +116,7 @@ impl PostFile {
             .open(&self.to_temp_pathbuf(target)).await
             .with_context(|| {
                 let mut buf = String::with_capacity(31 + self.temp_name.len());
-                write!(buf, "Failed to open temporary file: {}", self.temp_name).unwrap();
+                let _ = write!(buf, "Failed to open temporary file: {}", self.temp_name);
                 buf
             })
     }
@@ -125,7 +125,7 @@ impl PostFile {
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256::try_async_digest(&self.to_temp_pathbuf(target)).await.with_context(|| {
             let mut buf = String::with_capacity(15 + self.temp_name.len());
-            write!(buf, "hash tempfile: {}", self.temp_name).unwrap();
+            let _ = write!(buf, "hash tempfile: {}", self.temp_name);
             buf
         })
     }
@@ -133,7 +133,7 @@ impl PostFile {
     pub async fn try_exists(&self, target: &Target) -> Result<bool> {
         fs::try_exists(self.to_pathbuf(target)).await.with_context(|| {
             let mut buf = String::with_capacity(22 + self.temp_name.len());
-            write!(buf, "check if file exists: {}", self.temp_name).unwrap();
+            let _ = write!(buf, "check if file exists: {}", self.temp_name);
             buf
         })
     }
@@ -141,7 +141,7 @@ impl PostFile {
     pub async fn try_move(&self, target: &Target) -> Result<()> {
         fs::rename(self.to_temp_pathbuf(target), self.to_pathbuf(target)).await.with_context(|| {
             let mut buf = String::with_capacity(29 + self.temp_name.len() + self.name.len());
-            write!(buf, "rename tempfile to file: {} -> {}", self.temp_name, self.name).unwrap();
+            let _ = write!(buf, "rename tempfile to file: {} -> {}", self.temp_name, self.name);
             buf
         })
     }
@@ -149,7 +149,7 @@ impl PostFile {
     pub async fn try_delete(&self, target: &Target) -> Result<()> {
         fs::remove_file(self.to_temp_pathbuf(target)).await.with_context(|| {
             let mut buf = String::with_capacity(17 + self.temp_name.len());
-            write!(buf, "delete tempfile: {}", self.temp_name).unwrap();
+            let _ = write!(buf, "delete tempfile: {}", self.temp_name);
             buf
         })
     }
@@ -185,11 +185,11 @@ impl PostFile {
                             let mut msg = String::with_capacity(
                                 25 + self.name.len() + 5 + csize.len() + 6 + rsize.len() + 1
                             );
-                            write!(
+                            let _ = write!(
                                 msg,
                                 "size mismatch (deleted): {} [l: {csize} | r: {rsize}]",
                                 self.name
-                            )?;
+                            );
 
                             msg
                         },
@@ -240,11 +240,11 @@ impl PostFile {
                             let mut msg = String::with_capacity(
                                 25 + self.name.len() + 11 + rhash.len() + 10 + lhash.len()
                             );
-                            write!(
+                            let _ = write!(
                                 msg,
                                 "hash mismatch (deleted): {name}\n| remote: {rhash}\n|  local: {lhash}",
                                 name = self.name
-                            )?;
+                            );
 
                             msg
                         },
@@ -311,7 +311,7 @@ impl PostFile {
             let response = CLIENT.get(url)
                 .header("Range", {
                     let mut range = String::with_capacity(32);
-                    write!(range, "bytes={start}-")?;
+                    let _ = write!(range, "bytes={start}-");
                     range
                 })
                 .send().await?;
@@ -329,7 +329,7 @@ impl PostFile {
                                 let mut buf = String::with_capacity(
                                     13 + self.name.len() + 1 + error.len()
                                 );
-                                write!(buf, "write error: {}\n{error}", self.name)?;
+                                let _ = write!(buf, "write error: {}\n{error}", self.name);
                                 DownloadAction::Panic(buf)
                             }).await?;
                             exit(1);

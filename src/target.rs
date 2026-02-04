@@ -31,17 +31,17 @@ impl Display for Target {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Target::Creator { service, user, subtype, .. } => {
-                write!(f, "{service}/{user}")?;
+                let _ = write!(f, "{service}/{user}");
 
                 if let SubType::Post(p) = subtype {
-                    write!(f, "/{p}")?;
+                    let _ = write!(f, "/{p}");
                 }
             }
             Target::Discord { server, channel, .. } => {
-                write!(f, "discord/{server}")?;
+                let _ = write!(f, "discord/{server}");
 
                 if let Some(chan) = channel {
-                    write!(f, "/{chan}")?;
+                    let _ = write!(f, "/{chan}");
                 }
             }
         }
@@ -112,7 +112,7 @@ async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<
     let service = service.as_static_str();
 
     let mut url = String::with_capacity(8 + host.len() + 8 + service.len() + 6 + user.len() + 8);
-    write!(url, "https://{host}/api/v1/{service}/user/{user}/profile")?;
+    let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/profile");
 
     let account = CLIENT.get(url).send().await?.json().await?;
     let mut accounts = Vec::with_capacity(4);
@@ -121,7 +121,7 @@ async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<
     let mut linked_accounts_url = String::with_capacity(
         8 + host.len() + 8 + service.len() + 6 + user.len() + 6
     );
-    write!(linked_accounts_url, "https://{host}/api/v1/{service}/user/{user}/links")?;
+    let _ = write!(linked_accounts_url, "https://{host}/api/v1/{service}/user/{user}/links");
 
     let mut linked_accounts = CLIENT.get(linked_accounts_url).send().await?.json().await?;
     accounts.append(&mut linked_accounts);
@@ -290,7 +290,7 @@ impl Target {
             .with_context(|| {
                 let file = self.to_string();
                 let mut buf = String::with_capacity(32 + file.len());
-                write!(buf, "Failed to open archive file for {file}").unwrap();
+                let _ = write!(buf, "Failed to open archive file for {file}");
                 buf
             })?;
 
@@ -326,7 +326,7 @@ impl Target {
                 let user = self.user_or_server();
 
                 let mut file_name = String::with_capacity(service.len() + 1 + user.len() + 4);
-                write!(file_name, "{service}+{user}.txt").unwrap();
+                let _ = write!(file_name, "{service}+{user}.txt");
 
                 file_name
             }),

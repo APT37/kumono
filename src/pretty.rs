@@ -7,14 +7,14 @@ pub fn n_fmt(n: u64) -> String {
 
 pub fn with_word(n: u64, word: &str) -> String {
     let number = n_fmt(n);
-    
+
     let mut buf = String::with_capacity(number.len() + 3 + word.len());
 
-    match n {
-        0 => write!(buf, "no {word}s").unwrap(),
-        1 => write!(buf, "1 {word}").unwrap(),
-        _ => write!(buf, "{number} {word}s").unwrap(),
-    }
+    let _ = match n {
+        0 => write!(buf, "no {word}s"),
+        1 => write!(buf, "1 {word}"),
+        _ => write!(buf, "{number} {word}s"),
+    };
 
     buf
 }

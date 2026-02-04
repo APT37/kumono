@@ -25,28 +25,28 @@ impl Display for Profile {
             | Target::Creator { subtype: SubType::Post(_), .. }
             | Target::Discord { channel: None, .. } = *self.target
         {
-            write!(
+            let _ = write!(
                 f,
                 "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
                 posts = pretty::with_word(self.files.len() as u64, "file")
-            )?;
+            );
         } else {
-            write!(
+            let _ = write!(
                 f,
                 "#{number}: {target} has {posts}",
                 number = n_fmt(self.target_id as u64),
                 target = self.target,
                 posts = pretty::with_word(self.post_count as u64, "post")
-            )?;
+            );
 
             if self.post_count > 0 {
-                match self.files.len() {
-                    0 => write!(f, ", but no files")?,
-                    1 => write!(f, ", containing 1 file")?,
-                    n => write!(f, ", containing {} files", n_fmt(n as u64))?,
-                }
+                let _ = match self.files.len() {
+                    0 => write!(f, ", but no files"),
+                    1 => write!(f, ", containing 1 file"),
+                    n => write!(f, ", containing {} files", n_fmt(n as u64)),
+                };
             }
         }
 
@@ -109,7 +109,7 @@ impl Profile {
                 let mut url = String::with_capacity(
                     8 + host.len() + 8 + service.len() + 6 + user.len() + 6 + post.len()
                 );
-                write!(url, "https://{host}/api/v1/{service}/user/{user}/post/{post}")?;
+                let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/post/{post}");
 
                 url
             })
