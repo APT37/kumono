@@ -1,7 +1,10 @@
 #!/usr/bin/fish
 
-# depends on: fish, ripgrep, jq, sort
-
+# This script determines the valid charset for a given service.
+# 
+# Make sure to install the following programs: fish, ripgrep, jq, sort
+# 
+# Usage:
 # ./charset.fish coomer.st onlyfans
 # ./charset.fish kemono.cr patreon
 
