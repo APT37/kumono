@@ -1,21 +1,14 @@
 use crate::cli::ARGUMENTS;
 use anyhow::Result;
-use reqwest::{
-    Client,
-    ClientBuilder,
-    Proxy,
-    header::{ HeaderMap, HeaderName, HeaderValue },
-    redirect::Policy,
-};
+use reqwest::{ Client, ClientBuilder, Proxy, header::{ HeaderMap, HeaderValue }, redirect::Policy };
 use std::{ process::exit, sync::LazyLock };
 
 static VERSION: &str = concat!("kumono ", env!("CARGO_PKG_VERSION"));
 
 pub static CLIENT: LazyLock<Client> = LazyLock::new(|| {
     let build_client = || -> Result<Client> {
-        let headers = HeaderMap::from_iter([
-            (HeaderName::from_static("accept"), HeaderValue::from_static("text/css")),
-        ]);
+        let mut headers = HeaderMap::new();
+        headers.insert("accept", HeaderValue::from_static("text/css"));
 
         let mut client = ClientBuilder::new()
             .default_headers(headers)

@@ -1,9 +1,9 @@
-use crate::{ cli::ARGUMENTS, file::{ PostFile, PostFileRaw }, http::CLIENT, target::Target };
+use crate::{ cli::ARGUMENTS, file::{ PostFile, PostFileRaw }, http::CLIENT };
 use anyhow::{ Result, format_err };
 use regex::Regex;
 use reqwest::StatusCode;
 use serde::{ Deserialize, de::DeserializeOwned };
-use std::{ mem, sync::LazyLock };
+use std::{ mem, sync::{ Arc, LazyLock } };
 use thiserror::Error;
 use tokio::time::{ Duration, sleep };
 
@@ -33,7 +33,7 @@ pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
 }
 
 pub trait Post {
-    fn files(&mut self, target: &Target) -> Vec<PostFile>;
+    fn files(&mut self) -> Vec<Arc<PostFile>>;
 }
 
 #[derive(Debug, Error)]
@@ -83,7 +83,7 @@ struct SinglePostInner {
 }
 
 impl Post for SinglePost {
-    fn files(&mut self, target: &Target) -> Vec<PostFile> {
+    fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.post.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.post.attachments);
@@ -91,11 +91,11 @@ impl Post for SinglePost {
         let mut files = Vec::with_capacity(attachments.len() + 1);
 
         for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap(), target));
+            files.push(PostFile::new(raw.path.unwrap()));
         }
 
         if let Some(raw) = self.post.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path, target));
+            files.push(PostFile::new(path));
         }
 
         files
@@ -109,7 +109,7 @@ pub struct PagePost {
 }
 
 impl Post for PagePost {
-    fn files(&mut self, target: &Target) -> Vec<PostFile> {
+    fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.attachments);
@@ -118,12 +118,12 @@ impl Post for PagePost {
 
         for raw in attachments {
             if let Some(path) = raw.path {
-                files.push(PostFile::new(path, target));
+                files.push(PostFile::new(path));
             }
         }
 
         if let Some(raw) = self.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path, target));
+            files.push(PostFile::new(path));
         }
 
         files
@@ -142,7 +142,7 @@ pub struct DiscordPost {
 }
 
 impl Post for DiscordPost {
-    fn files(&mut self, target: &Target) -> Vec<PostFile> {
+    fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.attachments.retain(|file| file.path.is_some());
 
         let attachments = mem::take(&mut self.attachments);
@@ -150,7 +150,7 @@ impl Post for DiscordPost {
         let mut files = Vec::with_capacity(attachments.len());
 
         for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap(), target));
+            files.push(PostFile::new(raw.path.unwrap()));
         }
 
         files

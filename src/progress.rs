@@ -1,4 +1,4 @@
-use crate::{ cli::ARGUMENTS, pretty::{ n_fmt, with_word } };
+use crate::{ cli::ARGUMENTS, file::PostFile, pretty::{ n_fmt, with_word } };
 use indicatif::{ HumanBytes, ProgressBar, ProgressStyle };
 use itertools::Itertools;
 use std::{
@@ -11,17 +11,17 @@ use std::{
     sync::{ Arc, atomic::{ AtomicBool, Ordering::Relaxed } },
     time::Duration,
 };
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::UnboundedReceiver;
 
 pub enum DownloadAction {
     Start,
     Wait,
     Continue,
     ReportSize(u64),
-    ReportLegacyHashSkip(Arc<String>),
-    Skip(Arc<Option<String>>, Arc<Option<String>>),
-    Fail(String, Arc<Option<String>>),
-    Complete(Arc<Option<String>>, Arc<Option<String>>),
+    ReportLegacyHashSkip(Arc<PostFile>),
+    Skip(Arc<PostFile>),
+    Fail(String, Arc<PostFile>),
+    Complete(Arc<PostFile>),
     Panic(String),
 }
 
@@ -82,10 +82,10 @@ impl Stats {
             })
     }
 
-    fn write_to_archive(&mut self, hash: &Arc<Option<String>>) {
+    fn write_to_archive(&mut self, hash: Option<&str>) {
         if
             ARGUMENTS.download_archive &&
-            let Some(hash) = hash.as_ref().as_deref() &&
+            let Some(hash) = hash &&
             let Some(ref mut archive) = self.archive_file
         {
             let slices = [IoSlice::new(hash.as_bytes()), IoSlice::new(b"\n")];
@@ -117,31 +117,32 @@ impl Stats {
                 self.dl_bytes += size;
                 false
             }
-            DownloadAction::ReportLegacyHashSkip(file_name) => {
-                let mut error = String::with_capacity(43 + file_name.len());
-                let _ = write!(error, "skipped hash verification for legacy file: {file_name}");
+            DownloadAction::ReportLegacyHashSkip(post_file) => {
+                let name = post_file.get_name();
+                let mut error = String::with_capacity(43 + name.len());
+                let _ = write!(error, "skipped hash verification for legacy file: {name}");
                 self.error = error;
                 false
             }
-            DownloadAction::Skip(hash, extension) => {
+            DownloadAction::Skip(post_file) => {
                 self.active -= 1;
                 self.skipped += 1;
-                self.detract_one_from_file_counter(&extension);
-                self.write_to_archive(&hash);
+                self.detract_one_from_file_counter(post_file.get_ext());
+                self.write_to_archive(post_file.get_hash());
                 true
             }
-            DownloadAction::Fail(error, extension) => {
+            DownloadAction::Fail(error, post_file) => {
                 self.active -= 1;
                 self.failed += 1;
-                self.detract_one_from_file_counter(&extension);
+                self.detract_one_from_file_counter(post_file.get_ext());
                 self.error = error;
                 true
             }
-            DownloadAction::Complete(hash, extension) => {
+            DownloadAction::Complete(post_file) => {
                 self.active -= 1;
                 self.complete += 1;
-                self.detract_one_from_file_counter(&extension);
-                self.write_to_archive(&hash);
+                self.detract_one_from_file_counter(post_file.get_ext());
+                self.write_to_archive(post_file.get_hash());
                 true
             }
             DownloadAction::Panic(error) => {
@@ -152,8 +153,8 @@ impl Stats {
         }
     }
 
-    fn detract_one_from_file_counter(&mut self, extension: &Arc<Option<String>>) {
-        let extension = extension.as_ref().as_deref().unwrap_or("none");
+    fn detract_one_from_file_counter(&mut self, extension: Option<&str>) {
+        let extension = extension.unwrap_or("none");
 
         *self.files_by_type.entry(extension.to_string()).or_default() -= 1;
         self.files_by_type.retain(|_, v| *v > 0);
@@ -199,7 +200,7 @@ pub static DOWNLOADS_FAILED: AtomicBool = AtomicBool::new(false);
 pub fn progress_bar(
     files: u64,
     archive: PathBuf,
-    mut msg_rx: Receiver<DownloadAction>,
+    mut msg_rx: UnboundedReceiver<DownloadAction>,
     last_target: bool,
     files_by_type: HashMap<String, usize>
 ) {

@@ -15,7 +15,7 @@ pub struct Profile {
     target: Arc<Target>,
     post_count: usize,
     posts: Vec<Box<dyn Post>>,
-    pub files: HashSet<PostFile>,
+    pub files: HashSet<Arc<PostFile>>,
 }
 
 impl Display for Profile {
@@ -299,7 +299,7 @@ impl Profile {
         self.post_count = self.posts.len();
 
         self.posts.drain(..).for_each(|mut post| {
-            post.files(&self.target)
+            post.files()
                 .into_iter()
                 .for_each(|file| {
                     self.files.insert(file);

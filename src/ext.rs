@@ -1,6 +1,6 @@
 use crate::file::PostFile;
 use itertools::Itertools;
-use std::{ collections::{ HashMap, HashSet }, fmt::{ Display, Formatter, Result } };
+use std::{ collections::{ HashMap, HashSet }, fmt::{ Display, Formatter, Result }, sync::Arc };
 
 #[derive(Default)]
 pub struct ExtensionList {
@@ -9,11 +9,11 @@ pub struct ExtensionList {
 }
 
 impl ExtensionList {
-    pub fn new(files: &HashSet<PostFile>) -> Self {
+    pub fn new(files: &HashSet<Arc<PostFile>>) -> Self {
         let mut ext_list = ExtensionList::default();
 
         for file in files {
-            match file.extension.as_ref().as_deref() {
+            match file.get_ext() {
                 Some(ext) => {
                     if !ext_list.extensions.contains("ext") {
                         ext_list.extensions.insert(ext.to_string());
@@ -47,17 +47,12 @@ impl Display for ExtensionList {
     }
 }
 
-pub fn count(files: &HashSet<PostFile>) -> HashMap<String, usize> {
+pub fn count(files: &HashSet<Arc<PostFile>>) -> HashMap<String, usize> {
     let mut files_by_type: HashMap<String, _> = HashMap::new();
 
     for file in files {
         *files_by_type
-            .entry(
-                file.extension
-                    .as_ref()
-                    .as_deref()
-                    .map_or_else(|| "none".to_string(), String::from)
-            )
+            .entry(file.get_ext().map_or_else(|| "none".to_string(), String::from))
             .or_default() += 1;
     }
 

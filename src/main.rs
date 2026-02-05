@@ -1,4 +1,10 @@
-use crate::{ cli::ARGUMENTS, profile::Profile, progress::DownloadAction, target::Target };
+use crate::{
+    cli::ARGUMENTS,
+    file::PostFile,
+    profile::Profile,
+    progress::DownloadAction,
+    target::Target,
+};
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
@@ -64,14 +70,10 @@ async fn main() -> Result<()> {
         let mut total = files.len();
 
         if let Some(exts) = ARGUMENTS.included() {
-            files.retain(|file| {
-                file.extension.as_ref().as_ref().is_some_and(|ext| exts.contains(ext))
-            });
+            files.retain(|file| file.get_ext().is_some_and(|ext| exts.contains(ext)));
             files_left_msg(Filter::Inclusive, total, files.len());
         } else if let Some(exts) = ARGUMENTS.excluded() {
-            files.retain(|file| {
-                file.extension.as_ref().as_ref().is_none_or(|ext| !exts.contains(ext))
-            });
+            files.retain(|file| file.get_ext().is_none_or(|ext| !exts.contains(ext)));
             files_left_msg(Filter::Exclusive, total, files.len());
         }
 
@@ -87,7 +89,7 @@ async fn main() -> Result<()> {
 
             let archive = target.archive();
 
-            files.retain(|file| file.hash.as_ref().as_deref().is_none_or(|hash| !archive.contains(hash)));
+            files.retain(|file| file.get_hash().is_none_or(|hash| !archive.contains(hash)));
 
             let left = files.len();
 
@@ -109,7 +111,7 @@ async fn main() -> Result<()> {
 
         let archive_path = target.to_archive_pathbuf();
 
-        let (msg_tx, msg_rx) = mpsc::channel::<DownloadAction>(left);
+        let (msg_tx, msg_rx) = mpsc::unbounded_channel::<DownloadAction>();
 
         let files_by_type = ext::count(&files);
 
@@ -136,8 +138,8 @@ async fn main() -> Result<()> {
                 task::spawn(async move {
                     let _permit = permit;
 
-                    match file.try_download(&target, msg_tx.clone()).await {
-                        Ok(action) => msg_tx.send(action).await.unwrap(),
+                    match PostFile::try_download(file.clone(), &target, msg_tx.clone()).await {
+                        Ok(action) => msg_tx.send(action).unwrap(),
                         Err(err) => {
                             let mut error = err.to_string();
 
@@ -146,9 +148,7 @@ async fn main() -> Result<()> {
                                 error.push_str(&source.to_string());
                             }
 
-                            msg_tx
-                                .send(DownloadAction::Fail(error, file.extension)).await
-                                .unwrap();
+                            msg_tx.send(DownloadAction::Fail(error, file)).unwrap();
                         }
                     }
                 })

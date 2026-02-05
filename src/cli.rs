@@ -1,8 +1,13 @@
 use clap::Parser;
-use itertools::Itertools;
 use pretty_duration::pretty_duration;
 use serde::Deserialize;
-use std::{ fmt::{ Display, Formatter, Result }, num, sync::LazyLock, time::Duration };
+use std::{
+    collections::HashSet,
+    fmt::{ Display, Formatter, Result },
+    num,
+    sync::LazyLock,
+    time::Duration,
+};
 
 pub static ARGUMENTS: LazyLock<Args> = LazyLock::new(Args::parse);
 
@@ -97,25 +102,28 @@ impl Args {
         self.threads.clamp(1, 512)
     }
 
-    pub fn included(&self) -> Option<Vec<String>> {
+    pub fn included(&self) -> Option<HashSet<String>> {
         Self::process_exts(self.include.as_ref()?)
     }
 
-    pub fn excluded(&self) -> Option<Vec<String>> {
+    pub fn excluded(&self) -> Option<HashSet<String>> {
         Self::process_exts(self.exclude.as_ref()?)
     }
 
-    fn process_exts(exts: &[String]) -> Option<Vec<String>> {
-        let exts: Vec<String> = exts
-            .iter()
-            .unique()
-            .map(|ext| ext.to_lowercase())
-            .collect();
+    fn process_exts(exts: &[String]) -> Option<HashSet<String>> {
+        let mut unique_exts = HashSet::with_capacity(exts.len());
 
-        if exts.is_empty() {
+        for ext in exts {
+            if !unique_exts.contains(ext) {
+                unique_exts.insert(ext.clone());
+            }
+        }
+
+        if unique_exts.is_empty() {
             None
         } else {
-            Some(exts)
+            unique_exts.shrink_to_fit();
+            Some(unique_exts)
         }
     }
 }
