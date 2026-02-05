@@ -254,7 +254,7 @@ impl Target {
                 channel: extract(&caps, "channel"),
                 offset: {
                     let offset = extract_unwrap(&caps, "offset").parse()?;
-                    if offset == 0 || offset % 150 == 0 {
+                    if offset % 150 == 0 {
                         Some(offset)
                     } else {
                         return Err(format_err!("Invalid URL: {url}"));
