@@ -1,5 +1,5 @@
 use crate::{
-    api::{ self, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
+    api::{ self, ApiError, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
     file::PostFile,
     http::CLIENT,
     pretty::{ self, n_fmt },
@@ -140,7 +140,7 @@ impl Profile {
             loop {
                 let mut retries = 0;
 
-                let posts: Vec<PagePost>;
+                let mut posts = Vec::<PagePost>::new();
 
                 page.clear();
                 let _ = write!(page, "{}", (offset + 50) / 50);
@@ -150,6 +150,8 @@ impl Profile {
 
                 url.truncate(url_len);
                 let _ = write!(url, "{offset}");
+
+                let mut skip = false;
 
                 loop {
                     if retries > 0 {
@@ -165,10 +167,20 @@ impl Profile {
                             break;
                         }
                         Err(err) => {
+                            if let ApiError::MalformedPage = err {
+                                skip = true;
+                                break;
+                            }
                             err.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }
+                }
+
+                offset += 50;
+
+                if skip {
+                    continue;
                 }
 
                 if posts.is_empty() {
@@ -182,8 +194,6 @@ impl Profile {
                 if let SubType::PageOffset(_) = subtype {
                     break;
                 }
-
-                offset += 50;
             }
         }
 
@@ -246,7 +256,7 @@ impl Profile {
             loop {
                 let mut retries = 0;
 
-                let posts: Vec<DiscordPost>;
+                let mut posts = Vec::<DiscordPost>::new();
 
                 page.clear();
                 let _ = write!(page, "{}", (offset + 150) / 150);
@@ -256,6 +266,8 @@ impl Profile {
 
                 url.truncate(url_len);
                 let _ = write!(url, "{offset}");
+
+                let mut skip = false;
 
                 loop {
                     if retries > 0 {
@@ -271,10 +283,20 @@ impl Profile {
                             break;
                         }
                         Err(err) => {
+                            if let ApiError::MalformedPage = err {
+                                skip = true;
+                                break;
+                            }
                             err.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }
+                }
+
+                offset += 150;
+
+                if skip {
+                    break;
                 }
 
                 if posts.is_empty() {
@@ -288,8 +310,6 @@ impl Profile {
                 if single_page {
                     break;
                 }
-
-                offset += 150;
             }
         }
 
