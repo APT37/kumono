@@ -13,6 +13,8 @@ static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
 });
 
+static GHOST_POST: &str = r#"[ { "file": {}, "attachments": [] } ]"#;
+
 pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
     sleep(API_DELAY).await;
 
@@ -21,7 +23,11 @@ pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
         .map_err(|err| ApiError::Connect(err.to_string()))?;
 
     let status = res.status();
-    let text = res.text().await.expect("get text from response body");
+
+    let Ok(text) = res.text().await else {
+        eprintln!("skipping page due to malformed response (server issue)");
+        return Ok(serde_json::from_str(GHOST_POST).unwrap());
+    };
 
     if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
         return Ok(serde_json::from_str("[]").unwrap());
