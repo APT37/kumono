@@ -20,33 +20,33 @@ pub struct Profile {
 
 impl Display for Profile {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if
-            let
+        match *self.target {
             | Target::Creator { subtype: SubType::Post(_), .. }
-            | Target::Discord { channel: None, .. } = *self.target
-        {
-            let _ = write!(
-                f,
-                "#{number}: {target} has {posts}",
-                number = n_fmt(self.target_id as u64),
-                target = self.target,
-                posts = pretty::with_word(self.files.len() as u64, "file")
-            );
-        } else {
-            let _ = write!(
-                f,
-                "#{number}: {target} has {posts}",
-                number = n_fmt(self.target_id as u64),
-                target = self.target,
-                posts = pretty::with_word(self.post_count as u64, "post")
-            );
+            | Target::Discord { channel: None, .. } => {
+                let _ = write!(
+                    f,
+                    "#{number}: {target} has {posts}",
+                    number = n_fmt(self.target_id as u64),
+                    target = self.target,
+                    posts = pretty::with_word(self.files.len() as u64, "file")
+                );
+            }
+            _ => {
+                let _ = write!(
+                    f,
+                    "#{number}: {target} has {posts}",
+                    number = n_fmt(self.target_id as u64),
+                    target = self.target,
+                    posts = pretty::with_word(self.post_count as u64, "post")
+                );
 
-            if self.post_count > 0 {
-                let _ = match self.files.len() {
-                    0 => write!(f, ", but no files"),
-                    1 => write!(f, ", containing 1 file"),
-                    n => write!(f, ", containing {} files", n_fmt(n as u64)),
-                };
+                if self.post_count > 0 {
+                    let _ = match self.files.len() {
+                        0 => write!(f, ", but no files"),
+                        1 => write!(f, ", containing 1 file"),
+                        n => write!(f, ", containing {} files", n_fmt(n as u64)),
+                    };
+                }
             }
         }
 
@@ -123,7 +123,8 @@ impl Profile {
             thread::spawn(move || page_progress(msg_rx));
 
             let mut offset = if let SubType::PageOffset(o) = subtype { *o } else { 0 };
-            let mut page = String::with_capacity(4);
+
+            let mut page = String::with_capacity(3);
 
             let host = self.target.as_service().host();
             let service = self.target.as_service().as_static_str();
@@ -133,7 +134,7 @@ impl Profile {
             let _ = write!(msg, "Retrieving posts for {service}/{user} page #");
 
             let url_len = 8 + host.len() + 8 + service.len() + 6 + user.len() + 9;
-            let mut url = String::with_capacity(url_len);
+            let mut url = String::with_capacity(url_len + 5);
             let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/posts?o=");
 
             loop {
@@ -224,7 +225,7 @@ impl Profile {
                 }
                 None => 0,
             };
-            let mut page = String::with_capacity(4);
+            let mut page = String::with_capacity(3);
 
             let msg_len = 29 + server.len() + 1 + channel.id.len() + 7;
             let mut msg = String::with_capacity(msg_len);
@@ -235,7 +236,7 @@ impl Profile {
             );
 
             let url_len = 41 + channel.id.len() + 3;
-            let mut url = String::with_capacity(url_len);
+            let mut url = String::with_capacity(url_len + 5);
             let _ = write!(
                 url,
                 "https://kemono.cr/api/v1/discord/channel/{channel}?o=",
@@ -269,8 +270,8 @@ impl Profile {
                             posts = p;
                             break;
                         }
-                        Err(error) => {
-                            error.try_interpret(retries).await?;
+                        Err(err) => {
+                            err.try_interpret(retries).await?;
                             retries += 1;
                         }
                     }

@@ -13,8 +13,6 @@ static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
 });
 
-static GHOST_POST: &str = r#"[ { "file": {}, "attachments": [] } ]"#;
-
 pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
     sleep(API_DELAY).await;
 
@@ -26,7 +24,7 @@ pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
 
     let Ok(text) = res.text().await else {
         eprintln!("skipping page due to malformed response (server issue)");
-        return Ok(serde_json::from_str(GHOST_POST).unwrap());
+        return Err(ApiError::MalformedPage);
     };
 
     if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
@@ -35,7 +33,7 @@ pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
         return Err(ApiError::Status(status));
     }
 
-    serde_json::from_str(&text).map_err(|err| ApiError::Parser(err.to_string()))
+    serde_json::from_str(&text).map_err(|err| ApiError::MalformedPost(err.to_string()))
 }
 
 pub trait Post {
@@ -46,7 +44,8 @@ pub trait Post {
 pub enum ApiError {
     #[error("connection error")] Connect(String),
     #[error("non-success status code")] Status(StatusCode),
-    #[error("post parsing failed")] Parser(String),
+    #[error("malformed page data")] MalformedPage,
+    #[error("malformed post data")] MalformedPost(String),
 }
 
 impl ApiError {
@@ -61,7 +60,7 @@ impl ApiError {
         }
 
         match self {
-            ApiError::Connect(err) | ApiError::Parser(err) => {
+            ApiError::Connect(err) | ApiError::MalformedPost(err) => {
                 try_wait(retries, ARGUMENTS.retry_delay, err).await?;
             }
             ApiError::Status(status) =>
@@ -71,6 +70,7 @@ impl ApiError {
                     }
                     _ => try_wait(retries, ARGUMENTS.retry_delay, status.as_str()).await?,
                 }
+            ApiError::MalformedPage => unreachable!(),
         }
 
         Ok(())
