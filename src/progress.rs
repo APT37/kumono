@@ -26,12 +26,12 @@ pub enum DownloadAction {
 }
 
 struct Stats {
-    queued: u64,
-    waiting: u64,
-    active: u64,
-    complete: u64,
-    skipped: u64,
-    failed: u64,
+    queued: usize,
+    waiting: usize,
+    active: usize,
+    complete: usize,
+    skipped: usize,
+    failed: usize,
 
     dl_bytes: u64,
 
@@ -45,7 +45,11 @@ struct Stats {
 }
 
 impl Stats {
-    pub fn new(files: u64, archive_path: &PathBuf, files_by_type: HashMap<String, usize>) -> Self {
+    pub fn new(
+        files: usize,
+        archive_path: &PathBuf,
+        files_by_type: HashMap<String, usize>
+    ) -> Self {
         Self {
             queued: files,
             waiting: 0,
@@ -185,7 +189,7 @@ impl Display for Stats {
                 );
 
                 for (key, value) in self.files_by_type.iter().sorted() {
-                    let _ = write!(buffer, " / {key}: {}", n_fmt(*value as u64));
+                    let _ = write!(buffer, " / {key}: {}", n_fmt(*value));
                 }
 
                 buffer
@@ -198,13 +202,13 @@ pub static DOWNLOADS_FAILED: AtomicBool = AtomicBool::new(false);
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn progress_bar(
-    files: u64,
+    files: usize,
     archive: PathBuf,
     mut msg_rx: UnboundedReceiver<DownloadAction>,
     last_target: bool,
     files_by_type: HashMap<String, usize>
 ) {
-    let bar = ProgressBar::new(files);
+    let bar = ProgressBar::new(files as u64);
 
     bar.set_style(
         ProgressStyle::with_template(

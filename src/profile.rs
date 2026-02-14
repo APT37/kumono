@@ -41,9 +41,9 @@ impl Display for Profile {
                 let _ = write!(
                     f,
                     "#{number}: {target} has {files}",
-                    number = n_fmt(self.target_id as u64),
+                    number = n_fmt(self.target_id),
                     target = self.target,
-                    files = pretty::with_word(self.files.len() as u64, "file")
+                    files = pretty::with_word(self.files.len(), "file")
                 );
             }
             _ => {
@@ -52,16 +52,16 @@ impl Display for Profile {
                 let _ = write!(
                     f,
                     "#{number}: {target} has {posts}",
-                    number = n_fmt(self.target_id as u64),
+                    number = n_fmt(self.target_id),
                     target = self.target,
-                    posts = pretty::with_word(cap as u64, "post")
+                    posts = pretty::with_word(cap, "post")
                 );
 
                 if cap > 0 {
                     let _ = match self.files.len() {
                         0 => write!(f, ", but no files"),
                         1 => write!(f, ", containing 1 file"),
-                        n => write!(f, ", containing {} files", n_fmt(n as u64)),
+                        n => write!(f, ", containing {} files", n_fmt(n)),
                     };
                 }
             }

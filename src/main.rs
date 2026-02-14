@@ -117,7 +117,7 @@ async fn main() -> Result<()> {
 
         thread::spawn(move || {
             progress::progress_bar(
-                left as u64,
+                left,
                 archive_path,
                 msg_rx,
                 i == total_targets - 1,
@@ -171,8 +171,8 @@ async fn main() -> Result<()> {
 fn files_left_msg(filter: Filter, total: usize, left: usize) {
     eprintln!(
         "{filter}: skipping {skipped}, {left} left to download/check",
-        skipped = pretty::with_word((total - left) as u64, "file"),
-        left = pretty::with_word(left as u64, "file")
+        skipped = pretty::with_word(total - left, "file"),
+        left = pretty::with_word(left, "file")
     );
 }
 
