@@ -13,27 +13,27 @@ static RE_OUT_OF_BOUNDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"\{"error":"Offset [0-9]+ is bigger than total count [0-9]+\."\}"#).unwrap()
 });
 
-pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, ApiError> {
+pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, PostError> {
     sleep(API_DELAY).await;
 
     let res = CLIENT.get(url)
         .send().await
-        .map_err(|err| ApiError::Connect(err.to_string()))?;
+        .map_err(|err| PostError::Connect(err.to_string()))?;
 
     let status = res.status();
 
     let Ok(text) = res.text().await else {
         eprintln!("skipping page due to malformed response (server issue)");
-        return Err(ApiError::MalformedPage);
+        return Err(PostError::MalformedPage);
     };
 
     if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
         return Ok(serde_json::from_str("[]").unwrap());
     } else if status != StatusCode::OK {
-        return Err(ApiError::Status(status));
+        return Err(PostError::Status(status));
     }
 
-    serde_json::from_str(&text).map_err(|err| ApiError::MalformedPost(err.to_string()))
+    serde_json::from_str(&text).map_err(|err| PostError::MalformedPost(err.to_string()))
 }
 
 pub trait Post {
@@ -41,14 +41,14 @@ pub trait Post {
 }
 
 #[derive(Debug, Error)]
-pub enum ApiError {
+pub enum PostError {
     #[error("connection error")] Connect(String),
     #[error("non-success status code")] Status(StatusCode),
     #[error("malformed page data")] MalformedPage,
     #[error("malformed post data")] MalformedPost(String),
 }
 
-impl ApiError {
+impl PostError {
     pub async fn try_interpret(&self, retries: usize) -> Result<()> {
         async fn try_wait(retries: usize, duration: Duration, error: &str) -> Result<()> {
             if retries <= ARGUMENTS.max_retries {
@@ -60,17 +60,17 @@ impl ApiError {
         }
 
         match self {
-            ApiError::Connect(err) | ApiError::MalformedPost(err) => {
+            PostError::Connect(err) | PostError::MalformedPost(err) => {
                 try_wait(retries, ARGUMENTS.retry_delay, err).await?;
             }
-            ApiError::Status(status) =>
+            PostError::Status(status) =>
                 match status.as_u16() {
                     403 | 429 | 502..=504 => {
                         try_wait(retries, ARGUMENTS.rate_limit_backoff, status.as_str()).await?;
                     }
                     _ => try_wait(retries, ARGUMENTS.retry_delay, status.as_str()).await?,
                 }
-            ApiError::MalformedPage => unreachable!(),
+            PostError::MalformedPage => unreachable!(),
         }
 
         Ok(())

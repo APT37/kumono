@@ -12,11 +12,11 @@ use std::{ path::PathBuf, process::exit, sync::{ Arc, atomic::Ordering::Relaxed 
 use strum_macros::Display;
 use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
 
-mod api;
 mod cli;
 mod ext;
 mod file;
 mod http;
+mod post;
 mod pretty;
 mod profile;
 mod progress;

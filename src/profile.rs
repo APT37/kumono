@@ -1,19 +1,34 @@
 use crate::{
-    api::{ self, ApiError, DiscordChannel, DiscordPost, PagePost, Post, SinglePost },
     file::PostFile,
     http::CLIENT,
+    post::{ self, DiscordChannel, DiscordPost, PagePost, Post, PostError, SinglePost },
     pretty::{ self, n_fmt },
     target::{ SubType, Target },
 };
 use anyhow::Result;
 use indicatif::{ ProgressBar, ProgressStyle };
+use serde::Deserialize;
 use std::{ collections::HashSet, fmt::{ self, Display, Formatter, Write }, sync::Arc, thread };
 use tokio::{ sync::mpsc::{ UnboundedReceiver, unbounded_channel }, time::{ Duration, sleep } };
+
+#[derive(Deserialize)]
+struct Creator {
+    // id: usize, // "1024383"
+    // name: String, // "sspr"
+    // service: Service, // "fanbox"
+    // indexed: String, // "2021-10-07T02:46:54.888210"
+    // updated: String, // "2025-05-30T13:38:51.561232"
+    // public_id: String, // "sspr"
+    // relation_id: usize, // null
+    post_count: usize, // 165
+    // dm_count: usize, // 0
+    // share_count: usize, // 0
+    // chat_count: usize, // 0
+}
 
 pub struct Profile {
     target_id: usize,
     target: Arc<Target>,
-    post_count: usize,
     posts: Vec<Box<dyn Post>>,
     pub files: HashSet<Arc<PostFile>>,
 }
@@ -25,22 +40,24 @@ impl Display for Profile {
             | Target::Discord { channel: None, .. } => {
                 let _ = write!(
                     f,
-                    "#{number}: {target} has {posts}",
+                    "#{number}: {target} has {files}",
                     number = n_fmt(self.target_id as u64),
                     target = self.target,
-                    posts = pretty::with_word(self.files.len() as u64, "file")
+                    files = pretty::with_word(self.files.len() as u64, "file")
                 );
             }
             _ => {
+                let cap = self.posts.capacity();
+
                 let _ = write!(
                     f,
                     "#{number}: {target} has {posts}",
                     number = n_fmt(self.target_id as u64),
                     target = self.target,
-                    posts = pretty::with_word(self.post_count as u64, "post")
+                    posts = pretty::with_word(cap as u64, "post")
                 );
 
-                if self.post_count > 0 {
+                if cap > 0 {
                     let _ = match self.files.len() {
                         0 => write!(f, ", but no files"),
                         1 => write!(f, ", containing 1 file"),
@@ -70,11 +87,22 @@ fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
 
 impl Profile {
     pub async fn try_new(target: Arc<Target>, target_id: usize) -> Result<Self> {
+        let post_count = if let Target::Creator { service, user, .. } = &*target {
+            let host = service.host();
+            let service = service.as_static_str();
+            let mut url = String::with_capacity(
+                8 + host.len() + 8 + service.len() + 6 + user.len() + 8
+            );
+            let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/profile");
+            CLIENT.get(&url).send().await?.json::<Creator>().await?.post_count
+        } else {
+            0
+        };
+
         let mut profile = Self {
             target_id,
             target: target.clone(),
-            post_count: 0,
-            posts: Vec::with_capacity(250),
+            posts: Vec::with_capacity(post_count),
             files: HashSet::new(),
         };
 
@@ -87,15 +115,16 @@ impl Profile {
             }
         }
 
-        // wait for progress bar to finish
+        // wait for page progress bar to finish
         sleep(Duration::from_millis(1)).await;
 
         profile.init_files();
 
         eprintln!("{profile}");
 
-        // discard all posts
+        // discard posts, shrink vector
         profile.posts.clear();
+        profile.posts.shrink_to_fit();
 
         Ok(profile)
     }
@@ -161,13 +190,13 @@ impl Profile {
 
                     msg_tx.send(msg.clone())?;
 
-                    match api::try_fetch(&url).await {
+                    match post::try_fetch(&url).await {
                         Ok(p) => {
                             posts = p;
                             break;
                         }
                         Err(err) => {
-                            if let ApiError::MalformedPage = err {
+                            if let PostError::MalformedPage = err {
                                 skip = true;
                                 break;
                             }
@@ -214,7 +243,7 @@ impl Profile {
         } else {
             let mut url = String::with_capacity(48 + server.len());
             let _ = write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}");
-            api::try_fetch(&url).await?
+            post::try_fetch(&url).await?
         };
 
         if channels.is_empty() {
@@ -277,13 +306,13 @@ impl Profile {
 
                     msg_tx.send(msg.clone())?;
 
-                    match api::try_fetch(&url).await {
+                    match post::try_fetch(&url).await {
                         Ok(p) => {
                             posts = p;
                             break;
                         }
                         Err(err) => {
-                            if let ApiError::MalformedPage = err {
+                            if let PostError::MalformedPage = err {
                                 skip = true;
                                 break;
                             }
@@ -317,8 +346,6 @@ impl Profile {
     }
 
     fn init_files(&mut self) {
-        self.post_count = self.posts.len();
-
         self.posts.drain(..).for_each(|mut post| {
             post.files()
                 .into_iter()
