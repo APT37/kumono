@@ -120,7 +120,13 @@ impl Post for PagePost {
 
         let attachments = mem::take(&mut self.attachments);
 
-        let mut files = Vec::with_capacity(attachments.len() + 1);
+        let mut files = Vec::with_capacity(
+            if attachments.is_empty() {
+                0
+            } else {
+                attachments.len() + 1
+            }
+        );
 
         for raw in attachments {
             if let Some(path) = raw.path {
