@@ -1,10 +1,4 @@
-use crate::{
-    cli::ARGUMENTS,
-    file::PostFile,
-    profile::Profile,
-    progress::DownloadAction,
-    target::Target,
-};
+use crate::{ cli::ARGUMENTS, file::PostFile, progress::DownloadAction, target::Target };
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
@@ -22,7 +16,6 @@ mod profile;
 mod progress;
 mod target;
 
-#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
     if ARGUMENTS.show_config {
@@ -49,7 +42,7 @@ async fn main() -> Result<()> {
     for (i, target) in targets.into_iter().enumerate() {
         let target = Arc::new(target);
 
-        let mut files = Profile::try_new(target.clone(), i + 1).await?.files;
+        let mut files = profile::try_get_files(target.clone(), i + 1).await?;
 
         if files.is_empty() {
             if i != total_targets - 1 {
@@ -59,7 +52,7 @@ async fn main() -> Result<()> {
         }
 
         if ARGUMENTS.list_extensions {
-            eprintln!("{}", ext::ExtensionList::new(&files));
+            eprintln!("{}", ext::list(&files));
 
             if i != total_targets - 1 {
                 eprintln!();
@@ -109,20 +102,14 @@ async fn main() -> Result<()> {
 
         fs::create_dir_all(target.to_pathbuf(None)).await?;
 
-        let archive_path = target.to_archive_pathbuf();
+        let archive = target.to_archive_pathbuf();
 
         let (msg_tx, msg_rx) = mpsc::unbounded_channel::<DownloadAction>();
 
         let files_by_type = ext::count(&files);
 
         thread::spawn(move || {
-            progress::progress_bar(
-                left,
-                archive_path,
-                msg_rx,
-                i == total_targets - 1,
-                files_by_type
-            );
+            progress::progress_bar(left, archive, msg_rx, i == total_targets - 1, files_by_type);
         });
 
         let mut tasks = Vec::with_capacity(files.len());

@@ -26,11 +26,18 @@ struct Creator {
     // chat_count: usize, // 0
 }
 
-pub struct Profile {
+pub async fn try_get_files(
+    target: Arc<Target>,
+    target_id: usize
+) -> Result<HashSet<Arc<PostFile>>> {
+    Ok(Profile::try_new(target, target_id).await?.files)
+}
+
+struct Profile {
     target_id: usize,
     target: Arc<Target>,
     posts: Vec<Box<dyn Post>>,
-    pub files: HashSet<Arc<PostFile>>,
+    files: HashSet<Arc<PostFile>>,
 }
 
 impl Display for Profile {
@@ -86,7 +93,7 @@ fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
 }
 
 impl Profile {
-    pub async fn try_new(target: Arc<Target>, target_id: usize) -> Result<Self> {
+    async fn try_new(target: Arc<Target>, target_id: usize) -> Result<Self> {
         let post_count = if let Target::Creator { service, user, .. } = &*target {
             let host = service.host();
             let service = service.as_static_str();

@@ -2,8 +2,12 @@ use crate::file::PostFile;
 use itertools::Itertools;
 use std::{ collections::{ HashMap, HashSet }, fmt::{ Display, Formatter, Result }, sync::Arc };
 
+pub fn list(files: &HashSet<Arc<PostFile>>) -> String {
+    ExtensionList::new(files).to_string()
+}
+
 #[derive(Default)]
-pub struct ExtensionList {
+struct ExtensionList {
     extensions: HashSet<String>,
     without_extension: usize,
 }
