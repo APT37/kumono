@@ -28,12 +28,12 @@ pub async fn try_fetch<D: DeserializeOwned>(url: &str) -> Result<D, PostError> {
     };
 
     if status == StatusCode::BAD_REQUEST && RE_OUT_OF_BOUNDS.is_match(&text) {
-        return Ok(serde_json::from_str("[]").unwrap());
+        Ok(serde_json::from_str("[]").unwrap())
     } else if status != StatusCode::OK {
-        return Err(PostError::Status(status));
+        Err(PostError::Status(status))
+    } else {
+        serde_json::from_str(&text).map_err(|err| PostError::MalformedPost(err.to_string()))
     }
-
-    serde_json::from_str(&text).map_err(|err| PostError::MalformedPost(err.to_string()))
 }
 
 pub trait Post {
