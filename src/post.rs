@@ -92,19 +92,23 @@ impl Post for SinglePost {
     fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.post.attachments.retain(|file| file.path.is_some());
 
+        if self.post.attachments.is_empty() && self.post.file.is_none() {
+            return Vec::new();
+        }
+
         let attachments = mem::take(&mut self.post.attachments);
 
-        let mut files = Vec::with_capacity(attachments.len() + 1);
+        let mut post_files = Vec::with_capacity(attachments.len() + 1);
 
         for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap()));
+            post_files.push(PostFile::new(raw.path.unwrap()));
         }
 
         if let Some(raw) = self.post.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path));
+            post_files.push(PostFile::new(path));
         }
 
-        files
+        post_files
     }
 }
 
@@ -118,27 +122,25 @@ impl Post for PagePost {
     fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.attachments.retain(|file| file.path.is_some());
 
+        if self.attachments.is_empty() && self.file.is_none() {
+            return Vec::new();
+        }
+
         let attachments = mem::take(&mut self.attachments);
 
-        let mut files = Vec::with_capacity(
-            if attachments.is_empty() {
-                0
-            } else {
-                attachments.len() + 1
-            }
-        );
+        let mut post_files = Vec::with_capacity(attachments.len() + 1);
 
         for raw in attachments {
             if let Some(path) = raw.path {
-                files.push(PostFile::new(path));
+                post_files.push(PostFile::new(path));
             }
         }
 
         if let Some(raw) = self.file.take() && let Some(path) = raw.path {
-            files.push(PostFile::new(path));
+            post_files.push(PostFile::new(path));
         }
 
-        files
+        post_files
     }
 }
 
@@ -157,14 +159,52 @@ impl Post for DiscordPost {
     fn files(&mut self) -> Vec<Arc<PostFile>> {
         self.attachments.retain(|file| file.path.is_some());
 
-        let attachments = mem::take(&mut self.attachments);
-
-        let mut files = Vec::with_capacity(attachments.len());
-
-        for raw in attachments {
-            files.push(PostFile::new(raw.path.unwrap()));
+        if self.attachments.is_empty() {
+            return Vec::new();
         }
 
-        files
+        let attachments = mem::take(&mut self.attachments);
+
+        let mut post_files = Vec::with_capacity(attachments.len());
+
+        for raw in attachments {
+            post_files.push(PostFile::new(raw.path.unwrap()));
+        }
+
+        post_files
     }
 }
+
+// #[derive(Deserialize)]
+// pub struct FavoritePost {
+//     user: String,
+//     service: Service,
+//     file: Option<PostFileRaw>,
+//     attachments: Vec<PostFileRaw>,
+// }
+
+// impl Post for FavoritePost {
+//     fn files(&mut self) -> Vec<Arc<PostFile>> {
+//         self.attachments.retain(|file| file.path.is_some());
+
+//         if self.attachments.is_empty() && self.file.is_none() {
+//             return Vec::new();
+//         }
+
+//         let attachments = mem::take(&mut self.attachments);
+
+//         let mut post_files = Vec::with_capacity(attachments.len() + 1);
+
+//         for raw in attachments {
+//             if let Some(path) = raw.path {
+//                 post_files.push(PostFile::new(path));
+//             }
+//         }
+
+//         if let Some(raw) = self.file.take() && let Some(path) = raw.path {
+//             post_files.push(PostFile::new(path));
+//         }
+
+//         post_files
+//     }
+// }

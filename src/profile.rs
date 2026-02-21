@@ -176,7 +176,7 @@ impl Profile {
             loop {
                 let mut retries = 0;
 
-                let mut posts = Vec::<PagePost>::new();
+                let mut page_posts = Vec::<PagePost>::new();
 
                 page.clear();
                 let _ = write!(page, "{}", (offset + 50) / 50);
@@ -199,7 +199,7 @@ impl Profile {
 
                     match post::try_fetch(&url).await {
                         Ok(p) => {
-                            posts = p;
+                            page_posts = p;
                             break;
                         }
                         Err(err) => {
@@ -219,11 +219,11 @@ impl Profile {
                     continue;
                 }
 
-                if posts.is_empty() {
+                if page_posts.is_empty() {
                     break;
                 }
 
-                for post in posts {
+                for post in page_posts {
                     self.posts.push(Box::new(post));
                 }
 
@@ -292,7 +292,7 @@ impl Profile {
             loop {
                 let mut retries = 0;
 
-                let mut posts = Vec::<DiscordPost>::new();
+                let mut page_posts = Vec::<DiscordPost>::new();
 
                 page.clear();
                 let _ = write!(page, "{}", (offset + 150) / 150);
@@ -315,7 +315,7 @@ impl Profile {
 
                     match post::try_fetch(&url).await {
                         Ok(p) => {
-                            posts = p;
+                            page_posts = p;
                             break;
                         }
                         Err(err) => {
@@ -335,11 +335,11 @@ impl Profile {
                     break;
                 }
 
-                if posts.is_empty() {
+                if page_posts.is_empty() {
                     break;
                 }
 
-                for post in posts {
+                for post in page_posts {
                     self.posts.push(Box::new(post));
                 }
 
