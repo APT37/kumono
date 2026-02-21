@@ -100,9 +100,9 @@ async fn main() -> Result<()> {
 
         let left = files.len();
 
-        fs::create_dir_all(target.to_pathbuf(None)).await?;
+        fs::create_dir_all(target.as_pathbuf()).await?;
 
-        let archive = target.to_archive_pathbuf();
+        let archive = target.as_archive_pathbuf().clone();
 
         let (msg_tx, msg_rx) = mpsc::unbounded_channel::<DownloadAction>();
 

@@ -17,13 +17,17 @@ pub enum Target {
         service: Service,
         user: String,
         subtype: SubType,
+        path: PathBuf,
         archive: HashSet<String>,
+        archive_path: PathBuf,
     },
     Discord {
         server: String,
         channel: Option<String>,
         offset: Option<usize>,
+        path: PathBuf,
         archive: HashSet<String>,
+        archive_path: PathBuf,
     },
 }
 
@@ -107,7 +111,7 @@ static RE_DISCORD_PAGE: LazyRegex = LazyLock::new(|| {
     ).unwrap()
 });
 
-async fn try_fetch_linked_accounts(service: &Service, user: &str) -> Result<Vec<Info>> {
+async fn try_fetch_linked_accounts(service: Service, user: &str) -> Result<Vec<Info>> {
     let host = service.host();
     let service = service.as_static_str();
 
@@ -167,39 +171,59 @@ impl Target {
         targets
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn try_from_url(url: &str) -> Result<Vec<Self>> {
         let url = url.strip_suffix('/').unwrap_or(url);
 
         let capture = |re: &Regex| re.captures(url).expect("get captures");
         let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
-        let extract_unwrap = |caps: &Captures, name: &str| {
-            extract(caps, name).expect("extract values from captures")
+        let extract_unwrap = |caps: &Captures, name: &str|
+            extract(caps, name).expect("extract values from captures");
+        let service_user = |caps: &Captures| {
+            if let Ok(service) = extract_unwrap(caps, "service").parse::<Service>() {
+                Ok((service, extract_unwrap(caps, "user")))
+            } else {
+                Err(format_err!("Found invalid Service name when parsing URL"))
+            }
+        };
+        let server_channel = |caps: &Captures| {
+            (extract_unwrap(caps, "server"), extract(caps, "channel"))
+        };
+        let make_paths = |service, user_or_server: &str| {
+            (make_pathbuf(service, user_or_server), make_archive_pathbuf(service, user_or_server))
         };
 
         if RE_LINKED.is_match(url) {
             let caps = capture(&RE_LINKED);
 
-            let linked = try_fetch_linked_accounts(
-                &extract_unwrap(&caps, "service").parse()?,
-                &extract_unwrap(&caps, "user")
-            ).await?;
+            let (service, user) = service_user(&caps)?;
+            let linked = try_fetch_linked_accounts(service, &user).await?;
 
             let mut targets = Vec::new();
 
             for info in linked {
                 let mut target = if info.service == "discord" {
+                    let (path, archive_path) = make_paths(Service::Discord, &info.id);
+
                     Target::Discord {
                         server: info.id,
                         channel: None,
                         offset: None,
+                        path,
                         archive: HashSet::new(),
+                        archive_path,
                     }
                 } else {
+                    let (service, user) = (info.service.parse()?, info.id);
+                    let (path, archive_path) = make_paths(service, &user);
+
                     Target::Creator {
-                        service: info.service.parse()?,
-                        user: info.id,
+                        service,
+                        user,
                         subtype: SubType::None,
+                        path,
                         archive: HashSet::new(),
+                        archive_path,
                     }
                 };
 
@@ -217,41 +241,69 @@ impl Target {
 
         let mut target = if RE_CREATOR.is_match(url) {
             let caps = capture(&RE_CREATOR);
+
+            let (service, user) = service_user(&caps)?;
+            let (path, archive_path) = make_paths(service, &user);
+
             Target::Creator {
-                service: extract_unwrap(&caps, "service").parse()?,
-                user: extract_unwrap(&caps, "user"),
+                service,
+                user,
                 subtype: SubType::None,
+                path,
                 archive,
+                archive_path,
             }
         } else if RE_PAGE.is_match(url) {
             let caps = capture(&RE_PAGE);
+
+            let (service, user) = service_user(&caps)?;
+            let (path, archive_path) = make_paths(service, &user);
+
             Target::Creator {
-                service: extract_unwrap(&caps, "service").parse()?,
-                user: extract_unwrap(&caps, "user"),
+                service,
+                user,
                 subtype: SubType::PageOffset(extract_unwrap(&caps, "offset").parse()?),
+                path,
                 archive,
+                archive_path,
             }
         } else if RE_POST.is_match(url) {
             let caps = capture(&RE_POST);
+
+            let (service, user) = service_user(&caps)?;
+            let (path, archive_path) = make_paths(service, &user);
+
             Target::Creator {
-                service: extract_unwrap(&caps, "service").parse()?,
-                user: extract_unwrap(&caps, "user"),
+                service,
+                user,
                 subtype: SubType::Post(extract_unwrap(&caps, "post")),
+                path,
                 archive,
+                archive_path,
             }
         } else if RE_DISCORD.is_match(url) {
             let caps = capture(&RE_DISCORD);
+
+            let (server, channel) = server_channel(&caps);
+            let (path, archive_path) = make_paths(Service::Discord, &server);
+
             Target::Discord {
-                server: extract_unwrap(&caps, "server"),
-                channel: extract(&caps, "channel"),
+                server,
+                channel,
                 offset: None,
+                path,
                 archive,
+                archive_path,
             }
         } else if RE_DISCORD_PAGE.is_match(url) {
             let caps = capture(&RE_DISCORD_PAGE);
+
+            let (server, channel) = server_channel(&caps);
+            let (path, archive_path) = make_paths(Service::Discord, &server);
+
             Target::Discord {
-                server: extract_unwrap(&caps, "server"),
-                channel: extract(&caps, "channel"),
+                server,
+                channel,
                 offset: {
                     let offset = extract_unwrap(&caps, "offset").parse()?;
                     if offset % 150 == 0 {
@@ -260,7 +312,9 @@ impl Target {
                         return Err(format_err!("Invalid URL: {url}"));
                     }
                 },
+                path,
                 archive,
+                archive_path,
             }
         } else {
             return Err(format_err!("Invalid URL: {url}"));
@@ -273,20 +327,13 @@ impl Target {
         Ok(Vec::from_iter([target]))
     }
 
-    fn user_or_server(&self) -> &str {
-        match self {
-            Target::Creator { user, .. } => user,
-            Target::Discord { server, .. } => server,
-        }
-    }
-
     pub fn try_read_archive(&mut self) -> Result<()> {
         let mut archive = File::options()
             .read(true)
             .append(true)
             .create(true)
             .truncate(false)
-            .open(self.to_archive_pathbuf())
+            .open(self.as_archive_pathbuf())
             .with_context(|| {
                 let file = self.to_string();
                 let mut buf = String::with_capacity(32 + file.len());
@@ -317,29 +364,17 @@ impl Target {
         }
     }
 
-    pub fn to_archive_pathbuf(&self) -> PathBuf {
-        PathBuf::from_iter([
-            &ARGUMENTS.output_path,
-            "db",
-            &({
-                let service = self.as_service().as_static_str();
-                let user = self.user_or_server();
-
-                let mut file_name = String::with_capacity(service.len() + 1 + user.len() + 4);
-                let _ = write!(file_name, "{service}+{user}.txt");
-
-                file_name
-            }),
-        ])
+    pub fn as_pathbuf(&self) -> &PathBuf {
+        match self {
+            Target::Creator { path, .. } | Target::Discord { path, .. } => path,
+        }
     }
 
-    pub fn to_pathbuf(&self, file: Option<&str>) -> PathBuf {
-        PathBuf::from_iter([
-            &ARGUMENTS.output_path,
-            self.as_service().as_static_str(),
-            self.user_or_server(),
-            file.unwrap_or_default(),
-        ])
+    pub fn as_archive_pathbuf(&self) -> &PathBuf {
+        match self {
+            Target::Creator { archive_path, .. } | Target::Discord { archive_path, .. } =>
+                archive_path,
+        }
     }
 }
 
@@ -388,4 +423,23 @@ impl Service {
             _ => "kemono.cr",
         }
     }
+}
+
+fn make_pathbuf(service: Service, user: &str) -> PathBuf {
+    PathBuf::from_iter([&ARGUMENTS.output_path, service.as_static_str(), user])
+}
+
+fn make_archive_pathbuf(service: Service, user: &str) -> PathBuf {
+    PathBuf::from_iter([
+        &ARGUMENTS.output_path,
+        "db",
+        &({
+            let service = service.as_static_str();
+
+            let mut file_name = String::with_capacity(service.len() + 1 + user.len() + 4);
+            let _ = write!(file_name, "{service}+{user}.txt");
+
+            file_name
+        }),
+    ])
 }

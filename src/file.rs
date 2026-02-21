@@ -132,11 +132,15 @@ impl PostFile {
     }
 
     pub fn to_pathbuf(&self, target: &Target) -> PathBuf {
-        target.to_pathbuf(Some(self.get_name()))
+        let mut path = target.as_pathbuf().clone();
+        path.push(self.get_name());
+        path
     }
 
     pub fn to_temp_pathbuf(&self, target: &Target) -> PathBuf {
-        target.to_pathbuf(Some(self.get_temp()))
+        let mut path = target.as_pathbuf().clone();
+        path.push(self.get_temp());
+        path
     }
 
     pub async fn try_open(&self, target: &Target) -> Result<File> {
@@ -152,7 +156,6 @@ impl PostFile {
             })
     }
 
-    /// Calculates the file's SHA256 hash
     pub async fn hash(&self, target: &Target) -> Result<String> {
         sha256::try_async_digest(&self.to_temp_pathbuf(target)).await.with_context(|| {
             let mut buf = String::with_capacity(15 + self.temp_range.len());
