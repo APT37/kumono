@@ -9,7 +9,7 @@ use std::{
     path::PathBuf,
     process::exit,
     sync::{ Arc, atomic::{ AtomicBool, Ordering::Relaxed } },
-    time::Duration,
+    time::{ Duration, Instant },
 };
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -23,9 +23,12 @@ pub enum DownloadAction {
     Fail(String, Arc<PostFile>),
     Complete(Arc<PostFile>),
     Panic(String),
+    Update,
 }
 
 struct Stats {
+    start_time: Instant,
+
     queued: usize,
     waiting: usize,
     active: usize,
@@ -51,6 +54,8 @@ impl Stats {
         files_by_type: HashMap<String, usize>
     ) -> Self {
         Self {
+            start_time: Instant::now(),
+
             queued: files,
             waiting: 0,
             active: 0,
@@ -154,6 +159,7 @@ impl Stats {
                 self.panic = true;
                 false
             }
+            DownloadAction::Update => false,
         }
     }
 
@@ -163,14 +169,30 @@ impl Stats {
         *self.files_by_type.entry(extension.to_string()).or_default() -= 1;
         self.files_by_type.retain(|_, v| *v > 0);
     }
+
+    fn bytes_per_sec(&self) -> String {
+        let bytes = match Instant::now().duration_since(self.start_time).as_secs() {
+            0 => self.dl_bytes,
+            n => self.dl_bytes / n,
+        };
+
+        let mut base = HumanBytes(bytes).to_string();
+
+        if let Some(start) = base.find('.') {
+            base.replace_range(start..start + 3, "");
+        }
+
+        base
+    }
 }
 
 impl Display for Stats {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         writeln!(
             f,
-            "downloaded {} / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed{}",
+            "downloaded {} (avg. {}/s) / {} queued / {} waiting / {} active / {} complete / {} skipped / {} failed{}",
             HumanBytes(self.dl_bytes),
+            self.bytes_per_sec(),
             n_fmt(self.queued),
             n_fmt(self.waiting),
             n_fmt(self.active),
@@ -222,7 +244,7 @@ pub fn progress_bar(
 
     let mut stats = Stats::new(files, &archive, files_by_type);
 
-    let mut msg = String::new();
+    let mut errors = String::new();
 
     while let Some(state) = msg_rx.blocking_recv() {
         if stats.update(state) {
@@ -230,9 +252,9 @@ pub fn progress_bar(
         }
 
         if !stats.error.is_empty() {
-            msg.clear();
-            let _ = write!(msg, "\n{}", stats.error);
-            bar.set_message(msg.clone());
+            errors.clear();
+            let _ = write!(errors, "\n{}", stats.error);
+            bar.set_message(errors.clone());
         }
 
         bar.set_prefix(stats.to_string());

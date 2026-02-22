@@ -2,9 +2,15 @@ use crate::{ cli::ARGUMENTS, file::PostFile, progress::DownloadAction, target::T
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
-use std::{ path::PathBuf, process::exit, sync::{ Arc, atomic::Ordering::Relaxed }, thread };
+use std::{
+    path::PathBuf,
+    process::exit,
+    sync::{ Arc, atomic::Ordering::Relaxed },
+    thread,
+    time::Duration,
+};
 use strum_macros::Display;
-use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::{ Duration, sleep } };
+use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::sleep };
 
 mod cli;
 mod ext;
@@ -16,6 +22,7 @@ mod profile;
 mod progress;
 mod target;
 
+#[allow(clippy::too_many_lines)]
 #[tokio::main]
 async fn main() -> Result<()> {
     if ARGUMENTS.show_config {
@@ -110,6 +117,13 @@ async fn main() -> Result<()> {
 
         thread::spawn(move || {
             progress::progress_bar(left, archive, msg_rx, i == total_targets - 1, files_by_type);
+        });
+
+        let tx = msg_tx.clone();
+        thread::spawn(move || {
+            while tx.send(DownloadAction::Update).is_ok() {
+                thread::sleep(Duration::from_secs(1));
+            }
         });
 
         let mut tasks = Vec::with_capacity(files.len());
