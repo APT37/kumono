@@ -59,6 +59,8 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
 <img src="kumono.gif">
 
+*Results may vary based on hardware used. An NVMe SSD and a decent multi-core processor are recommended.*
+
 ### Available Options
 
 Downloads for `https://coomer.st/onlyfans/user/belledelphine` will go into `{output-path}/onlyfans/belledelphine` (the default value for `{output-path}` is `kumono`). *Downloads are automatically resumed.*
