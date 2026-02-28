@@ -33,14 +33,16 @@ async fn main() -> Result<()> {
         fs::create_dir_all(PathBuf::from_iter([&ARGUMENTS.output_path, "db"])).await?;
     }
 
-    let mut targets = Target::parse_args().await;
+    http::try_login().await?;
 
+    let mut targets = Vec::new();
+    targets.append(&mut target::try_fetch_favorites().await?);
     targets.append(&mut Target::try_parse_file().await?);
-
+    targets.append(&mut Target::parse_args().await);
     targets = targets.into_iter().unique_by(Target::to_string).collect();
 
     if targets.is_empty() {
-        eprintln!("No valid target URLs.");
+        eprintln!("No valid targets.");
         exit(3);
     }
 

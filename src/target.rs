@@ -12,6 +12,91 @@ use std::{
 };
 use strum_macros::{ Display, EnumString };
 
+// favorite post implementation is redundant in that we turn posts into
+// targets to get valid (archive) paths, then turn them back into posts.
+#[derive(Deserialize, Debug)]
+struct FavoritePost {
+    id: String,
+    user: String,
+    service: Service,
+    // file: Option<PostFileRaw>,
+    // attachments: Vec<PostFileRaw>,
+}
+
+impl FavoritePost {
+    fn into_target(self) -> Target {
+        let (service, user) = (self.service, self.user);
+
+        let (path, archive_path) = (
+            make_pathbuf(service, &user),
+            make_archive_pathbuf(service, &user),
+        );
+
+        Target::Creator {
+            service,
+            user,
+            subtype: SubType::Post(self.id),
+            path,
+            archive: HashSet::new(),
+            archive_path,
+        }
+    }
+}
+
+pub async fn try_fetch_favorites() -> Result<Vec<Target>> {
+    async fn try_fetch_artists(host: &str) -> Result<Vec<Info>> {
+        Ok(
+            CLIENT.get(format!("https://{host}/api/v1/account/favorites?type=artist"))
+                .send().await?
+                .json().await?
+        )
+    }
+    async fn try_fetch_posts(host: &str) -> Result<Vec<FavoritePost>> {
+        Ok(
+            CLIENT.get(format!("https://{host}/api/v1/account/favorites?type=post"))
+                .send().await?
+                .json().await?
+        )
+    }
+
+    let (mut artists, mut posts) = (Vec::new(), Vec::new());
+
+    if ARGUMENTS.coomer_user.is_some() {
+        artists.append(&mut try_fetch_artists("coomer.st").await?);
+        posts.append(&mut try_fetch_posts("coomer.st").await?);
+    }
+
+    if ARGUMENTS.kemono_user.is_some() {
+        artists.append(&mut try_fetch_artists("kemono.cr").await?);
+        posts.append(&mut try_fetch_posts("kemono.cr").await?);
+    }
+
+    let mut targets = Vec::with_capacity(artists.len() + posts.len());
+
+    for artist in artists {
+        let (service, user) = (artist.service.parse()?, artist.id);
+        let (path, archive_path) = (
+            make_pathbuf(service, &user),
+            make_archive_pathbuf(service, &user),
+        );
+
+        targets.push(Target::Creator {
+            service,
+            user,
+            subtype: SubType::None,
+            path,
+            archive: HashSet::new(),
+            archive_path,
+        });
+    }
+
+    for post in posts {
+        targets.push(post.into_target());
+    }
+
+    Ok(targets)
+}
+
 pub enum Target {
     Creator {
         service: Service,
@@ -61,7 +146,7 @@ pub enum SubType {
     None,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct Info {
     id: String, // "5564244",
     // name: String, // "theobrobine",
@@ -159,16 +244,20 @@ impl Target {
     }
 
     pub async fn parse_args() -> Vec<Target> {
-        let mut targets = Vec::with_capacity(ARGUMENTS.urls.len());
+        if let Some(urls) = ARGUMENTS.urls.as_ref() {
+            let mut targets = Vec::with_capacity(urls.len());
 
-        for url in &ARGUMENTS.urls {
-            match Target::try_from_url(url).await {
-                Ok(mut target) => targets.append(&mut target),
-                Err(err) => eprintln!("{err}"),
+            for url in urls {
+                match Target::try_from_url(url).await {
+                    Ok(mut target) => targets.append(&mut target),
+                    Err(err) => eprintln!("{err}"),
+                }
             }
-        }
 
-        targets
+            targets
+        } else {
+            Vec::new()
+        }
     }
 
     #[allow(clippy::too_many_lines)]
@@ -177,8 +266,9 @@ impl Target {
 
         let capture = |re: &Regex| re.captures(url).expect("get captures");
         let extract = |caps: &Captures, name: &str| caps.name(name).map(|m| m.as_str().to_string());
-        let extract_unwrap = |caps: &Captures, name: &str|
-            extract(caps, name).expect("extract values from captures");
+        let extract_unwrap = |caps: &Captures, name: &str| {
+            extract(caps, name).expect("extract values from captures")
+        };
         let service_user = |caps: &Captures| {
             if let Ok(service) = extract_unwrap(caps, "service").parse::<Service>() {
                 Ok((service, extract_unwrap(caps, "user")))
@@ -186,9 +276,10 @@ impl Target {
                 Err(format_err!("Found invalid Service name when parsing URL"))
             }
         };
-        let server_channel = |caps: &Captures| {
-            (extract_unwrap(caps, "server"), extract(caps, "channel"))
-        };
+        let server_channel = |caps: &Captures| (
+            extract_unwrap(caps, "server"),
+            extract(caps, "channel"),
+        );
         let make_paths = |service, user_or_server: &str| {
             (make_pathbuf(service, user_or_server), make_archive_pathbuf(service, user_or_server))
         };
@@ -372,14 +463,16 @@ impl Target {
 
     pub fn as_archive_pathbuf(&self) -> &PathBuf {
         match self {
-            Target::Creator { archive_path, .. } | Target::Discord { archive_path, .. } =>
-                archive_path,
+            Target::Creator { archive_path, .. } | Target::Discord { archive_path, .. } => {
+                archive_path
+            }
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, EnumString, Display)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, EnumString, Display, Deserialize, Debug)]
 #[strum(ascii_case_insensitive, serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum Service {
     Afdian,
     Boosty,

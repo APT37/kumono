@@ -15,11 +15,14 @@ Support is provided in the [discussions][discussions] section.
   - [Target Selection](#target-selection)
   - [Extension Selection](#extension-selection)
   - [Download Archive](#download-archive)
+  - [Favorite Download](#favorite-download)
 - [Legal Disclaimer](#legal-disclaimer)
 
 ## Installation
 
 ### Binaries
+
+Check [here](BINARY.md) for information on how to install a binary on your platform.
 
 [![][windows-x64-badge]][windows-x64-dl] [![][windows-arm-badge]][windows-arm-dl]
 
@@ -74,23 +77,33 @@ Arguments:
   [URLS]...  Creator page or post / Discord server or channel
 
 Options:
-  -p, --proxy <PROXY>                            Proxy URL (scheme://host:port[/path])
-  -t, --threads <THREADS>                        Simultaneous downloads (1-512) [default: 256]
-  -f, --input-file <INPUT_FILE>                  List of target URLs
-  -o, --output-path <OUTPUT_PATH>                Base directory for downloads [default: kumono]
-  -l, --list-extensions                          List of available file extensions (per target)
-  -i, --include <INCLUDE>                        File extensions to include (comma separated)
-  -e, --exclude <EXCLUDE>                        File extensions to exclude (comma separated)
-  -d, --download-archive                         Log hashes, skip moved/deleted file download
+  -p, --proxy <PROXY>              Proxy URL (scheme://host:port[/path])
+  -t, --threads <THREADS>          Simultaneous downloads (1-512) [default: 256]
+  -f, --input-file <INPUT_FILES>   File with URLs, can be used multiple times
+  -o, --output-path <OUTPUT_PATH>  Base directory for downloads [default: kumono]
+  -d, --download-archive           Log hashes, skip moved/deleted file downloads
+  -s, --show-config                Print configuration values
+  -h, --help                       Print help
+  -V, --version                    Print version
+
+Filtering:
+  -l, --list-extensions    List available file extensions (per URL)
+  -i, --include <INCLUDE>  File extensions to include (comma separated)
+  -e, --exclude <EXCLUDE>  File extensions to exclude (comma separated)
+
+Connection:
   -m, --max-retries <MAX_RETRIES>                [default: 4]
   -r, --retry-delay <RETRY_DELAY>                [default: 1]
       --connect-timeout <CONNECT_TIMEOUT>        [default: 5]
       --read-timeout <READ_TIMEOUT>              [default: 180]
       --rate-limit-backoff <RATE_LIMIT_BACKOFF>  [default: 15]
       --server-error-delay <SERVER_ERROR_DELAY>  [default: 5]
-  -s, --show-config                              Print configuration values
-  -h, --help                                     Print help
-  -V, --version                                  Print version
+
+Login:
+  -C, --coomer-user <COOMER_USER>  
+  -c, --coomer-pass <COOMER_PASS>  
+  -K, --kemono-user <KEMONO_USER>  
+  -k, --kemono-pass <KEMONO_PASS>
 ```
 
 ### Target Selection
@@ -141,6 +154,10 @@ kumono https://coomer.st/onlyfans/user/belledelphine --exclude jpg
 When using the `--download-archive` option, `kumono` will create log files for each target in `{output-path}/db` to save hashes of previously downloaded files.
 
 *Using this option will also add the hashes of existing files from previous runs for the same target to the respective log file.*
+
+### Favorite Download
+
+Favorites will automatically downloaded when you provide credentials via the login options.
 
 ## Legal Disclaimer
 

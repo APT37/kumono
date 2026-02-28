@@ -25,7 +25,7 @@ static HASH_RE: LazyLock<Regex> = LazyLock::new(||
     Regex::new(r"(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
 );
 
-#[derive(Deserialize, PartialEq, Eq, Hash)]
+#[derive(Deserialize, PartialEq, Eq, Hash, Debug)]
 pub struct PostFileRaw {
     // Deserializing the name field breaks our hashset's uniqueness guarantee;
     // the same file may be known under different names, leading to a race

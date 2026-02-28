@@ -1,6 +1,6 @@
 [package]
 name = "kumono"
-version = "0.74.0"
+version = "0.75.0"
 edition = "2024"
 description = "Media ripper for coomer and kemono"
 #homepage = "https://github.com/APT37/kumono"
@@ -20,9 +20,10 @@ itertools = "0.14.*"
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
 regex = "1.12.*"
-# consider using "cookies", "form" and "query" when implementing login
+# consider using "form" and "query" when implementing login
 reqwest = { version = "0.13.*", default-features = false, features = [
     "charset",
+    "cookies",
     "gzip",
     "http2",
     "json",
