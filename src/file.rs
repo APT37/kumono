@@ -21,6 +21,8 @@ use tokio::{
     time::sleep,
 };
 
+const CHUNK_SIZE: u64 = 4 * 1024 * 1024; // 4 MiB
+
 static HASH_RE: LazyLock<Regex> = LazyLock::new(||
     Regex::new(r"(?<hash>[0-9a-f]{64})(?:\..+)?$").unwrap()
 );
@@ -211,6 +213,8 @@ impl PostFile {
         let mut csize = temp_file.seek(SeekFrom::End(0)).await?;
 
         loop {
+            let mut range = String::with_capacity(32);
+
             if csize == rsize {
                 break;
             } else if csize > rsize {
@@ -239,7 +243,15 @@ impl PostFile {
                 let Err(err) = file.try_download_range(
                     &rpath,
                     &mut temp_file,
-                    csize,
+                    &({
+                        range.clear();
+                        let _ = write!(
+                            range,
+                            "bytes={csize}-{}",
+                            (rsize - 1).min(csize + CHUNK_SIZE - 1)
+                        );
+                        range
+                    }),
                     &mut msg_tx
                 ).await
             {
@@ -309,10 +321,9 @@ impl PostFile {
 
         loop {
             let response = CLIENT.head(&url).send().await?;
-            let status = response.status();
 
-            match status {
-                StatusCode::OK => {
+            match response.status() {
+                status if status == StatusCode::OK => {
                     let size = response
                         .content_length()
                         .map_or_else(
@@ -324,10 +335,10 @@ impl PostFile {
                 StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
                     try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
                 }
-                _ if status.is_server_error() => {
+                status if status.is_server_error() => {
                     try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
                 }
-                _ => {
+                status => {
                     size_error(status, "unexpected status code", &url)?;
                 }
             }
@@ -338,7 +349,7 @@ impl PostFile {
         &self,
         url: &str,
         file: &mut File,
-        start: u64,
+        range: &str,
         msg_tx: &mut UnboundedSender<DownloadAction>
     ) -> Result<()> {
         fn download_error(status: StatusCode, message: &str, url: &str) -> Result<()> {
@@ -346,16 +357,9 @@ impl PostFile {
         }
 
         loop {
-            let response = CLIENT.get(url)
-                .header("Range", {
-                    let mut range = String::with_capacity(32);
-                    let _ = write!(range, "bytes={start}-");
-                    range
-                })
-                .send().await?;
-            let status = response.status();
+            let response = CLIENT.get(url).header("Range", range).send().await?;
 
-            match status {
+            match response.status() {
                 StatusCode::PARTIAL_CONTENT => {
                     let mut stream = response.bytes_stream();
 
@@ -379,10 +383,10 @@ impl PostFile {
                 StatusCode::FORBIDDEN | StatusCode::TOO_MANY_REQUESTS | StatusCode::NOT_FOUND => {
                     try_wait(ARGUMENTS.rate_limit_backoff, msg_tx).await?;
                 }
-                _ if status.is_server_error() => {
+                status if status.is_server_error() => {
                     try_wait(ARGUMENTS.server_error_delay, msg_tx).await?;
                 }
-                _ => {
+                status => {
                     download_error(status, "unexpected status code", url)?;
                 }
             }

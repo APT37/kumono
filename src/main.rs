@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
         if ARGUMENTS.download_archive {
             total = files.len();
 
-            let archive = target.archive();
+            let archive = target.try_read_archive()?;
 
             files.retain(|file| file.get_hash().is_none_or(|hash| !archive.contains(hash)));
 
@@ -111,14 +111,20 @@ async fn main() -> Result<()> {
 
         fs::create_dir_all(target.as_pathbuf()).await?;
 
-        let archive = target.as_archive_pathbuf().clone();
+        let archive_path = target.as_archive_pathbuf().clone();
 
         let (msg_tx, msg_rx) = mpsc::unbounded_channel::<DownloadAction>();
 
         let files_by_type = ext::count(&files);
 
         thread::spawn(move || {
-            progress::progress_bar(left, archive, msg_rx, i == total_targets - 1, files_by_type);
+            progress::progress_bar(
+                left,
+                archive_path,
+                msg_rx,
+                i == total_targets - 1,
+                files_by_type
+            );
         });
 
         let tx = msg_tx.clone();

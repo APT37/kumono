@@ -37,7 +37,6 @@ impl FavoritePost {
             user,
             subtype: SubType::Post(self.id),
             path,
-            archive: HashSet::new(),
             archive_path,
         }
     }
@@ -85,7 +84,6 @@ pub async fn try_fetch_favorites() -> Result<Vec<Target>> {
             user,
             subtype: SubType::None,
             path,
-            archive: HashSet::new(),
             archive_path,
         });
     }
@@ -103,7 +101,6 @@ pub enum Target {
         user: String,
         subtype: SubType,
         path: PathBuf,
-        archive: HashSet<String>,
         archive_path: PathBuf,
     },
     Discord {
@@ -111,7 +108,6 @@ pub enum Target {
         channel: Option<String>,
         offset: Option<usize>,
         path: PathBuf,
-        archive: HashSet<String>,
         archive_path: PathBuf,
     },
 }
@@ -293,7 +289,7 @@ impl Target {
             let mut targets = Vec::new();
 
             for info in linked {
-                let mut target = if info.service == "discord" {
+                let target = if info.service == "discord" {
                     let (path, archive_path) = make_paths(Service::Discord, &info.id);
 
                     Target::Discord {
@@ -301,7 +297,6 @@ impl Target {
                         channel: None,
                         offset: None,
                         path,
-                        archive: HashSet::new(),
                         archive_path,
                     }
                 } else {
@@ -313,14 +308,9 @@ impl Target {
                         user,
                         subtype: SubType::None,
                         path,
-                        archive: HashSet::new(),
                         archive_path,
                     }
                 };
-
-                if ARGUMENTS.download_archive {
-                    target.try_read_archive()?;
-                }
 
                 targets.push(target);
             }
@@ -328,9 +318,7 @@ impl Target {
             return Ok(targets);
         }
 
-        let archive = HashSet::new();
-
-        let mut target = if RE_CREATOR.is_match(url) {
+        let target = if RE_CREATOR.is_match(url) {
             let caps = capture(&RE_CREATOR);
 
             let (service, user) = service_user(&caps)?;
@@ -341,7 +329,6 @@ impl Target {
                 user,
                 subtype: SubType::None,
                 path,
-                archive,
                 archive_path,
             }
         } else if RE_PAGE.is_match(url) {
@@ -355,7 +342,6 @@ impl Target {
                 user,
                 subtype: SubType::PageOffset(extract_unwrap(&caps, "offset").parse()?),
                 path,
-                archive,
                 archive_path,
             }
         } else if RE_POST.is_match(url) {
@@ -369,7 +355,6 @@ impl Target {
                 user,
                 subtype: SubType::Post(extract_unwrap(&caps, "post")),
                 path,
-                archive,
                 archive_path,
             }
         } else if RE_DISCORD.is_match(url) {
@@ -383,7 +368,6 @@ impl Target {
                 channel,
                 offset: None,
                 path,
-                archive,
                 archive_path,
             }
         } else if RE_DISCORD_PAGE.is_match(url) {
@@ -404,21 +388,16 @@ impl Target {
                     }
                 },
                 path,
-                archive,
                 archive_path,
             }
         } else {
             return Err(format_err!("Invalid URL: {url}"));
         };
 
-        if ARGUMENTS.download_archive {
-            target.try_read_archive()?;
-        }
-
         Ok(Vec::from_iter([target]))
     }
 
-    pub fn try_read_archive(&mut self) -> Result<()> {
+    pub fn try_read_archive(&self) -> Result<HashSet<String>> {
         let mut archive = File::options()
             .read(true)
             .append(true)
@@ -436,23 +415,7 @@ impl Target {
 
         archive.read_to_string(&mut arc_buf)?;
 
-        self.add_hashes(arc_buf.lines().map(ToString::to_string).collect());
-
-        Ok(())
-    }
-
-    fn add_hashes(&mut self, hashes: HashSet<String>) {
-        match self {
-            Target::Creator { archive, .. } | Target::Discord { archive, .. } => {
-                archive.extend(hashes);
-            }
-        }
-    }
-
-    pub fn archive(&self) -> &HashSet<String> {
-        match self {
-            Target::Creator { archive, .. } | Target::Discord { archive, .. } => archive,
-        }
+        Ok(arc_buf.lines().map(ToString::to_string).collect())
     }
 
     pub fn as_pathbuf(&self) -> &PathBuf {
