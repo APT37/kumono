@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT, progress::DownloadAction, target::Target };
-use anyhow::{ Context, Result, format_err };
+use anyhow::{ Context, Result, anyhow, format_err };
 use futures_util::StreamExt;
 use regex::Regex;
 use reqwest::StatusCode;
@@ -319,8 +319,20 @@ impl PostFile {
 
         let url = self.to_url(target);
 
+        let mut tries = 0;
+
         loop {
-            let response = CLIENT.head(&url).send().await?;
+            tries += 1;
+
+            let response = match CLIENT.head(&url).send().await {
+                Ok(res) => res,
+                Err(err) if tries == ARGUMENTS.max_tries => {
+                    return Err(anyhow!(err));
+                }
+                Err(_) => {
+                    continue;
+                }
+            };
 
             match response.status() {
                 status if status == StatusCode::OK => {
@@ -356,8 +368,20 @@ impl PostFile {
             Err(format_err!("[{status}] download failed: {message} ({url})"))
         }
 
+        let mut tries = 0;
+
         loop {
-            let response = CLIENT.get(url).header("Range", range).send().await?;
+            tries += 1;
+
+            let response = match CLIENT.get(url).header("Range", range).send().await {
+                Ok(res) => res,
+                Err(err) if tries == ARGUMENTS.max_tries => {
+                    return Err(anyhow!(err));
+                }
+                Err(_) => {
+                    continue;
+                }
+            };
 
             match response.status() {
                 StatusCode::PARTIAL_CONTENT => {

@@ -44,15 +44,14 @@ pub trait Post {
 pub enum PostError {
     #[error("connection error")] Connect(String),
     #[error("non-success status code")] Status(StatusCode),
-    #[error("malformed page data")]
-    MalformedPage,
+    #[error("malformed page data")] MalformedPage,
     #[error("malformed post data")] MalformedPost(String),
 }
 
 impl PostError {
     pub async fn try_interpret(&self, retries: usize) -> Result<()> {
         async fn try_wait(retries: usize, duration: Duration, error: &str) -> Result<()> {
-            if retries <= ARGUMENTS.max_retries {
+            if retries < ARGUMENTS.max_tries - 1 {
                 sleep(duration).await;
                 Ok(())
             } else {

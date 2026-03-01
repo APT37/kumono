@@ -1,11 +1,12 @@
 use crate::{
+    cli::ARGUMENTS,
     file::PostFile,
     http::CLIENT,
     post::{ self, DiscordChannel, DiscordPost, PagePost, Post, PostError, SinglePost },
     pretty::{ self, n_fmt },
     target::{ SubType, Target },
 };
-use anyhow::Result;
+use anyhow::{ Result, anyhow };
 use indicatif::{ ProgressBar, ProgressStyle };
 use serde::Deserialize;
 use std::{ collections::HashSet, fmt::{ self, Display, Formatter, Write }, sync::Arc, thread };
@@ -94,17 +95,33 @@ fn page_progress(mut msg_rx: UnboundedReceiver<String>) {
 
 impl Profile {
     async fn try_new(target: Arc<Target>, target_id: usize) -> Result<Self> {
-        let post_count = if let Target::Creator { service, user, .. } = &*target {
+        let mut post_count = 0;
+
+        if let Target::Creator { service, user, .. } = &*target {
             let host = service.host();
             let service = service.as_static_str();
             let mut url = String::with_capacity(
                 8 + host.len() + 8 + service.len() + 6 + user.len() + 8
             );
             let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/profile");
-            CLIENT.get(&url).send().await?.json::<Creator>().await?.post_count
-        } else {
-            0
-        };
+
+            let mut tries = 0;
+
+            loop {
+                match CLIENT.get(&url).send().await {
+                    Ok(res) => {
+                        post_count = res.json::<Creator>().await?.post_count;
+                        break;
+                    }
+                    Err(err) => {
+                        tries += 1;
+                        if tries > ARGUMENTS.max_tries {
+                            return Err(anyhow!(err));
+                        }
+                    }
+                }
+            }
+        }
 
         let mut profile = Self {
             target_id,
@@ -138,21 +155,30 @@ impl Profile {
 
     async fn init_posts_standard(&mut self, user: &str, subtype: &SubType) -> Result<()> {
         if let SubType::Post(post) = subtype {
-            let post: SinglePost = CLIENT.get({
-                let host = self.target.as_service().host();
-                let service = self.target.as_service().as_static_str();
+            let host = self.target.as_service().host();
+            let service = self.target.as_service().as_static_str();
 
-                let mut url = String::with_capacity(
-                    8 + host.len() + 8 + service.len() + 6 + user.len() + 6 + post.len()
-                );
-                let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/post/{post}");
+            let mut url = String::with_capacity(
+                8 + host.len() + 8 + service.len() + 6 + user.len() + 6 + post.len()
+            );
+            let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/post/{post}");
 
-                url
-            })
-                .send().await?
-                .json().await?;
+            let mut tries = 0;
 
-            self.posts.push(Box::new(post));
+            loop {
+                match CLIENT.get(&url).send().await {
+                    Ok(post) => {
+                        self.posts.push(Box::new(post.json::<SinglePost>().await?));
+                        break;
+                    }
+                    Err(err) => {
+                        tries += 1;
+                        if tries > ARGUMENTS.max_tries {
+                            return Err(anyhow!(err));
+                        }
+                    }
+                }
+            }
         } else {
             let (msg_tx, msg_rx) = unbounded_channel::<String>();
 
@@ -250,6 +276,7 @@ impl Profile {
         } else {
             let mut url = String::with_capacity(48 + server.len());
             let _ = write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}");
+            // TODO add retry loop
             post::try_fetch(&url).await?
         };
 

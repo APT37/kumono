@@ -3,7 +3,7 @@ use anyhow::{ Result, anyhow };
 use reqwest::{ Client, ClientBuilder, Proxy, header::{ HeaderMap, HeaderValue }, redirect::Policy };
 use serde::Deserialize;
 use serde_json::json;
-use std::{ process::exit, sync::LazyLock };
+use std::{ fmt::Write, process::exit, sync::LazyLock };
 
 static VERSION: &str = concat!("kumono ", env!("CARGO_PKG_VERSION"));
 
@@ -58,7 +58,7 @@ pub async fn try_login() -> Result<()> {
         let Some(user) = ARGUMENTS.coomer_user.as_ref() &&
         let Some(pass) = ARGUMENTS.coomer_pass.as_ref()
     {
-        Some((user, pass, "https://coomer.st/api/v1/authentication/login"))
+        Some(("coomer.st", user, pass))
     } else {
         None
     };
@@ -67,23 +67,40 @@ pub async fn try_login() -> Result<()> {
         let Some(user) = ARGUMENTS.kemono_user.as_ref() &&
         let Some(pass) = ARGUMENTS.kemono_pass.as_ref()
     {
-        Some((user, pass, "https://kemono.cr/api/v1/authentication/login"))
+        Some(("kemono.cr", user, pass))
     } else {
         None
     };
 
     // add validation: non-zero length, charset?
 
-    for (user, pass, url) in [coomer_auth, kemono_auth].into_iter().flatten() {
-        match
-            CLIENT.post(url)
-                .json(&json!({"username": user, "password": pass}))
-                .send().await?
-                .json().await?
-        {
-            LoginResponse::Success { .. } => {}
-            LoginResponse::Error { error } => {
-                return Err(anyhow!(error));
+    for (host, user, pass) in [coomer_auth, kemono_auth].into_iter().flatten() {
+        let mut url = String::with_capacity(8 + host.len() + 28);
+        let _ = write!(url, "https://{host}/api/v1/authentication/login");
+
+        let json = json!({"username": user, "password": pass});
+
+        let mut tries = 0;
+
+        loop {
+            tries += 1;
+
+            match CLIENT.post(&url).json(&json).send().await {
+                Ok(res) =>
+                    match res.json().await? {
+                        LoginResponse::Success { .. } => {
+                            break;
+                        }
+                        LoginResponse::Error { error } => {
+                            return Err(anyhow!(error));
+                        }
+                    }
+
+                Err(err) => {
+                    if tries == ARGUMENTS.max_tries {
+                        return Err(anyhow!(err));
+                    }
+                }
             }
         }
     }

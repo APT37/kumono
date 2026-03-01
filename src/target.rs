@@ -1,5 +1,5 @@
 use crate::{ cli::ARGUMENTS, http::CLIENT };
-use anyhow::{ Context, Result, format_err };
+use anyhow::{ Context, Result, format_err, anyhow };
 use regex::{ Captures, Regex };
 use serde::Deserialize;
 use std::{
@@ -44,18 +44,51 @@ impl FavoritePost {
 
 pub async fn try_fetch_favorites() -> Result<Vec<Target>> {
     async fn try_fetch_artists(host: &str) -> Result<Vec<Info>> {
-        Ok(
-            CLIENT.get(format!("https://{host}/api/v1/account/favorites?type=artist"))
-                .send().await?
-                .json().await?
-        )
+        let mut tries = 0;
+
+        loop {
+            tries += 1;
+
+            let response = match
+                CLIENT.get(
+                    format!("https://{host}/api/v1/account/favorites?type=artist")
+                ).send().await
+            {
+                Ok(res) => res,
+                Err(err) if tries == ARGUMENTS.max_tries => {
+                    return Err(anyhow!(err));
+                }
+                Err(_) => {
+                    continue;
+                }
+            };
+
+            return Ok(response.json().await?);
+        }
     }
+
     async fn try_fetch_posts(host: &str) -> Result<Vec<FavoritePost>> {
-        Ok(
-            CLIENT.get(format!("https://{host}/api/v1/account/favorites?type=post"))
-                .send().await?
-                .json().await?
-        )
+        let mut tries = 0;
+
+        loop {
+            tries += 1;
+
+            let response = match
+                CLIENT.get(
+                    format!("https://{host}/api/v1/account/favorites?type=post")
+                ).send().await
+            {
+                Ok(res) => res,
+                Err(err) if tries == ARGUMENTS.max_tries => {
+                    return Err(anyhow!(err));
+                }
+                Err(_) => {
+                    continue;
+                }
+            };
+
+            return Ok(response.json().await?);
+        }
     }
 
     let (mut artists, mut posts) = (Vec::new(), Vec::new());
@@ -196,20 +229,58 @@ async fn try_fetch_linked_accounts(service: Service, user: &str) -> Result<Vec<I
     let host = service.host();
     let service = service.as_static_str();
 
-    let mut url = String::with_capacity(8 + host.len() + 8 + service.len() + 6 + user.len() + 8);
-    let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/profile");
-
-    let account = CLIENT.get(url).send().await?.json().await?;
     let mut accounts = Vec::with_capacity(4);
-    accounts.push(account);
 
-    let mut linked_accounts_url = String::with_capacity(
-        8 + host.len() + 8 + service.len() + 6 + user.len() + 6
-    );
-    let _ = write!(linked_accounts_url, "https://{host}/api/v1/{service}/user/{user}/links");
+    {
+        let mut url = String::with_capacity(
+            8 + host.len() + 8 + service.len() + 6 + user.len() + 8
+        );
+        let _ = write!(url, "https://{host}/api/v1/{service}/user/{user}/profile");
 
-    let mut linked_accounts = CLIENT.get(linked_accounts_url).send().await?.json().await?;
-    accounts.append(&mut linked_accounts);
+        let mut tries = 0;
+
+        loop {
+            tries += 1;
+
+            match CLIENT.get(&url).send().await {
+                Ok(res) => {
+                    accounts.push(res.json().await?);
+                    break;
+                }
+                Err(err) => {
+                    if tries == ARGUMENTS.max_tries {
+                        return Err(anyhow!(err));
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        let mut linked_accounts_url = String::with_capacity(
+            8 + host.len() + 8 + service.len() + 6 + user.len() + 6
+        );
+        let _ = write!(linked_accounts_url, "https://{host}/api/v1/{service}/user/{user}/links");
+
+        let mut tries = 0;
+
+        loop {
+            tries += 1;
+
+            match CLIENT.get(&linked_accounts_url).send().await {
+                Ok(res) => {
+                    let mut linked_accounts = res.json().await?;
+                    accounts.append(&mut linked_accounts);
+                    break;
+                }
+                Err(err) => {
+                    if tries == ARGUMENTS.max_tries {
+                        return Err(anyhow!(err));
+                    }
+                }
+            }
+        }
+    }
 
     Ok(accounts)
 }

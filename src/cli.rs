@@ -60,8 +60,8 @@ pub struct Args {
     #[arg(short, long, help = "Log hashes, skip moved/deleted file downloads")]
     pub download_archive: bool,
 
-    #[arg(short, long, default_value_t = 4, help_heading = "Connection")]
-    pub max_retries: usize,
+    #[arg(short, long, default_value_t = 5, help_heading = "Connection")]
+    pub max_tries: usize,
 
     #[arg(
         short,
