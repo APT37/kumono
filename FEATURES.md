@@ -21,8 +21,8 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | creator + linked accounts | yes                | no                             | no                | no                                         |
 | discord server            | yes                | no                             | yes               | ?                                          |
 | discord channel           | yes                | no                             | no                | ?                                          |
-| favorites (creator)       | [planned][favs]    | ?                              | ?                 | ?                                          |
-| favorites (post)          | [planned][favs]    | ?                              | ?                 | ?                                          |
+| favorites (creator)       | yes                | ?                              | ?                 | ?                                          |
+| favorites (post)          | yes                | ?                              | ?                 | ?                                          |
 | DM/fancard/community      | [planned][dms-etc] | ?                              | ?                 | ?                                          |
 | verify hashes             | yes                | ?                              | ?                 | ?                                          |
 | resume downloads          | yes                | ?                              | ?                 | ?                                          |
@@ -30,9 +30,6 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | download archive          | yes                | ?                              | ?                 | ?                                          |
 | file type filtering       | yes                | yes                            | yes               | ?                                          |
 | proxy support             | yes                | ?                              | yes               | ?                                          |
-| retry on timeout          | planned            | ?                              | ?                 | ?                                          |
-| retry on server error     | yes                | yes                            | ?                 | ?                                          |
-| retry on connection error | yes                | ?                              | yes               | ?                                          |
 
 <!-- | use original file name    | no (TBD?)         | ?                              | ?                 | ?                                    | -->
 <!-- | advanced renaming options | no (TBD?)         | yes                            | ?                 | ?                                    | -->
