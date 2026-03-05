@@ -18,4 +18,4 @@ For convenience, you can move the `kumono-*` binary to a `PATH` location. This w
 
 <!-- link definitions -->
 
-[latest-realease]: https://github.com/APT37/kumono/releases/latest
+[latest-release]: https://github.com/APT37/kumono/releases/latest
