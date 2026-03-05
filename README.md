@@ -1,3 +1,5 @@
+[!NOTE] Please be aware that this is beta software, meaning all aspects are subject change due to ongoing adjustments and improvements.
+
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
 [![][build-status]][build-runs] [![][release-date]][latest-release]
@@ -60,9 +62,11 @@ Make sure the cargo binary location (usually `~/.cargo/bin`) is in your `$PATH`.
 
 ## Command Line
 
+*CLI output is subject to change, so the below animation might not always be up to date.*
+
 <img src="kumono.gif">
 
-*Results may vary based on hardware used. An NVMe SSD and a decent multi-core processor are recommended.*
+*Results may vary based on the hardware used.*
 
 ### Available Options
 
