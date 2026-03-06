@@ -1,4 +1,5 @@
-[!NOTE] Please be aware that this is beta software, meaning all aspects are subject change due to ongoing adjustments and improvements.
+> [!NOTE]
+> Please be aware that this is beta software, meaning all aspects are subject change due to ongoing adjustments and improvements.
 
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
