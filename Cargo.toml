@@ -12,7 +12,7 @@ keywords = ["kemono", "coomer", "filter", "api", "download"]
 
 [dependencies]
 anyhow = "1.0.*"
-clap = { version = "4.5.*", features = ["derive"] }
+clap = { version = "4.6.*", features = ["derive"] }
 futures = "0.3.*"
 futures-util = "0.3.*"
 indicatif = "0.18.*"
