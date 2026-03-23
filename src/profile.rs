@@ -276,7 +276,7 @@ impl Profile {
         } else {
             let mut url = String::with_capacity(48 + server.len());
             let _ = write!(url, "https://kemono.cr/api/v1/discord/channel/lookup/{server}");
-            // TODO add retry loop
+            // TODO: add retry loop
             post::try_fetch(&url).await?
         };
 
