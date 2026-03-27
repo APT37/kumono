@@ -162,7 +162,7 @@ When using the `--download-archive` option, `kumono` will create log files for e
 
 ### Favorite Download
 
-Favorites will automatically downloaded when you provide credentials via the login options.
+Favorites will be downloaded automatically when you provide credentials via the login options.
 
 ## Legal Disclaimer
 
