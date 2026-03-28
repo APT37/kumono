@@ -1,5 +1,6 @@
-> [!NOTE]
-> Please be aware that this is beta software, meaning all aspects are subject change due to ongoing adjustments and improvements.
+> [!IMPORTANT]
+> Due to lack of time on my end and better alternatives being available, I've decided to end the development of `kumono`.
+> While the current code still works as of 28.03.2026, please consider using a different solution in the future, as this project will no longer be maintained.
 
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
