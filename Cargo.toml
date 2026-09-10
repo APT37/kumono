@@ -16,7 +16,7 @@ clap = { version = "4.6.*", features = ["derive"] }
 futures = "0.3.*"
 futures-util = "0.3.*"
 indicatif = "0.18.*"
-itertools = "0.14.*"
+itertools = "0.15.*"
 num-format = "0.4.*"
 pretty-duration = "0.1.*"
 regex = "1.13.*"
