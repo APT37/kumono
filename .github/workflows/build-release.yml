@@ -78,4 +78,6 @@ jobs:
         toolchain: stable
 
     - name: Publish crate
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       run: cargo publish --no-verify
