@@ -23,7 +23,6 @@ pub enum DownloadAction {
     Fail(String, Arc<PostFile>),
     Complete(Arc<PostFile>),
     Panic(String),
-    Update,
 }
 
 struct Stats {
@@ -159,7 +158,6 @@ impl Stats {
                 self.panic = true;
                 false
             }
-            DownloadAction::Update => false,
         }
     }
 

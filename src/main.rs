@@ -2,15 +2,9 @@ use crate::{ cli::ARGUMENTS, file::PostFile, progress::DownloadAction, target::T
 use anyhow::Result;
 use futures::future::join_all;
 use itertools::Itertools;
-use std::{
-    path::PathBuf,
-    process::exit,
-    sync::{ Arc, atomic::Ordering::Relaxed },
-    thread,
-    time::Duration,
-};
+use std::{ path::PathBuf, process::exit, sync::{ Arc, atomic::Ordering::Relaxed }, thread };
 use strum_macros::Display;
-use tokio::{ fs, sync::{ Semaphore, mpsc }, task, time::sleep };
+use tokio::{ fs, sync::{ Semaphore, mpsc }, task };
 
 mod cli;
 mod ext;
@@ -127,13 +121,6 @@ async fn main() -> Result<()> {
             );
         });
 
-        let tx = msg_tx.clone();
-        thread::spawn(move || {
-            while tx.send(DownloadAction::Update).is_ok() {
-                thread::sleep(Duration::from_secs(1));
-            }
-        });
-
         let mut tasks = Vec::with_capacity(files.len());
 
         let sem = Arc::new(Semaphore::new(ARGUMENTS.threads()));
@@ -167,7 +154,7 @@ async fn main() -> Result<()> {
         join_all(tasks).await;
 
         // wait for the bar to (hopefully) finish properly
-        sleep(Duration::from_millis((left / 10).try_into().unwrap_or_default())).await;
+        // sleep(Duration::from_millis((left / 10).try_into().unwrap_or_default())).await;
     }
 
     if progress::DOWNLOADS_FAILED.load(Relaxed) {
