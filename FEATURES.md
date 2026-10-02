@@ -42,6 +42,7 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | ⭐ [Yuvi9587/Kemono-Downloader][yuvikd] ⭐ | Has support for multiple content hosters similar to coomer/kemono.<br>Only a Windows x64 binary is provided. |
 | [VoxDroid/KemonoDownloader][vdkd]        | Pre-complied binaries cost money, and every update requires another purchase... 💸                            |
+| [vegidio/umd][umd]                       | Supports many NSFW hosters. Programmed in Go 🚀                                                               |
 
 <!-- link definitions -->
 
@@ -63,3 +64,4 @@ Due to missing/unclear documentation and scope limitations, this is only a parti
 
 [vdkd]: https://github.com/VoxDroid/KemonoDownloader
 [yuvikd]: https://github.com/Yuvi9587/Kemono-Downloader
+[umd]: https://github.com/vegidio/umd
