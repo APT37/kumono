@@ -1,6 +1,6 @@
 <h2>kumono - Media ripper for <a href="https://coomer.st">coomer</a> and <a href="https://kemono.cr">kemono</a></h2>
 
-[![][build-status]][build-runs] [![][release-date]][latest-release] [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/apt37/kumono)
+[![][build-status]][build-runs] [![][release-date]][latest-release]
 
 For a comparison with other tools, see [features](FEATURES.md).
 
